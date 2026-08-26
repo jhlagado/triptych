@@ -1,0 +1,57 @@
+{
+  "name": "triptych",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "A modular three-ESP32 computer with Z80-compatible CPU, video, and sound contracts",
+  "license": "GPL-3.0-or-later",
+  "engines": {
+    "node": ">=20"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./cpu": {
+      "types": "./dist/cpu/index.d.ts",
+      "import": "./dist/cpu/index.js"
+    },
+    "./sound": {
+      "types": "./dist/sound/index.d.ts",
+      "import": "./dist/sound/index.js"
+    },
+    "./video": {
+      "types": "./dist/video/index.d.ts",
+      "import": "./dist/video/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "docs",
+    "roms",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "clean": "node --input-type=module -e \"import { rmSync } from 'node:fs'; rmSync('dist', { recursive: true, force: true })\"",
+    "build": "npm run clean && tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
+    "lint": "eslint src test --ext .ts",
+    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\" \"tools/**/*.mjs\" \"docs/**/*.md\" \"firmware/**/*.md\" README.md AGENTS.md NOTICE.md",
+    "format:check": "prettier --check \"src/**/*.ts\" \"test/**/*.ts\" \"tools/**/*.mjs\" \"docs/**/*.md\" \"firmware/**/*.md\" README.md AGENTS.md NOTICE.md",
+    "test": "vitest run",
+    "proof:cpm22": "npm run build && node tools/prove-cpm22.mjs",
+    "check": "npm run build && npm run typecheck && npm run lint && npm run format:check && npm test"
+  },
+  "devDependencies": {
+    "@jhlagado/azm": "^0.4.0",
+    "@jhlagado/debug80-runtime": "^0.2.0",
+    "@typescript-eslint/eslint-plugin": "^8.42.0",
+    "@typescript-eslint/parser": "^8.42.0",
+    "eslint": "^8.55.0",
+    "prettier": "^3.6.2",
+    "typescript": "^5.9.2",
+    "vitest": "^4.1.10"
+  }
+}
