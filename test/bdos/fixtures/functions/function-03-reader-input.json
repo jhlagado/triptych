@@ -1,0 +1,41 @@
+{
+  "schema": "triptych-bdos-direct-call-v1",
+  "id": "function-3-reader-input",
+  "evidence": [
+    {
+      "kind": "published-interface",
+      "source": "Digital Research CP/M Operating System Manual, July 1982",
+      "section": "Chapter 5, Function 3"
+    }
+  ],
+  "call": {
+    "function": 3,
+    "de": 0,
+    "stackPointer": 53248
+  },
+  "biosResponses": [
+    {
+      "entry": 7,
+      "occurrence": 0,
+      "return": {
+        "a": 66
+      }
+    }
+  ],
+  "expected": {
+    "returnRegisters": {
+      "a": 66,
+      "b": 0,
+      "h": 0,
+      "l": 66,
+      "sp": 53248,
+      "pc": 260
+    },
+    "biosCalls": [
+      {
+        "entry": 7,
+        "name": "reader-input"
+      }
+    ]
+  }
+}

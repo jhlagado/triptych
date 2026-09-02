@@ -35,6 +35,8 @@ jobs:
         run: cargo install wasm-bindgen-cli --version 0.2.127 --locked
       - name: Verify Triptych
         run: npm run check
+      - name: Replay headless CP/M scenario
+        run: npm run proof:cpm-headless
       - name: Build browser host
         run: npm run build:wasm-browser
       - name: Configure GitHub Pages

@@ -46,6 +46,17 @@ npm run build:wasm-host
 
 Generated bindings are placed in `dist/wasm/` and are not source-controlled.
 
+The same adapter runs declarative CCP and `.COM` sessions without a browser:
+
+```sh
+npm run proof:cpm-headless
+```
+
+The scenario runner compares exact serial output before applying the shared
+ANSI terminal model, and carries only the exported disk image into the next
+fresh-machine session. It runs every fixture under `test/bdos/scenarios/` by
+default; `TRIPTYCH_CPM_SCENARIO` selects one fixture.
+
 ## Browser terminal
 
 The static page in `web/` uses the same `TriptychCpu` class. It accepts a CP/M

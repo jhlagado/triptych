@@ -103,7 +103,9 @@ Whole-system scenarios also feed the serial output into Triptych's DOM-free
 attributes, cursor position, pending wrap, and bell count as well as raw bytes.
 This makes the CCP and full-screen applications reproducible in CI without a
 browser window. Browser rendering remains a separate thin view of the same
-terminal state.
+terminal state. The reusable fixture lifecycle and host-adapter boundary are
+defined by the
+[CP/M headless scenario contract](../specifications/cpm-headless-scenarios-v1.md).
 
 Correctness precedes optimization. Exact bytes used, largest stack depth, and
 resident workspace are reported only for a behaviorally passing build. The
@@ -235,10 +237,11 @@ must not retroactively weaken the BDOS compatibility tests.
 
 ## Immediate next work
 
-Milestone 0 is the current unit of work. After it passes, begin Milestone 1 by
-building one direct-call fixture for function 12 (return version) and one
-scripted-console fixture for function 2. These deliberately small cases prove
-the harness boundary before filesystem complexity is introduced.
+The direct harness now covers functions 0 through 12 and an out-of-range call,
+including the console control paths. The next Milestone 1 slice is call-sequence
+support followed by disk and filesystem fixtures for functions 13 through 40.
+Sequences must initialize BDOS through public calls rather than fixture code
+writing private legacy state.
 
 ## References
 

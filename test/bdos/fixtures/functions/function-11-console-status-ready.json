@@ -1,0 +1,57 @@
+{
+  "schema": "triptych-bdos-direct-call-v1",
+  "id": "function-11-console-status-ready",
+  "evidence": [
+    {
+      "kind": "published-interface",
+      "source": "Digital Research CP/M Operating System Manual, July 1982",
+      "section": "Chapter 5, Function 11"
+    },
+    {
+      "kind": "black-box-compatibility",
+      "source": "Frozen BDOS SHA-256 258fe1b659a979fa9adab000fd2ee27b165349179f6b5f5b8b5266ea3385ac22",
+      "section": "Ready status consumes one BIOS character into the BDOS lookahead buffer and returns 1"
+    }
+  ],
+  "call": {
+    "function": 11,
+    "de": 0,
+    "stackPointer": 53248
+  },
+  "biosResponses": [
+    {
+      "entry": 2,
+      "occurrence": 0,
+      "return": {
+        "a": 255
+      }
+    },
+    {
+      "entry": 3,
+      "occurrence": 0,
+      "return": {
+        "a": 66
+      }
+    }
+  ],
+  "expected": {
+    "returnRegisters": {
+      "a": 1,
+      "b": 0,
+      "h": 0,
+      "l": 1,
+      "sp": 53248,
+      "pc": 260
+    },
+    "biosCalls": [
+      {
+        "entry": 2,
+        "name": "console-status"
+      },
+      {
+        "entry": 3,
+        "name": "console-input"
+      }
+    ]
+  }
+}

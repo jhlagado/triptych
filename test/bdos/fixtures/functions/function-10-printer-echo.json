@@ -1,0 +1,53 @@
+{
+  "schema": "triptych-bdos-direct-call-v1",
+  "id": "function-10-printer-echo",
+  "evidence": [
+    {
+      "kind": "published-interface",
+      "source": "Digital Research CP/M Operating System Manual, July 1982",
+      "section": "Chapter 5, Function 10 and control-P printer echo"
+    },
+    {
+      "kind": "black-box-compatibility",
+      "source": "Frozen BDOS SHA-256 258fe1b659a979fa9adab000fd2ee27b165349179f6b5f5b8b5266ea3385ac22",
+      "section": "BIOS trace for control-P, A, carriage return"
+    }
+  ],
+  "call": {
+    "function": 10,
+    "de": 512,
+    "stackPointer": 53248
+  },
+  "initialMemory": [
+    {
+      "address": 512,
+      "bytes": [8, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    }
+  ],
+  "biosResponses": [
+    { "entry": 3, "occurrence": 0, "return": { "a": 16 } },
+    { "entry": 3, "occurrence": 1, "return": { "a": 65 } },
+    { "entry": 3, "occurrence": 2, "return": { "a": 13 } },
+    { "entry": 2, "occurrence": 0, "return": { "a": 0 } },
+    { "entry": 2, "occurrence": 1, "return": { "a": 0 } }
+  ],
+  "expected": {
+    "memory": [
+      {
+        "address": 512,
+        "bytes": [8, 1, 65]
+      }
+    ],
+    "biosCalls": [
+      { "entry": 3, "name": "console-input" },
+      { "entry": 3, "name": "console-input" },
+      { "entry": 2, "name": "console-status", "registers": { "c": 65 } },
+      { "entry": 4, "name": "console-output", "registers": { "c": 65 } },
+      { "entry": 5, "name": "list-output", "registers": { "c": 65 } },
+      { "entry": 3, "name": "console-input" },
+      { "entry": 2, "name": "console-status", "registers": { "c": 13 } },
+      { "entry": 4, "name": "console-output", "registers": { "c": 13 } },
+      { "entry": 5, "name": "list-output", "registers": { "c": 13 } }
+    ]
+  }
+}

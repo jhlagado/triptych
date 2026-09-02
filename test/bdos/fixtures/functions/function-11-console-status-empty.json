@@ -1,0 +1,41 @@
+{
+  "schema": "triptych-bdos-direct-call-v1",
+  "id": "function-11-console-status-empty",
+  "evidence": [
+    {
+      "kind": "published-interface",
+      "source": "Digital Research CP/M Operating System Manual, July 1982",
+      "section": "Chapter 5, Function 11"
+    }
+  ],
+  "call": {
+    "function": 11,
+    "de": 0,
+    "stackPointer": 53248
+  },
+  "biosResponses": [
+    {
+      "entry": 2,
+      "occurrence": 0,
+      "return": {
+        "a": 0
+      }
+    }
+  ],
+  "expected": {
+    "returnRegisters": {
+      "a": 0,
+      "b": 0,
+      "h": 0,
+      "l": 0,
+      "sp": 53248,
+      "pc": 260
+    },
+    "biosCalls": [
+      {
+        "entry": 2,
+        "name": "console-status"
+      }
+    ]
+  }
+}

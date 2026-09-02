@@ -1,0 +1,52 @@
+{
+  "schema": "triptych-bdos-direct-call-v1",
+  "id": "function-6-direct-input-ready",
+  "evidence": [
+    {
+      "kind": "published-interface",
+      "source": "Digital Research CP/M Operating System Manual, July 1982",
+      "section": "Chapter 5, Function 6 input mode"
+    }
+  ],
+  "call": {
+    "function": 6,
+    "de": 255,
+    "stackPointer": 53248
+  },
+  "biosResponses": [
+    {
+      "entry": 2,
+      "occurrence": 0,
+      "return": {
+        "a": 255
+      }
+    },
+    {
+      "entry": 3,
+      "occurrence": 0,
+      "return": {
+        "a": 66
+      }
+    }
+  ],
+  "expected": {
+    "returnRegisters": {
+      "a": 66,
+      "b": 0,
+      "h": 0,
+      "l": 66,
+      "sp": 53248,
+      "pc": 260
+    },
+    "biosCalls": [
+      {
+        "entry": 2,
+        "name": "console-status"
+      },
+      {
+        "entry": 3,
+        "name": "console-input"
+      }
+    ]
+  }
+}

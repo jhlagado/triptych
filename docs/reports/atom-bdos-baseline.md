@@ -62,19 +62,27 @@ at every BIOS entry, applies fixture-defined return values, checks caller-stack
 restoration, and rejects writes outside the resident BDOS region and the
 caller's two-byte return slot.
 
-The first evidence-tagged fixtures prove function 12 (return version), function
-2 (console output with no pending input), and an out-of-range function. They
-are data under `test/bdos/fixtures/functions/`, not facts extracted from legacy
-source symbols. All three pass against the hashed oracle.
+Twenty-one evidence-tagged fixtures now cover every function from 0 through
+12, plus an out-of-range function. They include warm boot, direct and buffered
+input, output status polling, tab expansion, control-S pause/resume, control-P
+printer echo, backspace editing, I/O byte state, strings, and peripheral I/O.
+They are data under `test/bdos/fixtures/functions/`, not facts extracted from
+legacy source symbols. All pass against the hashed oracle.
 
 The existing WASM proof now reads
 `test/bdos/scenarios/ccp-file-roundtrip.json` and feeds each fresh-process CCP
-session into the DOM-free ANSI terminal model. It checks the raw transcript,
-visible screen text, cursor, and bell state. Later editor and compiler scenarios
-will use the same format and add attribute and disk assertions.
+session through the reusable headless scenario runner and DOM-free ANSI
+terminal model. It checks the raw transcript, every screen and attribute cell,
+cursor, active attributes, pending wrap, and bell state. Arbitrary input-byte
+arrays cover control and cursor keys. The `edit-ansi-quit` scenario waits for
+`EDIT.COM` to finish drawing and proves its reverse-video status line before
+injecting Ctrl-Q; this prevents BDOS console polling from consuming the key
+early. Compiler scenarios will use the same host-neutral format. Scenarios can
+also assert the persisted disk digest.
 
 ## Next proof
 
-Extend the direct-call matrix through console functions 0 to 12, including
-scripted input, tab expansion, control-S pause/resume, control-P printer echo,
-line editing, and warm boot. Only then should replacement assembly begin.
+Extend the direct harness to preserve BDOS state across a sequence of calls,
+then define the disk and filesystem matrix for functions 13 through 40. That
+sequence support is required to reset and select a disk through public calls
+rather than initializing private legacy state.

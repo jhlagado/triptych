@@ -1,0 +1,70 @@
+{
+  "schema": "triptych-bdos-direct-call-v1",
+  "id": "function-9-print-string",
+  "evidence": [
+    {
+      "kind": "published-interface",
+      "source": "Digital Research CP/M Operating System Manual, July 1982",
+      "section": "Chapter 5, Function 9"
+    }
+  ],
+  "call": {
+    "function": 9,
+    "de": 512,
+    "stackPointer": 53248
+  },
+  "initialMemory": [
+    {
+      "address": 512,
+      "bytes": [72, 73, 36]
+    }
+  ],
+  "biosResponses": [
+    {
+      "entry": 2,
+      "occurrence": 0,
+      "return": {
+        "a": 0
+      }
+    },
+    {
+      "entry": 2,
+      "occurrence": 1,
+      "return": {
+        "a": 0
+      }
+    }
+  ],
+  "expected": {
+    "biosCalls": [
+      {
+        "entry": 2,
+        "name": "console-status",
+        "registers": {
+          "c": 72
+        }
+      },
+      {
+        "entry": 4,
+        "name": "console-output",
+        "registers": {
+          "c": 72
+        }
+      },
+      {
+        "entry": 2,
+        "name": "console-status",
+        "registers": {
+          "c": 73
+        }
+      },
+      {
+        "entry": 4,
+        "name": "console-output",
+        "registers": {
+          "c": 73
+        }
+      }
+    ]
+  }
+}

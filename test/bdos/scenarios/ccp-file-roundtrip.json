@@ -8,11 +8,15 @@
       "inputAscii": "SMOKE\r",
       "stopAfterAscii": "Wrote RESULT.TXT\r\n\r\nA>",
       "expectedTranscript": "\r\nA>SMOKE\r\r\nWrote RESULT.TXT\r\n\r\nA>",
+      "expectedDriveSha256": "33a26af4c510f73e7ff3647c412a2a20c942fb8d5b0dcdfbfafc868904369924",
       "expectedTerminal": {
         "text": "\nA>SMOKE\nWrote RESULT.TXT\n\nA>",
         "cursorRow": 4,
         "cursorColumn": 2,
-        "bellCount": 0
+        "currentAttributes": 0,
+        "wrapPending": false,
+        "bellCount": 0,
+        "screenSha256": "5392f0741528eec112e980c1b4c18595989520a2e3741f85a4b5c6aa32d27485"
       }
     },
     {
@@ -20,11 +24,15 @@
       "inputAscii": "TYPE RESULT.TXT\r",
       "stopAfterAscii": "CP/M file services are working\r\n\r\nA>",
       "expectedTranscript": "\r\nA>TYPE RESULT.TXT\r\r\nCP/M file services are working\r\n\r\nA>",
+      "expectedDriveSha256": "33a26af4c510f73e7ff3647c412a2a20c942fb8d5b0dcdfbfafc868904369924",
       "expectedTerminal": {
         "text": "\nA>TYPE RESULT.TXT\nCP/M file services are working\n\nA>",
         "cursorRow": 4,
         "cursorColumn": 2,
-        "bellCount": 0
+        "currentAttributes": 0,
+        "wrapPending": false,
+        "bellCount": 0,
+        "screenSha256": "36a2e99942bea58dbdc834996e60cdf1bd10fd049e0daabf4f690ce2b3b987a2"
       }
     }
   ]

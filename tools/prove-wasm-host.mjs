@@ -8,7 +8,7 @@ import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 
 import { compile, defaultFormatWriters } from "@jhlagado/azm/compile";
-import { TerminalBuffer } from "../crates/triptych-host-wasm/web/terminal.js";
+import { runCpmHeadlessScenario } from "./lib/cpm-headless-scenario.mjs";
 
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = resolve(scriptDirectory, "..");
@@ -19,12 +19,11 @@ const fixtureDirectory = join(
   "fixtures",
 );
 const sourceDirectory = join(repositoryRoot, "roms", "cpu");
-const headlessScenarioPath = join(
+const headlessScenarioDirectory = join(
   repositoryRoot,
   "test",
   "bdos",
   "scenarios",
-  "ccp-file-roundtrip.json",
 );
 const require = createRequire(import.meta.url);
 const { TriptychCpu } = require(
@@ -240,104 +239,83 @@ function padForBackingSectors(image) {
   return padded;
 }
 
-function runUntilOutput(machine, suffix, maximumSteps = 20_000_000) {
-  for (let steps = 0; steps < maximumSteps; steps += 50_000) {
-    machine.run_slice(50_000, 500_000);
-    const output = Buffer.from(machine.serial_output()).toString("latin1");
-    if (output.endsWith(suffix)) return output;
-  }
-  throw new Error(`timed out waiting for ${JSON.stringify(suffix)}`);
-}
-
 async function proveCpm() {
-  const cpmImagePath = process.env.TRIPTYCH_CPM22_IMAGE;
-  if (!cpmImagePath) {
-    throw new Error(
-      "TRIPTYCH_CPM22_IMAGE must name a provenance-reviewed CP/M 2.2 image",
-    );
-  }
-  const [bootRom, bios, sourceDisk, scenario] = await Promise.all([
+  const cpmImagePath = resolve(
+    process.env.TRIPTYCH_CPM22_IMAGE ??
+      join(repositoryRoot, "third_party", "cpm22", "cpm22.img"),
+  );
+  const [bootRom, bios, sourceDisk] = await Promise.all([
     assemble(join(sourceDirectory, "bootstrap.asm")),
     assemble(join(sourceDirectory, "bios.asm")),
     readFile(resolve(cpmImagePath)),
-    readFile(headlessScenarioPath, "utf8").then(JSON.parse),
   ]);
-  assert.equal(scenario.schema, "triptych-cpm-headless-scenario-v1");
   const disk = Uint8Array.from(sourceDisk);
   disk.set(bios, BIOS_SYSTEM_OFFSET);
-
-  let persisted = padForBackingSectors(disk);
-  const results = [];
-  for (const session of scenario.sessions) {
-    const machine = new TriptychCpu(bootRom);
-    try {
-      machine.install_drive(0, persisted, true);
-      machine.enqueue_serial_input(Buffer.from(session.inputAscii, "ascii"));
-      const transcript = runUntilOutput(machine, session.stopAfterAscii);
-      assert.equal(transcript, session.expectedTranscript, session.id);
-
-      const terminal = new TerminalBuffer();
-      terminal.write(Buffer.from(transcript, "latin1"));
-      const terminalSnapshot = terminal.snapshot();
-      assert.equal(terminal.text(), session.expectedTerminal.text, session.id);
-      assert.equal(
-        terminalSnapshot.cursorRow,
-        session.expectedTerminal.cursorRow,
-        session.id,
-      );
-      assert.equal(
-        terminalSnapshot.cursorColumn,
-        session.expectedTerminal.cursorColumn,
-        session.id,
-      );
-      assert.equal(
-        terminalSnapshot.bellCount,
-        session.expectedTerminal.bellCount,
-        session.id,
-      );
-
-      persisted = machine.export_drive(0);
-      results.push({
-        id: session.id,
-        terminalRows: terminalSnapshot.rows,
-        terminalColumns: terminalSnapshot.columns,
-        cursorRow: terminalSnapshot.cursorRow,
-        cursorColumn: terminalSnapshot.cursorColumn,
-      });
-    } finally {
-      machine.free();
-    }
+  const configuredScenario = process.env.TRIPTYCH_CPM_SCENARIO;
+  const scenarioPaths = configuredScenario
+    ? [resolve(configuredScenario)]
+    : (await readdir(headlessScenarioDirectory))
+        .filter((name) => name.endsWith(".json"))
+        .sort()
+        .map((name) => join(headlessScenarioDirectory, name));
+  const scenarios = [];
+  for (const scenarioPath of scenarioPaths) {
+    const scenario = JSON.parse(await readFile(scenarioPath, "utf8"));
+    const result = runCpmHeadlessScenario({
+      scenario,
+      initialDrive: padForBackingSectors(disk),
+      createMachine(drive) {
+        const machine = new TriptychCpu(bootRom);
+        machine.install_drive(0, drive, true);
+        return {
+          enqueueInput(bytes) {
+            machine.enqueue_serial_input(bytes);
+          },
+          runSlice() {
+            machine.run_slice(50_000, 500_000);
+          },
+          serialOutput() {
+            return machine.serial_output();
+          },
+          exportDrive() {
+            return machine.export_drive(0);
+          },
+          close() {
+            machine.free();
+          },
+        };
+      },
+    });
+    scenarios.push({ id: result.id, sessions: result.sessions });
   }
-  return { id: scenario.id, sessions: results };
+  return { scenarios };
 }
 
 // Keep temporary-directory creation in the proof so an interrupted run never
 // reuses state. CP/M media remains in WASM memory; no file is written there.
 const temporary = await mkdtemp(join(tmpdir(), "triptych-wasm-proof-"));
 try {
-  const fixtureNames = (await readdir(fixtureDirectory))
-    .filter((name) => name.endsWith(".json"))
-    .sort();
+  const cpmHeadlessOnly = process.argv.slice(2).includes("--cpm-headless-only");
   const passed = [];
-  for (const name of fixtureNames) {
-    const fixture = JSON.parse(
-      await readFile(join(fixtureDirectory, name), "utf8"),
-    );
-    passed.push(runFixture(fixture));
+  if (!cpmHeadlessOnly) {
+    const fixtureNames = (await readdir(fixtureDirectory))
+      .filter((name) => name.endsWith(".json"))
+      .sort();
+    for (const name of fixtureNames) {
+      const fixture = JSON.parse(
+        await readFile(join(fixtureDirectory, name), "utf8"),
+      );
+      passed.push(runFixture(fixture));
+    }
   }
   const cpm = await proveCpm();
-  console.log(
-    JSON.stringify(
-      {
-        status: "passed",
-        host: "triptych-host-wasm",
-        fixtures: passed,
-        cpm,
-      },
-      undefined,
-      2,
-    ),
-  );
+  const report = {
+    status: "passed",
+    host: "triptych-host-wasm",
+    ...(cpmHeadlessOnly ? {} : { fixtures: passed }),
+    cpm,
+  };
+  console.log(JSON.stringify(report, undefined, 2));
 } finally {
   await rm(temporary, { recursive: true, force: true });
 }

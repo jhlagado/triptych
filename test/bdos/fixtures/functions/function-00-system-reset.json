@@ -1,0 +1,33 @@
+{
+  "schema": "triptych-bdos-direct-call-v1",
+  "id": "function-0-system-reset",
+  "evidence": [
+    {
+      "kind": "published-interface",
+      "source": "Digital Research CP/M Operating System Manual, July 1982",
+      "section": "Chapter 5, Function 0"
+    }
+  ],
+  "call": {
+    "function": 0,
+    "de": 0,
+    "stackPointer": 53248
+  },
+  "biosResponses": [
+    {
+      "entry": 1,
+      "occurrence": 0,
+      "action": "stop"
+    }
+  ],
+  "expected": {
+    "stop": "bios-transfer",
+    "biosTransferEntry": 1,
+    "biosCalls": [
+      {
+        "entry": 1,
+        "name": "warm-boot"
+      }
+    ]
+  }
+}

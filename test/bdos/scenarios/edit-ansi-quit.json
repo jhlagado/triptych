@@ -1,0 +1,42 @@
+{
+  "schema": "triptych-cpm-headless-scenario-v1",
+  "id": "edit-ansi-quit",
+  "description": "Launch EDIT.COM, prove its ANSI-rendered screen, then inject Ctrl-Q only after the editor is ready and return to the CCP",
+  "sessions": [
+    {
+      "id": "open-and-quit-editor",
+      "interactions": [
+        {
+          "id": "launch-editor",
+          "inputAscii": "EDIT INPUT.NU\r",
+          "stopAfterAscii": "\u001b[1;1H",
+          "expectedTerminal": {
+            "text": "sub main() fails\n    writeOutputByte('O') else fail\n    writeOutputByte('K') else fail\nend\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nEDIT INPUT   .NU       ^S Save  ^Q Quit",
+            "cursorRow": 0,
+            "cursorColumn": 0,
+            "currentAttributes": 0,
+            "wrapPending": false,
+            "bellCount": 0,
+            "screenSha256": "035ed8fcedcf7743dd0f5e5c30e6481495b54d7b769967821b4695497245fcd2"
+          }
+        },
+        {
+          "id": "quit-editor",
+          "inputBytes": [17],
+          "stopAfterAscii": "\r\nA>"
+        }
+      ],
+      "expectedTranscript": "\r\nA>EDIT INPUT.NU\r\r\n\u001b[2J\u001b[Hsub main() fails\r\n    writeOutputByte('O') else fail\r\n    writeOutputByte('K') else fail\r\nend\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\u001b[24;1H\u001b[7mEDIT INPUT   .NU       ^S Save  ^Q Quit                                         \u001b[0m\u001b[1;1H\u001b[2J\u001b[H\r\nA>",
+      "expectedDriveSha256": "2e2e14dc3d8af3a36054994a5cf41b3d1bb6087a36aa837d43d9c65b01ec375f",
+      "expectedTerminal": {
+        "text": "\nA>",
+        "cursorRow": 1,
+        "cursorColumn": 2,
+        "currentAttributes": 0,
+        "wrapPending": false,
+        "bellCount": 0,
+        "screenSha256": "f503d6e0b46796eeab75c842dfcaf4dfe60e28ba30354e80a8db890bf7d9dae7"
+      }
+    }
+  ]
+}

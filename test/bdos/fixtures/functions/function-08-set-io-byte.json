@@ -1,0 +1,32 @@
+{
+  "schema": "triptych-bdos-direct-call-v1",
+  "id": "function-8-set-io-byte",
+  "evidence": [
+    {
+      "kind": "published-interface",
+      "source": "Digital Research CP/M Operating System Manual, July 1982",
+      "section": "Chapter 5, Function 8"
+    }
+  ],
+  "call": {
+    "function": 8,
+    "de": 90,
+    "stackPointer": 53248
+  },
+  "initialMemory": [
+    {
+      "address": 3,
+      "bytes": [165]
+    }
+  ],
+  "biosResponses": [],
+  "expected": {
+    "memory": [
+      {
+        "address": 3,
+        "bytes": [90]
+      }
+    ],
+    "biosCalls": []
+  }
+}

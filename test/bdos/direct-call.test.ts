@@ -1,11 +1,14 @@
 import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   type BdosDirectCallFixture,
+  type BdosDirectCallResult,
+  type BdosDirectCallSequenceFixture,
   type BdosObservedRegisters,
   runBdosDirectCall,
+  runBdosDirectCallSequence,
   unexpectedDirectCallWrites,
 } from "../support/bdos-direct-call.js";
 
@@ -16,21 +19,37 @@ const referenceDisk = readFileSync(
 const referenceBdos = referenceDisk.subarray(0x0800, 0x1600);
 const expectedBdosSha256 =
   "258fe1b659a979fa9adab000fd2ee27b165349179f6b5f5b8b5266ea3385ac22";
+const functionFixtureDirectory = resolve(
+  repositoryRoot,
+  "test",
+  "bdos",
+  "fixtures",
+  "functions",
+);
+const fixtureNames = readdirSync(functionFixtureDirectory)
+  .filter((name) => name.endsWith(".json"))
+  .sort();
+const sequenceFixtureDirectory = resolve(
+  repositoryRoot,
+  "test",
+  "bdos",
+  "fixtures",
+  "sequences",
+);
+const sequenceFixtureNames = readdirSync(sequenceFixtureDirectory)
+  .filter((name) => name.endsWith(".json"))
+  .sort();
 
 function readFixture(name: string): BdosDirectCallFixture {
   return JSON.parse(
-    readFileSync(
-      resolve(
-        repositoryRoot,
-        "test",
-        "bdos",
-        "fixtures",
-        "functions",
-        `${name}.json`,
-      ),
-      "utf8",
-    ),
+    readFileSync(resolve(functionFixtureDirectory, name), "utf8"),
   ) as BdosDirectCallFixture;
+}
+
+function readSequenceFixture(name: string): BdosDirectCallSequenceFixture {
+  return JSON.parse(
+    readFileSync(resolve(sequenceFixtureDirectory, name), "utf8"),
+  ) as BdosDirectCallSequenceFixture;
 }
 
 function expectPartialRegisters(
@@ -44,8 +63,63 @@ function expectPartialRegisters(
   }
 }
 
+function expectFixtureResult(
+  fixture:
+    BdosDirectCallFixture | BdosDirectCallSequenceFixture["steps"][number],
+  result: BdosDirectCallResult,
+): void {
+  expect(result.stop).toBe(fixture.expected.stop ?? "normal-return");
+  expect(result.biosTransferEntry).toBe(fixture.expected.biosTransferEntry);
+  if (fixture.expected.returnRegisters !== undefined) {
+    expectPartialRegisters(result.registers, fixture.expected.returnRegisters);
+  }
+  expect(result.biosCalls).toHaveLength(fixture.expected.biosCalls.length);
+  fixture.expected.biosCalls.forEach((expectedCall, index) => {
+    const observedCall = result.biosCalls[index];
+    expect(observedCall?.entry).toBe(expectedCall.entry);
+    expect(observedCall?.name).toBe(expectedCall.name);
+    if (expectedCall.registers !== undefined && observedCall !== undefined) {
+      expectPartialRegisters(observedCall.registers, expectedCall.registers);
+    }
+  });
+
+  const allowedAddresses = new Set<number>();
+  for (const patch of fixture.expected.memory ?? []) {
+    expect(
+      [
+        ...result.memory.slice(
+          patch.address,
+          patch.address + patch.bytes.length,
+        ),
+      ],
+      `memory at ${patch.address.toString(16)}`,
+    ).toEqual(patch.bytes);
+    for (let offset = 0; offset < patch.bytes.length; offset += 1) {
+      allowedAddresses.add(patch.address + offset);
+    }
+  }
+  expect(
+    unexpectedDirectCallWrites(
+      result,
+      fixture.call.stackPointer,
+      allowedAddresses,
+    ),
+  ).toEqual([]);
+}
+
 describe("CP/M 2.2 BDOS direct-call contract", () => {
-  it.each(["return-version", "console-output", "out-of-range"])(
+  it("has at least one fixture for every function from 0 through 12", () => {
+    const covered = new Set(
+      fixtureNames.map((fixtureName) => readFixture(fixtureName).call.function),
+    );
+    expect(
+      [...covered]
+        .filter((functionNumber) => functionNumber <= 12)
+        .sort((left, right) => left - right),
+    ).toEqual(Array.from({ length: 13 }, (_, index) => index));
+  });
+
+  it.each(fixtureNames)(
     "runs the %s fixture against the frozen black-box oracle",
     (fixtureName) => {
       expect(createHash("sha256").update(referenceBdos).digest("hex")).toBe(
@@ -56,30 +130,22 @@ describe("CP/M 2.2 BDOS direct-call contract", () => {
       expect(fixture.evidence.length).toBeGreaterThan(0);
 
       const result = runBdosDirectCall(referenceBdos, fixture);
-      if (fixture.expected.returnRegisters !== undefined) {
-        expectPartialRegisters(
-          result.registers,
-          fixture.expected.returnRegisters,
-        );
-      }
-      expect(result.biosCalls).toHaveLength(fixture.expected.biosCalls.length);
-      fixture.expected.biosCalls.forEach((expectedCall, index) => {
-        const observedCall = result.biosCalls[index];
-        expect(observedCall?.entry).toBe(expectedCall.entry);
-        expect(observedCall?.name).toBe(expectedCall.name);
-        if (
-          expectedCall.registers !== undefined &&
-          observedCall !== undefined
-        ) {
-          expectPartialRegisters(
-            observedCall.registers,
-            expectedCall.registers,
-          );
-        }
+      expectFixtureResult(fixture, result);
+    },
+  );
+
+  it.each(sequenceFixtureNames)(
+    "runs the %s stateful fixture against the frozen black-box oracle",
+    (fixtureName) => {
+      const fixture = readSequenceFixture(fixtureName);
+      expect(fixture.schema).toBe("triptych-bdos-direct-sequence-v1");
+      const result = runBdosDirectCallSequence(referenceBdos, fixture);
+      expect(result.steps).toHaveLength(fixture.steps.length);
+      fixture.steps.forEach((step, index) => {
+        expect(step.evidence.length).toBeGreaterThan(0);
+        expect(result.steps[index]?.id).toBe(step.id);
+        expectFixtureResult(step, result.steps[index]!.result);
       });
-      expect(
-        unexpectedDirectCallWrites(result, fixture.call.stackPointer),
-      ).toEqual([]);
     },
   );
 });

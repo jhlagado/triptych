@@ -1,0 +1,64 @@
+{
+  "schema": "triptych-bdos-direct-call-v1",
+  "id": "function-10-backspace-edit",
+  "evidence": [
+    {
+      "kind": "published-interface",
+      "source": "Digital Research CP/M Operating System Manual, July 1982",
+      "section": "Chapter 5, Function 10 line editing"
+    },
+    {
+      "kind": "black-box-compatibility",
+      "source": "Frozen BDOS SHA-256 258fe1b659a979fa9adab000fd2ee27b165349179f6b5f5b8b5266ea3385ac22",
+      "section": "BIOS and buffer result for A, B, backspace, C, carriage return"
+    }
+  ],
+  "call": {
+    "function": 10,
+    "de": 512,
+    "stackPointer": 53248
+  },
+  "initialMemory": [
+    {
+      "address": 512,
+      "bytes": [8, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    }
+  ],
+  "biosResponses": [
+    { "entry": 3, "occurrence": 0, "return": { "a": 65 } },
+    { "entry": 3, "occurrence": 1, "return": { "a": 66 } },
+    { "entry": 3, "occurrence": 2, "return": { "a": 8 } },
+    { "entry": 3, "occurrence": 3, "return": { "a": 67 } },
+    { "entry": 3, "occurrence": 4, "return": { "a": 13 } },
+    { "entry": 2, "occurrence": 0, "return": { "a": 0 } },
+    { "entry": 2, "occurrence": 1, "return": { "a": 0 } },
+    { "entry": 2, "occurrence": 2, "return": { "a": 0 } },
+    { "entry": 2, "occurrence": 3, "return": { "a": 0 } }
+  ],
+  "expected": {
+    "memory": [
+      {
+        "address": 512,
+        "bytes": [8, 2, 65, 67]
+      }
+    ],
+    "biosCalls": [
+      { "entry": 3, "name": "console-input" },
+      { "entry": 2, "name": "console-status", "registers": { "c": 65 } },
+      { "entry": 4, "name": "console-output", "registers": { "c": 65 } },
+      { "entry": 3, "name": "console-input" },
+      { "entry": 2, "name": "console-status", "registers": { "c": 66 } },
+      { "entry": 4, "name": "console-output", "registers": { "c": 66 } },
+      { "entry": 3, "name": "console-input" },
+      { "entry": 4, "name": "console-output", "registers": { "c": 8 } },
+      { "entry": 4, "name": "console-output", "registers": { "c": 32 } },
+      { "entry": 4, "name": "console-output", "registers": { "c": 8 } },
+      { "entry": 3, "name": "console-input" },
+      { "entry": 2, "name": "console-status", "registers": { "c": 67 } },
+      { "entry": 4, "name": "console-output", "registers": { "c": 67 } },
+      { "entry": 3, "name": "console-input" },
+      { "entry": 2, "name": "console-status", "registers": { "c": 13 } },
+      { "entry": 4, "name": "console-output", "registers": { "c": 13 } }
+    ]
+  }
+}

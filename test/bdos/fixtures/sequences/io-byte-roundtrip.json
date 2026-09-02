@@ -1,0 +1,55 @@
+{
+  "schema": "triptych-bdos-direct-sequence-v1",
+  "id": "io-byte-roundtrip",
+  "description": "Set and then read the I/O byte through public BDOS calls while preserving resident state",
+  "steps": [
+    {
+      "id": "set-io-byte",
+      "evidence": [
+        {
+          "kind": "published-interface",
+          "source": "Digital Research CP/M Operating System Manual, July 1982",
+          "section": "5.3, function 8: set I/O byte"
+        }
+      ],
+      "call": {
+        "function": 8,
+        "de": 90,
+        "stackPointer": 53248
+      },
+      "initialMemory": [{ "address": 3, "bytes": [165] }],
+      "biosResponses": [],
+      "expected": {
+        "memory": [{ "address": 3, "bytes": [90] }],
+        "biosCalls": []
+      }
+    },
+    {
+      "id": "get-io-byte",
+      "evidence": [
+        {
+          "kind": "published-interface",
+          "source": "Digital Research CP/M Operating System Manual, July 1982",
+          "section": "5.3, function 7: get I/O byte"
+        }
+      ],
+      "call": {
+        "function": 7,
+        "de": 0,
+        "stackPointer": 53248
+      },
+      "biosResponses": [],
+      "expected": {
+        "returnRegisters": {
+          "a": 90,
+          "b": 0,
+          "h": 0,
+          "l": 90,
+          "sp": 53248,
+          "pc": 260
+        },
+        "biosCalls": []
+      }
+    }
+  ]
+}

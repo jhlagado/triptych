@@ -1,0 +1,28 @@
+{
+  "schema": "triptych-bdos-direct-call-v1",
+  "id": "function-5-list-output",
+  "evidence": [
+    {
+      "kind": "published-interface",
+      "source": "Digital Research CP/M Operating System Manual, July 1982",
+      "section": "Chapter 5, Function 5"
+    }
+  ],
+  "call": {
+    "function": 5,
+    "de": 65,
+    "stackPointer": 53248
+  },
+  "biosResponses": [],
+  "expected": {
+    "biosCalls": [
+      {
+        "entry": 5,
+        "name": "list-output",
+        "registers": {
+          "c": 65
+        }
+      }
+    ]
+  }
+}

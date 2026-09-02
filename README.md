@@ -117,6 +117,22 @@ TRIPTYCH_CPM22_IMAGE=/path/to/cpm22.img \
 npm run proof:wasm-host
 ```
 
+CCP and application sessions can also be replayed without the browser. The
+default proof boots the repository's provenance-reviewed disk and runs every
+scenario under `test/bdos/scenarios/`: a scripted CCP file round trip in fresh
+machines and a staged `EDIT.COM` ANSI session. It checks exact serial bytes,
+complete ANSI screen state, and declared disk digests:
+
+```sh
+npm run proof:cpm-headless
+```
+
+Set `TRIPTYCH_CPM_SCENARIO=/path/to/scenario.json` to replay another CCP or
+`.COM` scenario. The
+[headless scenario contract](docs/specifications/cpm-headless-scenarios-v1.md)
+defines readable ASCII and arbitrary byte inputs, terminal snapshots, and
+cross-session disk persistence.
+
 The same toolchain builds an interactive browser terminal. The bundled disk
 starts CP/M automatically:
 

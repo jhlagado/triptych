@@ -1,0 +1,46 @@
+{
+  "schema": "triptych-bdos-direct-call-v1",
+  "id": "function-2-console-output-pause",
+  "evidence": [
+    {
+      "kind": "published-interface",
+      "source": "Digital Research CP/M Operating System Manual, July 1982",
+      "section": "Chapter 5, Function 2 start/stop scroll"
+    },
+    {
+      "kind": "black-box-compatibility",
+      "source": "Frozen BDOS SHA-256 258fe1b659a979fa9adab000fd2ee27b165349179f6b5f5b8b5266ea3385ac22",
+      "section": "BIOS trace for control-S followed by a resume character"
+    }
+  ],
+  "call": {
+    "function": 2,
+    "de": 65,
+    "stackPointer": 53248
+  },
+  "biosResponses": [
+    {
+      "entry": 2,
+      "occurrence": 0,
+      "return": { "a": 255 }
+    },
+    {
+      "entry": 3,
+      "occurrence": 0,
+      "return": { "a": 19 }
+    },
+    {
+      "entry": 3,
+      "occurrence": 1,
+      "return": { "a": 81 }
+    }
+  ],
+  "expected": {
+    "biosCalls": [
+      { "entry": 2, "name": "console-status", "registers": { "c": 65 } },
+      { "entry": 3, "name": "console-input" },
+      { "entry": 3, "name": "console-input" },
+      { "entry": 4, "name": "console-output", "registers": { "c": 65 } }
+    ]
+  }
+}

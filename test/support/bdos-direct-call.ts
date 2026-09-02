@@ -43,9 +43,14 @@ export interface BdosDirectCallFixture {
     de: number;
     stackPointer: number;
   };
+  initialMemory?: Array<{
+    address: number;
+    bytes: number[];
+  }>;
   biosResponses: Array<{
     entry: number;
     occurrence: number;
+    action?: "return" | "stop";
     return?: {
       a?: number;
       bc?: number;
@@ -53,7 +58,13 @@ export interface BdosDirectCallFixture {
     };
   }>;
   expected: {
+    stop?: "normal-return" | "bios-transfer";
+    biosTransferEntry?: number;
     returnRegisters?: Partial<BdosObservedRegisters>;
+    memory?: Array<{
+      address: number;
+      bytes: number[];
+    }>;
     biosCalls: Array<{
       entry: number;
       name: string;
@@ -82,11 +93,31 @@ export interface BdosBiosCall {
 }
 
 export interface BdosDirectCallResult {
+  stop: "normal-return" | "bios-transfer";
+  biosTransferEntry?: number;
   registers: BdosObservedRegisters;
   biosCalls: BdosBiosCall[];
   changedAddresses: number[];
+  memory: Uint8Array;
   steps: number;
   tStates: number;
+}
+
+export type BdosDirectCallStep = Omit<BdosDirectCallFixture, "schema">;
+
+export interface BdosDirectCallSequenceFixture {
+  schema: "triptych-bdos-direct-sequence-v1";
+  id: string;
+  description: string;
+  steps: BdosDirectCallStep[];
+}
+
+export interface BdosDirectCallSequenceResult {
+  id: string;
+  steps: Array<{
+    id: string;
+    result: BdosDirectCallResult;
+  }>;
 }
 
 function observedRegisters(
@@ -131,10 +162,9 @@ function applyBiosReturn(
   }
 }
 
-export function runBdosDirectCall(
+function createBdosDirectRunner(
   bdos: Uint8Array,
-  fixture: BdosDirectCallFixture,
-): BdosDirectCallResult {
+): (fixture: BdosDirectCallFixture) => BdosDirectCallResult {
   if (bdos.length !== BDOS_LIMIT - BDOS_BASE) {
     throw new Error(
       `BDOS must fill the fixed ${BDOS_LIMIT - BDOS_BASE}-byte resident slot`,
@@ -160,77 +190,126 @@ export function runBdosDirectCall(
     memory[stubAddress] = 0xc9;
   }
 
-  const initialMemory = memory.slice();
-  const initialState = runtime.captureCpuState();
-  initialState.a = 0x99;
-  initialState.b = 0x88;
-  initialState.c = fixture.call.function & 0xff;
-  initialState.d = (fixture.call.de >>> 8) & 0xff;
-  initialState.e = fixture.call.de & 0xff;
-  initialState.h = 0x77;
-  initialState.l = 0x66;
-  initialState.pc = CALLER_ADDRESS;
-  initialState.sp = fixture.call.stackPointer & 0xffff;
-  initialState.halted = false;
-  runtime.restoreCpuState(initialState);
-
-  const biosCalls: BdosBiosCall[] = [];
-  const occurrences = new Uint16Array(BIOS_ENTRIES);
-  let steps = 0;
-  let tStates = 0;
-  for (; steps < 100_000 && !runtime.isHalted(); steps += 1) {
-    const pc = runtime.getPC();
-    if (pc >= BIOS_STUB_BASE && pc < BIOS_STUB_BASE + BIOS_ENTRIES) {
-      const entry = pc - BIOS_STUB_BASE;
-      const occurrence = occurrences[entry] ?? 0;
-      const state = runtime.captureCpuState();
-      biosCalls.push({
-        entry,
-        name: BIOS_NAMES[entry] ?? `unknown-${entry}`,
-        occurrence,
-        registers: observedRegisters(state),
-      });
-      applyBiosReturn(fixture, entry, occurrence, state);
-      occurrences[entry] = occurrence + 1;
-      runtime.restoreCpuState(state);
+  return (fixture: BdosDirectCallFixture): BdosDirectCallResult => {
+    for (const patch of fixture.initialMemory ?? []) {
+      if (
+        patch.address < 0 ||
+        patch.address + patch.bytes.length > MEMORY_BYTES
+      ) {
+        throw new Error(`${fixture.id} initial memory patch is out of range`);
+      }
+      memory.set(patch.bytes, patch.address);
     }
-    tStates += runtime.step().cycles ?? 0;
-  }
-  if (!runtime.isHalted()) {
-    throw new Error(`${fixture.id} exceeded the direct-call step limit`);
-  }
-  for (const response of fixture.biosResponses) {
-    const calls = occurrences[response.entry] ?? 0;
-    if (calls <= response.occurrence) {
-      throw new Error(
-        `${fixture.id} did not make scripted BIOS call ${response.entry} occurrence ${response.occurrence}`,
-      );
-    }
-  }
 
-  const changedAddresses = [];
-  for (let address = 0; address < MEMORY_BYTES; address += 1) {
-    if (memory[address] !== initialMemory[address])
-      changedAddresses.push(address);
-  }
+    const initialMemory = memory.slice();
+    const initialState = runtime.captureCpuState();
+    initialState.a = 0x99;
+    initialState.b = 0x88;
+    initialState.c = fixture.call.function & 0xff;
+    initialState.d = (fixture.call.de >>> 8) & 0xff;
+    initialState.e = fixture.call.de & 0xff;
+    initialState.h = 0x77;
+    initialState.l = 0x66;
+    initialState.pc = CALLER_ADDRESS;
+    initialState.sp = fixture.call.stackPointer & 0xffff;
+    initialState.halted = false;
+    runtime.restoreCpuState(initialState);
+
+    const biosCalls: BdosBiosCall[] = [];
+    const occurrences = new Uint16Array(BIOS_ENTRIES);
+    let stop: BdosDirectCallResult["stop"] = "normal-return";
+    let biosTransferEntry: number | undefined;
+    let steps = 0;
+    let tStates = 0;
+    for (; steps < 100_000 && !runtime.isHalted(); steps += 1) {
+      const pc = runtime.getPC();
+      if (pc >= BIOS_STUB_BASE && pc < BIOS_STUB_BASE + BIOS_ENTRIES) {
+        const entry = pc - BIOS_STUB_BASE;
+        const occurrence = occurrences[entry] ?? 0;
+        const state = runtime.captureCpuState();
+        biosCalls.push({
+          entry,
+          name: BIOS_NAMES[entry] ?? `unknown-${entry}`,
+          occurrence,
+          registers: observedRegisters(state),
+        });
+        const response = fixture.biosResponses.find(
+          (candidate) =>
+            candidate.entry === entry && candidate.occurrence === occurrence,
+        );
+        occurrences[entry] = occurrence + 1;
+        if (response?.action === "stop") {
+          stop = "bios-transfer";
+          biosTransferEntry = entry;
+          break;
+        }
+        applyBiosReturn(fixture, entry, occurrence, state);
+        runtime.restoreCpuState(state);
+      }
+      tStates += runtime.step().cycles ?? 0;
+    }
+    if (!runtime.isHalted() && stop === "normal-return") {
+      throw new Error(`${fixture.id} exceeded the direct-call step limit`);
+    }
+    for (const response of fixture.biosResponses) {
+      const calls = occurrences[response.entry] ?? 0;
+      if (calls <= response.occurrence) {
+        throw new Error(
+          `${fixture.id} did not make scripted BIOS call ${response.entry} occurrence ${response.occurrence}`,
+        );
+      }
+    }
+
+    const changedAddresses = [];
+    for (let address = 0; address < MEMORY_BYTES; address += 1) {
+      if (memory[address] !== initialMemory[address])
+        changedAddresses.push(address);
+    }
+    return {
+      stop,
+      ...(biosTransferEntry === undefined ? {} : { biosTransferEntry }),
+      registers: observedRegisters(runtime.captureCpuState()),
+      biosCalls,
+      changedAddresses,
+      memory: memory.slice(),
+      steps,
+      tStates,
+    };
+  };
+}
+
+export function runBdosDirectCall(
+  bdos: Uint8Array,
+  fixture: BdosDirectCallFixture,
+): BdosDirectCallResult {
+  return createBdosDirectRunner(bdos)(fixture);
+}
+
+export function runBdosDirectCallSequence(
+  bdos: Uint8Array,
+  fixture: BdosDirectCallSequenceFixture,
+): BdosDirectCallSequenceResult {
+  const run = createBdosDirectRunner(bdos);
   return {
-    registers: observedRegisters(runtime.captureCpuState()),
-    biosCalls,
-    changedAddresses,
-    steps,
-    tStates,
+    id: fixture.id,
+    steps: fixture.steps.map((step) => ({
+      id: step.id,
+      result: run({ schema: "triptych-bdos-direct-call-v1", ...step }),
+    })),
   };
 }
 
 export function unexpectedDirectCallWrites(
   result: BdosDirectCallResult,
   stackPointer: number,
+  allowedAddresses: ReadonlySet<number> = new Set(),
 ): number[] {
   const callStackFirst = (stackPointer - 2) & 0xffff;
   const callStackLast = (stackPointer - 1) & 0xffff;
   return result.changedAddresses.filter(
     (address) =>
       !(address >= BDOS_BASE && address < BDOS_LIMIT) &&
-      !(address >= callStackFirst && address <= callStackLast),
+      !(address >= callStackFirst && address <= callStackLast) &&
+      !allowedAddresses.has(address),
   );
 }

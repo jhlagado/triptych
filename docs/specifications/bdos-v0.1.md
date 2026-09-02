@@ -73,7 +73,7 @@ The initial replacement implements the complete CP/M 2.2 range.
 |   3 | Reader input                | none                                | character                       |
 |   4 | Punch output                | `E` character                       | none                            |
 |   5 | List output                 | `E` character                       | none                            |
-|   6 | Direct console I/O          | `E` selects input/status/output     | character or status             |
+|   6 | Direct console I/O          | `E=$FF` inputs; otherwise outputs   | character or zero               |
 |   7 | Get I/O byte                | none                                | I/O byte                        |
 |   8 | Set I/O byte                | `E` value                           | none                            |
 |   9 | Print string                | `DE` points to `$`-terminated bytes | none                            |
@@ -187,6 +187,10 @@ BDOS must not assume a host filesystem or a stronger hidden durability path.
 These are host-model proofs until repeated on the ESP32-S3. They make no claim
 about physical SD latency, serial loss, execution pacing, power behavior, or
 hardware stability.
+
+Whole-system fixture lifecycle, byte encodings, terminal snapshots, and disk
+persistence follow the
+[CP/M headless scenario contract](cpm-headless-scenarios-v1.md).
 
 ## Source and build boundary
 
