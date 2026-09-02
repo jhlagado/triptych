@@ -237,11 +237,13 @@ must not retroactively weaken the BDOS compatibility tests.
 
 ## Immediate next work
 
-The direct harness now covers functions 0 through 12 and an out-of-range call,
-including the console control paths. The next Milestone 1 slice is call-sequence
-support followed by disk and filesystem fixtures for functions 13 through 40.
-Sequences must initialize BDOS through public calls rather than fixture code
-writing private legacy state.
+The direct harness now has basic evidence-tagged cases for every function from
+0 through 40 and an out-of-range call. Stateful disk cases initialize BDOS
+through public calls and compare public BIOS traces, exact disk records, FCBs,
+DMA, allocation state, and write counts. The remaining Milestone 1 slice is the
+adversarial matrix: wildcards, users, extent boundaries, absent drives,
+read-only state, full directory/disk, and injected BIOS I/O failure with
+rejection atomicity.
 
 ## References
 

@@ -1,0 +1,387 @@
+{
+  "schema": "triptych-bdos-direct-sequence-v1",
+  "id": "file-mutation-roundtrip",
+  "description": "Create, write, close, set attributes, rename, and delete one file on a blank public BIOS disk",
+  "biosDisk": {
+    "drives": [
+      {
+        "number": 0,
+        "dphAddress": 64512,
+        "directoryBufferAddress": 64640,
+        "dpbAddress": 64528,
+        "checkVectorAddress": 64768,
+        "allocationVectorAddress": 64800,
+        "firstSector": 1,
+        "defaultRecordByte": 229,
+        "dpb": {
+          "sectorsPerTrack": 26,
+          "blockShift": 3,
+          "blockMask": 7,
+          "extentMask": 0,
+          "maximumBlock": 242,
+          "maximumDirectoryEntry": 63,
+          "directoryAllocation0": 192,
+          "directoryAllocation1": 0,
+          "checkVectorBytes": 16,
+          "reservedTracks": 2
+        }
+      }
+    ]
+  },
+  "steps": [
+    {
+      "id": "reset-and-login",
+      "evidence": [
+        {
+          "kind": "published-interface",
+          "source": "Digital Research CP/M Operating System Manual, July 1982",
+          "section": "5.2, function 13"
+        }
+      ],
+      "call": { "function": 13, "de": 0, "stackPointer": 53248 },
+      "biosResponses": [],
+      "expected": {
+        "returnRegisters": { "a": 0, "l": 0, "sp": 53248, "pc": 260 },
+        "memory": [{ "address": 64800, "bytes": [192, 0] }],
+        "biosCallCount": 99,
+        "biosTraceSha256": "05c7a536d3c51532c4e8d9827c001038fed1e98b45b2fedfbaff7d2254c6670a",
+        "biosDiskWriteCount": 0
+      }
+    },
+    {
+      "id": "set-data-dma",
+      "evidence": [
+        {
+          "kind": "published-interface",
+          "source": "Digital Research CP/M Operating System Manual, July 1982",
+          "section": "5.2, function 26"
+        }
+      ],
+      "call": { "function": 26, "de": 768, "stackPointer": 53248 },
+      "initialMemory": [{ "address": 768, "length": 128, "fill": 90 }],
+      "biosResponses": [],
+      "expected": {
+        "returnRegisters": { "a": 0, "l": 0, "sp": 53248, "pc": 260 },
+        "biosCalls": [
+          { "entry": 12, "name": "set-dma", "registers": { "b": 3, "c": 0 } }
+        ],
+        "biosDiskState": { "dma": 768 },
+        "biosDiskWriteCount": 0
+      }
+    },
+    {
+      "id": "make-file",
+      "evidence": [
+        {
+          "kind": "published-interface",
+          "source": "Digital Research CP/M Operating System Manual, July 1982",
+          "section": "5.2, function 22"
+        }
+      ],
+      "call": { "function": 22, "de": 512, "stackPointer": 53248 },
+      "initialMemory": [
+        {
+          "address": 512,
+          "bytes": [
+            0, 78, 69, 87, 70, 73, 76, 69, 32, 84, 88, 84, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+          ]
+        }
+      ],
+      "biosResponses": [],
+      "expected": {
+        "returnRegisters": { "a": 0, "l": 0, "sp": 53248, "pc": 260 },
+        "memory": [
+          {
+            "address": 512,
+            "length": 36,
+            "fill": 0,
+            "patches": [
+              {
+                "offset": 1,
+                "bytes": [78, 69, 87, 70, 73, 76, 69, 32, 84, 88, 84]
+              },
+              { "offset": 14, "bytes": [128] }
+            ]
+          }
+        ],
+        "biosCallCount": 13,
+        "biosTraceSha256": "a614f4de6b1abb365cba4675a032ac5ca97a2827e10e1d11ed115dc7f19d2e60",
+        "biosDiskWriteCount": 1,
+        "biosDiskRecords": [
+          {
+            "drive": 0,
+            "record": 52,
+            "length": 128,
+            "fill": 229,
+            "patches": [
+              {
+                "offset": 0,
+                "bytes": [
+                  0, 78, 69, 87, 70, 73, 76, 69, 32, 84, 88, 84, 0, 0, 0, 0, 0,
+                  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "write-first-record",
+      "evidence": [
+        {
+          "kind": "published-interface",
+          "source": "Digital Research CP/M Operating System Manual, July 1982",
+          "section": "5.2, function 21"
+        }
+      ],
+      "call": { "function": 21, "de": 512, "stackPointer": 53248 },
+      "biosResponses": [],
+      "expected": {
+        "returnRegisters": { "a": 0, "l": 0, "sp": 53248, "pc": 260 },
+        "memory": [
+          {
+            "address": 512,
+            "length": 36,
+            "fill": 0,
+            "patches": [
+              {
+                "offset": 1,
+                "bytes": [78, 69, 87, 70, 73, 76, 69, 32, 84, 88, 84]
+              },
+              { "offset": 15, "bytes": [1, 2] },
+              { "offset": 32, "bytes": [1] }
+            ]
+          },
+          { "address": 64800, "bytes": [224, 0] }
+        ],
+        "biosCallCount": 4,
+        "biosTraceSha256": "411a3b2ecd37ef6d221c9ed91537a7e7d04972773dc670ec854206eba827ee89",
+        "biosDiskWriteCount": 2,
+        "biosDiskRecords": [
+          {
+            "drive": 0,
+            "record": 68,
+            "length": 128,
+            "fill": 90
+          }
+        ]
+      }
+    },
+    {
+      "id": "close-written-file",
+      "evidence": [
+        {
+          "kind": "published-interface",
+          "source": "Digital Research CP/M Operating System Manual, July 1982",
+          "section": "5.2, function 16"
+        }
+      ],
+      "call": { "function": 16, "de": 512, "stackPointer": 53248 },
+      "biosResponses": [],
+      "expected": {
+        "returnRegisters": { "a": 0, "l": 0, "sp": 53248, "pc": 260 },
+        "biosCallCount": 13,
+        "biosTraceSha256": "a614f4de6b1abb365cba4675a032ac5ca97a2827e10e1d11ed115dc7f19d2e60",
+        "biosDiskWriteCount": 3,
+        "biosDiskRecords": [
+          {
+            "drive": 0,
+            "record": 52,
+            "length": 128,
+            "fill": 229,
+            "patches": [
+              {
+                "offset": 0,
+                "bytes": [
+                  0, 78, 69, 87, 70, 73, 76, 69, 32, 84, 88, 84, 0, 0, 0, 1, 2,
+                  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+                ]
+              }
+            ]
+          },
+          { "drive": 0, "record": 68, "length": 128, "fill": 90 }
+        ]
+      }
+    },
+    {
+      "id": "set-file-attributes",
+      "evidence": [
+        {
+          "kind": "published-interface",
+          "source": "Digital Research CP/M Operating System Manual, July 1982",
+          "section": "5.2, function 30"
+        }
+      ],
+      "call": { "function": 30, "de": 1024, "stackPointer": 53248 },
+      "initialMemory": [
+        {
+          "address": 1024,
+          "bytes": [
+            0, 78, 69, 87, 70, 73, 76, 69, 32, 212, 216, 84, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+          ]
+        }
+      ],
+      "biosResponses": [],
+      "expected": {
+        "returnRegisters": { "a": 0, "l": 0, "sp": 53248, "pc": 260 },
+        "biosCallCount": 13,
+        "biosTraceSha256": "a614f4de6b1abb365cba4675a032ac5ca97a2827e10e1d11ed115dc7f19d2e60",
+        "biosDiskWriteCount": 4,
+        "biosDiskRecords": [
+          {
+            "drive": 0,
+            "record": 52,
+            "length": 128,
+            "fill": 229,
+            "patches": [
+              {
+                "offset": 0,
+                "bytes": [
+                  0, 78, 69, 87, 70, 73, 76, 69, 32, 212, 216, 84, 0, 0, 0, 1,
+                  2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "clear-file-attributes",
+      "evidence": [
+        {
+          "kind": "published-interface",
+          "source": "Digital Research CP/M Operating System Manual, July 1982",
+          "section": "5.2, function 30"
+        }
+      ],
+      "call": { "function": 30, "de": 1152, "stackPointer": 53248 },
+      "initialMemory": [
+        {
+          "address": 1152,
+          "bytes": [
+            0, 78, 69, 87, 70, 73, 76, 69, 32, 84, 88, 84, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+          ]
+        }
+      ],
+      "biosResponses": [],
+      "expected": {
+        "returnRegisters": { "a": 0, "l": 0, "sp": 53248, "pc": 260 },
+        "biosCallCount": 13,
+        "biosTraceSha256": "a614f4de6b1abb365cba4675a032ac5ca97a2827e10e1d11ed115dc7f19d2e60",
+        "biosDiskWriteCount": 5,
+        "biosDiskRecords": [
+          {
+            "drive": 0,
+            "record": 52,
+            "length": 128,
+            "fill": 229,
+            "patches": [
+              {
+                "offset": 0,
+                "bytes": [
+                  0, 78, 69, 87, 70, 73, 76, 69, 32, 84, 88, 84, 0, 0, 0, 1, 2,
+                  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "rename-file",
+      "evidence": [
+        {
+          "kind": "published-interface",
+          "source": "Digital Research CP/M Operating System Manual, July 1982",
+          "section": "5.2, function 23"
+        }
+      ],
+      "call": { "function": 23, "de": 1280, "stackPointer": 53248 },
+      "initialMemory": [
+        {
+          "address": 1280,
+          "bytes": [
+            0, 78, 69, 87, 70, 73, 76, 69, 32, 84, 88, 84, 0, 0, 0, 0, 0, 82,
+            69, 78, 65, 77, 69, 68, 32, 84, 88, 84, 0, 0, 0, 0, 0, 0, 0, 0
+          ]
+        }
+      ],
+      "biosResponses": [],
+      "expected": {
+        "returnRegisters": { "a": 0, "l": 0, "sp": 53248, "pc": 260 },
+        "biosCallCount": 13,
+        "biosTraceSha256": "a614f4de6b1abb365cba4675a032ac5ca97a2827e10e1d11ed115dc7f19d2e60",
+        "biosDiskWriteCount": 6,
+        "biosDiskRecords": [
+          {
+            "drive": 0,
+            "record": 52,
+            "length": 128,
+            "fill": 229,
+            "patches": [
+              {
+                "offset": 0,
+                "bytes": [
+                  0, 82, 69, 78, 65, 77, 69, 68, 32, 84, 88, 84, 0, 0, 0, 1, 2,
+                  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "delete-renamed-file",
+      "evidence": [
+        {
+          "kind": "published-interface",
+          "source": "Digital Research CP/M Operating System Manual, July 1982",
+          "section": "5.2, function 19"
+        }
+      ],
+      "call": { "function": 19, "de": 1536, "stackPointer": 53248 },
+      "initialMemory": [
+        {
+          "address": 1536,
+          "bytes": [
+            0, 82, 69, 78, 65, 77, 69, 68, 32, 84, 88, 84, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+          ]
+        }
+      ],
+      "biosResponses": [],
+      "expected": {
+        "returnRegisters": { "a": 0, "l": 0, "sp": 53248, "pc": 260 },
+        "memory": [{ "address": 64800, "bytes": [192, 0] }],
+        "biosCallCount": 10,
+        "biosTraceSha256": "c0be61b9bf60afeb135ab2a24bfb9ae6b2704aa560c230de429cb10c95693c05",
+        "biosDiskWriteCount": 7,
+        "biosDiskRecords": [
+          {
+            "drive": 0,
+            "record": 52,
+            "length": 128,
+            "fill": 229,
+            "patches": [
+              {
+                "offset": 1,
+                "bytes": [
+                  82, 69, 78, 65, 77, 69, 68, 32, 84, 88, 84, 0, 0, 0, 1, 2, 0,
+                  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+                ]
+              }
+            ]
+          },
+          { "drive": 0, "record": 68, "length": 128, "fill": 90 }
+        ]
+      }
+    }
+  ]
+}

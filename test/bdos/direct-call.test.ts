@@ -7,6 +7,9 @@ import {
   type BdosDirectCallResult,
   type BdosDirectCallSequenceFixture,
   type BdosObservedRegisters,
+  bdosBiosTraceSha256,
+  materializeBdosBytePattern,
+  materializeBdosMemoryPatch,
   runBdosDirectCall,
   runBdosDirectCallSequence,
   unexpectedDirectCallWrites,
@@ -73,28 +76,67 @@ function expectFixtureResult(
   if (fixture.expected.returnRegisters !== undefined) {
     expectPartialRegisters(result.registers, fixture.expected.returnRegisters);
   }
-  expect(result.biosCalls).toHaveLength(fixture.expected.biosCalls.length);
-  fixture.expected.biosCalls.forEach((expectedCall, index) => {
-    const observedCall = result.biosCalls[index];
-    expect(observedCall?.entry).toBe(expectedCall.entry);
-    expect(observedCall?.name).toBe(expectedCall.name);
-    if (expectedCall.registers !== undefined && observedCall !== undefined) {
-      expectPartialRegisters(observedCall.registers, expectedCall.registers);
+  if (fixture.expected.biosCalls !== undefined) {
+    expect(result.biosCalls).toHaveLength(fixture.expected.biosCalls.length);
+    fixture.expected.biosCalls.forEach((expectedCall, index) => {
+      const observedCall = result.biosCalls[index];
+      expect(observedCall?.entry).toBe(expectedCall.entry);
+      expect(observedCall?.name).toBe(expectedCall.name);
+      if (expectedCall.registers !== undefined && observedCall !== undefined) {
+        expectPartialRegisters(observedCall.registers, expectedCall.registers);
+      }
+    });
+  }
+  if (fixture.expected.biosCallCount !== undefined) {
+    expect(result.biosCalls).toHaveLength(fixture.expected.biosCallCount);
+  }
+  if (fixture.expected.biosTraceSha256 !== undefined) {
+    expect(bdosBiosTraceSha256(result.biosCalls)).toBe(
+      fixture.expected.biosTraceSha256,
+    );
+  }
+  if (fixture.expected.biosDiskState !== undefined) {
+    expect(result.biosDisk).toBeDefined();
+    for (const field of Object.keys(fixture.expected.biosDiskState) as Array<
+      keyof NonNullable<typeof fixture.expected.biosDiskState>
+    >) {
+      expect(result.biosDisk?.[field], `BIOS disk ${field}`).toBe(
+        fixture.expected.biosDiskState[field],
+      );
     }
-  });
+  }
+  if (fixture.expected.biosDiskWriteCount !== undefined) {
+    expect(result.biosDisk, "BIOS disk snapshot").toBeDefined();
+    expect(result.biosDisk?.writes, "BIOS disk writes").toHaveLength(
+      fixture.expected.biosDiskWriteCount,
+    );
+  }
+  for (const expectedRecord of fixture.expected.biosDiskRecords ?? []) {
+    const observedRecord = result.biosDisk?.records.find(
+      (candidate) =>
+        candidate.drive === expectedRecord.drive &&
+        candidate.record === expectedRecord.record,
+    );
+    expect(
+      observedRecord,
+      `BIOS disk record ${expectedRecord.drive}:${expectedRecord.record}`,
+    ).toBeDefined();
+    const expectedBytes = materializeBdosBytePattern(
+      expectedRecord,
+      `BIOS disk record ${expectedRecord.drive}:${expectedRecord.record}`,
+    );
+    expect(expectedBytes).toHaveLength(128);
+    expect(observedRecord?.bytes).toEqual([...expectedBytes]);
+  }
 
   const allowedAddresses = new Set<number>();
   for (const patch of fixture.expected.memory ?? []) {
+    const bytes = materializeBdosMemoryPatch(patch);
     expect(
-      [
-        ...result.memory.slice(
-          patch.address,
-          patch.address + patch.bytes.length,
-        ),
-      ],
+      [...result.memory.slice(patch.address, patch.address + bytes.length)],
       `memory at ${patch.address.toString(16)}`,
-    ).toEqual(patch.bytes);
-    for (let offset = 0; offset < patch.bytes.length; offset += 1) {
+    ).toEqual([...bytes]);
+    for (let offset = 0; offset < bytes.length; offset += 1) {
       allowedAddresses.add(patch.address + offset);
     }
   }
@@ -108,15 +150,22 @@ function expectFixtureResult(
 }
 
 describe("CP/M 2.2 BDOS direct-call contract", () => {
-  it("has at least one fixture for every function from 0 through 12", () => {
-    const covered = new Set(
-      fixtureNames.map((fixtureName) => readFixture(fixtureName).call.function),
-    );
+  it("has at least one fixture for every function from 0 through 40", () => {
+    const covered = new Set([
+      ...fixtureNames.map(
+        (fixtureName) => readFixture(fixtureName).call.function,
+      ),
+      ...sequenceFixtureNames.flatMap((fixtureName) =>
+        readSequenceFixture(fixtureName).steps.map(
+          (step) => step.call.function,
+        ),
+      ),
+    ]);
     expect(
       [...covered]
-        .filter((functionNumber) => functionNumber <= 12)
+        .filter((functionNumber) => functionNumber <= 40)
         .sort((left, right) => left - right),
-    ).toEqual(Array.from({ length: 13 }, (_, index) => index));
+    ).toEqual(Array.from({ length: 41 }, (_, index) => index));
   });
 
   it.each(fixtureNames)(

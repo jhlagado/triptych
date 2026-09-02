@@ -15,6 +15,8 @@ const transcripts = [firstTranscript, secondTranscript].map((text) =>
 const scenario = {
   schema: "triptych-cpm-headless-scenario-v1",
   id: "headless-runner-self-check",
+  expectedInitialDriveSha256:
+    "054edec1d0211f624fed0cbca9d4f9400b0e491c43742af2c5b0abebf0c990d8",
   sessions: [
     {
       id: "ansi-attributes-and-byte-input",
@@ -102,7 +104,23 @@ const result = runCpmHeadlessScenario({
 });
 
 assert.equal(result.id, scenario.id);
+assert.equal(result.initialDriveSha256, scenario.expectedInitialDriveSha256);
 assert.equal(result.sessions.length, 2);
 assert.deepEqual(result.finalDrive, Uint8Array.from([17, 34, 2, 3]));
 assert.deepEqual(closed, [0, 1]);
+assert.throws(
+  () =>
+    runCpmHeadlessScenario({
+      scenario: {
+        ...scenario,
+        id: "wrong-initial-drive",
+        expectedInitialDriveSha256: "0".repeat(64),
+      },
+      initialDrive: Uint8Array.from([0, 1, 2, 3]),
+      createMachine() {
+        throw new Error("machine must not start for the wrong disk");
+      },
+    }),
+  /wrong-initial-drive initial drive image/,
+);
 console.log("Headless CP/M scenario runner checks passed");

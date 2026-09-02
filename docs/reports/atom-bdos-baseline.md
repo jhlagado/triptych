@@ -53,21 +53,28 @@ This report records files and host-side assembly only. It contains no ESP32-S3
 hardware measurement and makes no claim about SD timing, serial reliability,
 power, pacing, or sustained physical operation.
 
-## Direct-harness seed
+## Direct-harness status
 
-Milestone 1 has begun with `test/support/bdos-direct-call.ts`. It loads only the
-frozen BDOS slot, invokes the public `$EC06` path from a small transient, and
-replaces the BIOS with 17 one-byte return stubs. The harness records registers
-at every BIOS entry, applies fixture-defined return values, checks caller-stack
-restoration, and rejects writes outside the resident BDOS region and the
-caller's two-byte return slot.
+Milestone 1 uses `test/support/bdos-direct-call.ts`. It loads only the frozen
+BDOS slot, invokes the public `$EC06` path from a small transient, and replaces
+the BIOS with its public 17-entry interface. The harness records registers at
+every BIOS entry, applies fixture-defined return values, checks caller-stack
+restoration, and rejects writes outside the resident BDOS region, declared
+outputs, BIOS workspace, and the caller's two-byte return slot.
 
-Twenty-one evidence-tagged fixtures now cover every function from 0 through
-12, plus an out-of-range function. They include warm boot, direct and buffered
+Evidence-tagged fixtures now execute every function from 0 through 40, plus an
+out-of-range function. Console cases include warm boot, direct and buffered
 input, output status polling, tab expansion, control-S pause/resume, control-P
 printer echo, backspace editing, I/O byte state, strings, and peripheral I/O.
-They are data under `test/bdos/fixtures/functions/`, not facts extracted from
-legacy source symbols. All pass against the hashed oracle.
+A semantic BIOS disk double publishes a documented DPH/DPB and models
+selection, positioning, sector translation, DMA, 128-byte reads, and writes.
+Stateful fixtures prove disk/user/vector state, file open and read, directory
+search, create/write/close, attributes, rename, delete, random access, file
+size, random-record conversion, and zero-filled extension. They compare public
+BIOS call traces, FCB and DMA results, allocation bits, exact directory and data
+records, and disk-write counts. The fixtures are data under
+`test/bdos/fixtures/`, not facts extracted from legacy source symbols. All pass
+against the hashed oracle.
 
 The existing WASM proof now reads
 `test/bdos/scenarios/ccp-file-roundtrip.json` and feeds each fresh-process CCP
@@ -82,7 +89,8 @@ also assert the persisted disk digest.
 
 ## Next proof
 
-Extend the direct harness to preserve BDOS state across a sequence of calls,
-then define the disk and filesystem matrix for functions 13 through 40. That
-sequence support is required to reset and select a disk through public calls
-rather than initializing private legacy state.
+Add adversarial fixtures around the now-complete basic function matrix:
+wildcards, user isolation, extent boundaries, absent drives, read-only files
+and disks, full directory and allocation maps, and injected BIOS read/write
+failure. These must prove rejection atomicity before replacement code is
+written.

@@ -286,7 +286,11 @@ async function proveCpm() {
         };
       },
     });
-    scenarios.push({ id: result.id, sessions: result.sessions });
+    scenarios.push({
+      id: result.id,
+      initialDriveSha256: result.initialDriveSha256,
+      sessions: result.sessions,
+    });
   }
   return { scenarios };
 }

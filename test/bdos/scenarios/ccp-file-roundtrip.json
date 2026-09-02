@@ -2,6 +2,7 @@
   "schema": "triptych-cpm-headless-scenario-v1",
   "id": "ccp-file-roundtrip",
   "description": "Cold-boot the CCP twice, create a file through BDOS, then display it from a fresh machine using the persisted disk",
+  "expectedInitialDriveSha256": "2e2e14dc3d8af3a36054994a5cf41b3d1bb6087a36aa837d43d9c65b01ec375f",
   "sessions": [
     {
       "id": "create-with-smoke",

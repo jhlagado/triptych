@@ -2,6 +2,7 @@
   "schema": "triptych-cpm-headless-scenario-v1",
   "id": "edit-ansi-quit",
   "description": "Launch EDIT.COM, prove its ANSI-rendered screen, then inject Ctrl-Q only after the editor is ready and return to the CCP",
+  "expectedInitialDriveSha256": "2e2e14dc3d8af3a36054994a5cf41b3d1bb6087a36aa837d43d9c65b01ec375f",
   "sessions": [
     {
       "id": "open-and-quit-editor",

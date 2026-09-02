@@ -1,4 +1,11 @@
+import { createHash } from "node:crypto";
+
 import { createDebug80TestHarness } from "./debug80-runtime.js";
+import {
+  BdosBiosDiskDouble,
+  type BdosBiosDiskFixture,
+  type BdosBiosDiskSnapshot,
+} from "./bdos-bios-double.js";
 
 const MEMORY_BYTES = 0x10000;
 const CALLER_ADDRESS = 0x0100;
@@ -43,10 +50,8 @@ export interface BdosDirectCallFixture {
     de: number;
     stackPointer: number;
   };
-  initialMemory?: Array<{
-    address: number;
-    bytes: number[];
-  }>;
+  initialMemory?: BdosMemoryPatch[];
+  biosDisk?: BdosBiosDiskFixture;
   biosResponses: Array<{
     entry: number;
     occurrence: number;
@@ -61,16 +66,39 @@ export interface BdosDirectCallFixture {
     stop?: "normal-return" | "bios-transfer";
     biosTransferEntry?: number;
     returnRegisters?: Partial<BdosObservedRegisters>;
-    memory?: Array<{
-      address: number;
-      bytes: number[];
-    }>;
-    biosCalls: Array<{
+    memory?: BdosMemoryPatch[];
+    biosCalls?: Array<{
       entry: number;
       name: string;
       registers?: Partial<BdosObservedRegisters>;
     }>;
+    biosCallCount?: number;
+    biosTraceSha256?: string;
+    biosDiskState?: Partial<
+      Pick<BdosBiosDiskSnapshot, "selectedDrive" | "track" | "sector" | "dma">
+    >;
+    biosDiskWriteCount?: number;
+    biosDiskRecords?: Array<
+      BdosBytePattern & {
+        drive: number;
+        record: number;
+      }
+    >;
   };
+}
+
+export interface BdosBytePattern {
+  bytes?: number[];
+  length?: number;
+  fill?: number;
+  patches?: Array<{
+    offset: number;
+    bytes: number[];
+  }>;
+}
+
+export interface BdosMemoryPatch extends BdosBytePattern {
+  address: number;
 }
 
 export interface BdosObservedRegisters {
@@ -92,6 +120,29 @@ export interface BdosBiosCall {
   registers: BdosObservedRegisters;
 }
 
+function biosCallArguments(call: BdosBiosCall): string {
+  const { registers } = call;
+  if ([4, 5, 6].includes(call.entry)) return `c=${registers.c}`;
+  if (call.entry === 9) return `c=${registers.c},e=${registers.e}`;
+  if ([10, 11, 12].includes(call.entry)) {
+    return `bc=${(registers.b << 8) | registers.c}`;
+  }
+  if (call.entry === 16) {
+    return `bc=${(registers.b << 8) | registers.c},de=${(registers.d << 8) | registers.e}`;
+  }
+  return "";
+}
+
+export function bdosBiosTraceSha256(calls: BdosBiosCall[]): string {
+  const canonical = calls
+    .map(
+      (call) =>
+        `${call.entry}:${call.name}:${call.occurrence}:${biosCallArguments(call)}`,
+    )
+    .join("\n");
+  return createHash("sha256").update(`${canonical}\n`, "utf8").digest("hex");
+}
+
 export interface BdosDirectCallResult {
   stop: "normal-return" | "bios-transfer";
   biosTransferEntry?: number;
@@ -99,6 +150,9 @@ export interface BdosDirectCallResult {
   biosCalls: BdosBiosCall[];
   changedAddresses: number[];
   memory: Uint8Array;
+  biosDisk?: BdosBiosDiskSnapshot;
+  biosOwnedWritableAddresses: number[];
+  biosMemoryWrittenAddresses: number[];
   steps: number;
   tStates: number;
 }
@@ -109,6 +163,7 @@ export interface BdosDirectCallSequenceFixture {
   schema: "triptych-bdos-direct-sequence-v1";
   id: string;
   description: string;
+  biosDisk?: BdosBiosDiskFixture;
   steps: BdosDirectCallStep[];
 }
 
@@ -118,6 +173,56 @@ export interface BdosDirectCallSequenceResult {
     id: string;
     result: BdosDirectCallResult;
   }>;
+}
+
+function assertByte(value: number, label: string): void {
+  if (!Number.isInteger(value) || value < 0 || value > 0xff) {
+    throw new Error(`${label} must be a byte`);
+  }
+}
+
+export function materializeBdosBytePattern(
+  pattern: BdosBytePattern,
+  label = "byte pattern",
+): Uint8Array {
+  if (
+    pattern.length !== undefined &&
+    (!Number.isInteger(pattern.length) || pattern.length < 0)
+  ) {
+    throw new Error(`${label} length must be a non-negative integer`);
+  }
+  if (pattern.fill !== undefined) assertByte(pattern.fill, `${label} fill`);
+  pattern.bytes?.forEach((value) => assertByte(value, `${label} byte`));
+  const hasBytes = pattern.bytes !== undefined;
+  const hasFilledLength =
+    pattern.length !== undefined && pattern.fill !== undefined;
+  if (hasBytes === hasFilledLength) {
+    throw new Error(
+      `${label} must define exactly one of bytes and length with fill`,
+    );
+  }
+  const bytes = hasBytes
+    ? Uint8Array.from(pattern.bytes ?? [])
+    : new Uint8Array(pattern.length ?? 0).fill(pattern.fill ?? 0);
+  for (const nested of pattern.patches ?? []) {
+    nested.bytes.forEach((value) => assertByte(value, `${label} patch byte`));
+    if (
+      !Number.isInteger(nested.offset) ||
+      nested.offset < 0 ||
+      nested.offset + nested.bytes.length > bytes.length
+    ) {
+      throw new Error(`${label} nested patch is out of range`);
+    }
+    bytes.set(nested.bytes, nested.offset);
+  }
+  return bytes;
+}
+
+export function materializeBdosMemoryPatch(patch: BdosMemoryPatch): Uint8Array {
+  if (!Number.isInteger(patch.address) || patch.address < 0) {
+    throw new Error("memory patch address must be a non-negative integer");
+  }
+  return materializeBdosBytePattern(patch, "memory patch");
 }
 
 function observedRegisters(
@@ -164,6 +269,7 @@ function applyBiosReturn(
 
 function createBdosDirectRunner(
   bdos: Uint8Array,
+  biosDiskFixture?: BdosBiosDiskFixture,
 ): (fixture: BdosDirectCallFixture) => BdosDirectCallResult {
   if (bdos.length !== BDOS_LIMIT - BDOS_BASE) {
     throw new Error(
@@ -189,16 +295,19 @@ function createBdosDirectRunner(
     );
     memory[stubAddress] = 0xc9;
   }
+  const biosDisk =
+    biosDiskFixture === undefined
+      ? undefined
+      : new BdosBiosDiskDouble(biosDiskFixture, memory);
 
   return (fixture: BdosDirectCallFixture): BdosDirectCallResult => {
+    biosDisk?.beginCall();
     for (const patch of fixture.initialMemory ?? []) {
-      if (
-        patch.address < 0 ||
-        patch.address + patch.bytes.length > MEMORY_BYTES
-      ) {
+      const bytes = materializeBdosMemoryPatch(patch);
+      if (patch.address < 0 || patch.address + bytes.length > MEMORY_BYTES) {
         throw new Error(`${fixture.id} initial memory patch is out of range`);
       }
-      memory.set(patch.bytes, patch.address);
+      memory.set(bytes, patch.address);
     }
 
     const initialMemory = memory.slice();
@@ -243,6 +352,10 @@ function createBdosDirectRunner(
           biosTransferEntry = entry;
           break;
         }
+        // An explicit response replaces the semantic disk operation. This lets
+        // fixtures inject a failed BIOS read or write without first committing
+        // the successful side effect that the response is meant to replace.
+        if (response === undefined) biosDisk?.handle(entry, state);
         applyBiosReturn(fixture, entry, occurrence, state);
         runtime.restoreCpuState(state);
       }
@@ -272,6 +385,9 @@ function createBdosDirectRunner(
       biosCalls,
       changedAddresses,
       memory: memory.slice(),
+      ...(biosDisk === undefined ? {} : { biosDisk: biosDisk.snapshot() }),
+      biosOwnedWritableAddresses: [...(biosDisk?.ownedWritableAddresses ?? [])],
+      biosMemoryWrittenAddresses: [...(biosDisk?.memoryWrittenAddresses ?? [])],
       steps,
       tStates,
     };
@@ -282,14 +398,14 @@ export function runBdosDirectCall(
   bdos: Uint8Array,
   fixture: BdosDirectCallFixture,
 ): BdosDirectCallResult {
-  return createBdosDirectRunner(bdos)(fixture);
+  return createBdosDirectRunner(bdos, fixture.biosDisk)(fixture);
 }
 
 export function runBdosDirectCallSequence(
   bdos: Uint8Array,
   fixture: BdosDirectCallSequenceFixture,
 ): BdosDirectCallSequenceResult {
-  const run = createBdosDirectRunner(bdos);
+  const run = createBdosDirectRunner(bdos, fixture.biosDisk);
   return {
     id: fixture.id,
     steps: fixture.steps.map((step) => ({
@@ -310,6 +426,8 @@ export function unexpectedDirectCallWrites(
     (address) =>
       !(address >= BDOS_BASE && address < BDOS_LIMIT) &&
       !(address >= callStackFirst && address <= callStackLast) &&
+      !result.biosOwnedWritableAddresses.includes(address) &&
+      !result.biosMemoryWrittenAddresses.includes(address) &&
       !allowedAddresses.has(address),
   );
 }

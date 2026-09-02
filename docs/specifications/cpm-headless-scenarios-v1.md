@@ -33,9 +33,12 @@ terminal state do not survive a session boundary.
 ## Fixture shape
 
 The JSON schema identifier is `triptych-cpm-headless-scenario-v1`. A scenario
-has an `id`, a human-readable `description`, and a non-empty `sessions` array.
-For a one-shot command, each session has an `id` and exactly one field from
-each pair below:
+has an `id`, a human-readable `description`, an
+`expectedInitialDriveSha256` identifying the exact installed starting image,
+and a non-empty `sessions` array. The runner checks the starting digest before
+booting the first machine, so a fixture cannot silently replay against a
+different CCP, BDOS, BIOS, or application set. For a one-shot command, each
+session has an `id` and exactly one field from each pair below:
 
 | Purpose                  | Readable 7-bit form  | Arbitrary byte form       |
 | ------------------------ | -------------------- | ------------------------- |

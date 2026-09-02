@@ -125,6 +125,11 @@ function sessionInteractions(session) {
 function validateScenario(scenario) {
   assert.equal(scenario.schema, CPM_HEADLESS_SCENARIO_SCHEMA);
   assert.equal(typeof scenario.id, "string");
+  assert.match(
+    scenario.expectedInitialDriveSha256,
+    /^[0-9a-f]{64}$/,
+    `${scenario.id} expectedInitialDriveSha256`,
+  );
   assert.ok(Array.isArray(scenario.sessions) && scenario.sessions.length > 0);
 }
 
@@ -142,6 +147,12 @@ export function runCpmHeadlessScenario({
 }) {
   validateScenario(scenario);
   let persisted = Uint8Array.from(initialDrive);
+  const initialDriveSha256 = sha256(persisted);
+  assert.equal(
+    initialDriveSha256,
+    scenario.expectedInitialDriveSha256,
+    `${scenario.id} initial drive image`,
+  );
   const results = [];
 
   for (const session of scenario.sessions) {
@@ -242,6 +253,7 @@ export function runCpmHeadlessScenario({
 
   return {
     id: scenario.id,
+    initialDriveSha256,
     sessions: results,
     finalDrive: persisted,
   };
