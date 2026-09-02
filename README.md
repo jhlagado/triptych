@@ -69,20 +69,17 @@ TRIPTYCH_CPM22_IMAGE=/path/to/cpm22.img npm run run:cpm22-native
 ```
 
 The launcher prints the source image's SHA-256 digest, assembles Triptych's
-boot ROM, BDOS, and BIOS, and installs the resident components in a temporary
-copy of the disk. CP/M disk writes last for the session and are discarded when
-the launcher exits with Ctrl-C; the supplied image is never modified.
-
-The in-progress Triptych CCP can be previewed on the native host without
-replacing the retained production CCP or modifying the source disk:
+boot ROM, CCP, BDOS, and BIOS, and installs the resident components in a
+temporary copy of the disk. CP/M disk writes last for the session and are
+discarded when the launcher exits with Ctrl-C; the supplied image is never
+modified. The shorter CCP-specific command starts the same configuration:
 
 ```sh
 npm run run:ccp-native
 ```
 
-The preview currently proves prompt and command parsing, bounded transient
-loading and return, page-zero command-tail/default-FCB publication, `DIR`, and
-`TYPE`. Its complete acceptance state is tracked by the
+The CCP implements all six CP/M 2.2 resident commands and runs the bundled
+editor, assembler, and compiler. Its complete acceptance state is tracked by the
 [Atom CCP roadmap](docs/plans/atom-ccp-roadmap.md) and
 [CCP contract](docs/specifications/ccp-v0.1.md).
 
@@ -114,9 +111,9 @@ TRIPTYCH_CPM22_WORK_DISK=/path/to/triptych-working.img \
 npm run run:cpm22-native
 ```
 
-The launcher installs the current Triptych BDOS and BIOS atomically before
-boot. Guest writes that reach the disk controller's flush boundary remain in
-the named working image across host processes.
+The launcher installs the current Triptych CCP, BDOS, and BIOS atomically
+before boot. Guest writes that reach the disk controller's flush boundary
+remain in the named working image across host processes.
 
 The Stage 5 WebAssembly proof additionally needs the exactly matching
 `wasm-bindgen` 0.2.127 command-line tool:
@@ -132,9 +129,10 @@ npm run proof:wasm-host
 
 CCP and application sessions can also be replayed without the browser. The
 default proof boots the repository's provenance-reviewed disk and runs every
-scenario under `test/bdos/scenarios/`: CCP file and `DIR`/`TYPE` workflows, a
-staged `EDIT.COM` ANSI session, and an `ATOM.COM` assembly followed by execution
-of its output in a fresh machine. It checks exact serial bytes, complete ANSI
+scenario under `test/bdos/scenarios/` and `test/ccp/scenarios/`: built-in and
+loader boundaries, CCP file and `DIR`/`TYPE` workflows, a staged `EDIT.COM`
+ANSI session, and `ATOM.COM` and `NUC.COM` compilation followed by execution of
+their output in a fresh machine. It checks exact serial bytes, complete ANSI
 screen state, and declared disk digests:
 
 ```sh
@@ -148,8 +146,8 @@ defines readable ASCII and arbitrary byte inputs, terminal snapshots, and
 cross-session disk persistence.
 
 The same toolchain builds an interactive browser terminal. It installs the
-current Triptych BDOS and BIOS into the bundled or user-selected disk before
-starting CP/M automatically:
+current Triptych CCP, BDOS, and BIOS into the bundled or user-selected disk
+before starting CP/M automatically:
 
 ```sh
 npm run run:wasm-browser
@@ -179,10 +177,9 @@ contracts. Current implementation work is limited to the CPU module; the
 Rust, native, WebAssembly, ESP32-S3, and breadboard stages and their proof
 gates. The [Atom BDOS roadmap](docs/plans/atom-bdos-roadmap.md) and
 [BDOS contract](docs/specifications/bdos-v0.1.md) define the independent,
-interface-driven replacement of the transitional BDOS while retaining the
-existing CCP and Triptych BIOS. The
+interface-driven replacement of the transitional BDOS. The
 [Atom CCP roadmap](docs/plans/atom-ccp-roadmap.md) and
-[CCP contract](docs/specifications/ccp-v0.1.md) define the next independently
+[CCP contract](docs/specifications/ccp-v0.1.md) define its independently
 implemented resident replacement. The
 [CPU conformance contract](docs/specifications/cpu-conformance-v1.md)
 and [Stage 1 report](docs/reports/cpu-stage1-conformance.md) retain the first

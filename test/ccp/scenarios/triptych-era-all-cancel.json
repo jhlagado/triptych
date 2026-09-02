@@ -1,0 +1,40 @@
+{
+  "schema": "triptych-cpm-headless-scenario-v1",
+  "id": "triptych-ccp-era-all-cancel",
+  "description": "Require the Triptych CCP to match the ERA *.* confirmation and cancellation transcript",
+  "systemCcp": "triptych",
+  "systemBdos": "triptych",
+  "expectedInitialDriveSha256": "183cc8f95e8ee7beee0776e87c29e6429191cdeab4393365cb6c4049cbccf089",
+  "sessions": [
+    {
+      "id": "cancel-erase-all",
+      "interactions": [
+        { "id": "boot", "inputAscii": "", "stopAfterAscii": "\r\nA>" },
+        {
+          "id": "request",
+          "inputAscii": "era *.*\r",
+          "stopAfterAscii": "?"
+        },
+        {
+          "id": "cancel",
+          "inputAscii": "N\r",
+          "stopAfterAscii": "\r\nA>"
+        },
+        {
+          "id": "unchanged",
+          "inputAscii": "dir readme.txt\r",
+          "stopAfterAscii": "README   TXT\r\nA>"
+        }
+      ],
+      "expectedTranscript": "\r\nA>era *.*\r\r\nALL (Y/N)?N\r\r\nA>dir readme.txt\r\r\nA: README   TXT\r\nA>",
+      "expectedTerminal": {
+        "text": "\nA>era *.*\nALL (Y/N)?N\nA>dir readme.txt\nA: README   TXT\nA>",
+        "cursorRow": 5,
+        "cursorColumn": 2,
+        "currentAttributes": 0,
+        "wrapPending": false,
+        "bellCount": 0
+      }
+    }
+  ]
+}

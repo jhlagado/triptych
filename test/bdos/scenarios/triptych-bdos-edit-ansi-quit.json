@@ -1,9 +1,10 @@
 {
   "schema": "triptych-cpm-headless-scenario-v1",
   "id": "triptych-bdos-edit-ansi-quit",
-  "description": "Launch EDIT.COM through the Triptych BDOS and prove its ANSI screen before quitting without saving",
+  "description": "Launch EDIT.COM through the Triptych CCP and BDOS and prove its ANSI screen before quitting without saving",
+  "systemCcp": "triptych",
   "systemBdos": "triptych",
-  "expectedInitialDriveSha256": "6f4413d04af07746a37b4abc9a67fdb81537a67b4d89b2df8d46d25bbb76681f",
+  "expectedInitialDriveSha256": "183cc8f95e8ee7beee0776e87c29e6429191cdeab4393365cb6c4049cbccf089",
   "sessions": [
     {
       "id": "open-and-quit-editor",
@@ -34,7 +35,7 @@
         }
       ],
       "expectedTranscript": "\r\nA>EDIT INPUT.NU\r\r\n\u001b[2J\u001b[Hsub main() fails\r\n    writeOutputByte('O') else fail\r\n    writeOutputByte('K') else fail\r\nend\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\u001b[24;1H\u001b[7mEDIT INPUT   .NU       ^S Save  ^Q Quit                                         \u001b[0m\u001b[1;1H\u001b[2J\u001b[H\r\nA>",
-      "expectedDriveSha256": "6f4413d04af07746a37b4abc9a67fdb81537a67b4d89b2df8d46d25bbb76681f",
+      "expectedDriveSha256": "183cc8f95e8ee7beee0776e87c29e6429191cdeab4393365cb6c4049cbccf089",
       "expectedTerminal": {
         "text": "\nA>",
         "cursorRow": 1,

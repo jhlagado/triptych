@@ -4,7 +4,7 @@
   "description": "Require the Triptych CCP to match blank-line, drive-selection, missing-command, transient-load, persistence, and warm-return behavior",
   "systemCcp": "triptych",
   "systemBdos": "triptych",
-  "expectedInitialDriveSha256": "05a4e60c636fae511c75613c92b5d78798f6b596afa9a351da53faf474a20636",
+  "expectedInitialDriveSha256": "183cc8f95e8ee7beee0776e87c29e6429191cdeab4393365cb6c4049cbccf089",
   "expectedFinalFiles": [
     {
       "name": "RESULT.TXT",
@@ -43,7 +43,7 @@
         }
       ],
       "expectedTranscript": "\r\nA>\r\r\nA>a:\r\r\nA>nope\r\r\nNOPE?\r\n\r\nA>smoke\r\r\nWrote RESULT.TXT\r\n\r\nA>",
-      "expectedDriveSha256": "0939b9a77dae2cfdf67d687281f1ffc7ea058d9a1671f3d0cd4b06595ef3eda4",
+      "expectedDriveSha256": "3048239674644d8f1f92976b1eaf4e01c622720121371b2a32d74b7581e4346a",
       "expectedTerminal": {
         "text": "\nA>\nA>a:\nA>nope\nNOPE?\n\nA>smoke\nWrote RESULT.TXT\n\nA>",
         "cursorRow": 9,

@@ -1,0 +1,50 @@
+{
+  "schema": "triptych-cpm-headless-scenario-v1",
+  "id": "triptych-ccp-builtin-errors",
+  "description": "Require the Triptych CCP to match public USER, ERA, and REN diagnostics and recovery",
+  "systemCcp": "triptych",
+  "systemBdos": "triptych",
+  "expectedInitialDriveSha256": "183cc8f95e8ee7beee0776e87c29e6429191cdeab4393365cb6c4049cbccf089",
+  "sessions": [
+    {
+      "id": "builtin-errors",
+      "interactions": [
+        { "id": "boot", "inputAscii": "", "stopAfterAscii": "\r\nA>" },
+        {
+          "id": "missing-era",
+          "inputAscii": "era missing.txt\r",
+          "stopAfterAscii": "\r\nA>"
+        },
+        {
+          "id": "missing-ren-source",
+          "inputAscii": "ren new.txt=missing.txt\r",
+          "stopAfterAscii": "\r\nA>"
+        },
+        {
+          "id": "existing-ren-destination",
+          "inputAscii": "ren readme.txt=smoke.com\r",
+          "stopAfterAscii": "\r\nA>"
+        },
+        {
+          "id": "invalid-save-count",
+          "inputAscii": "save x foo.com\r",
+          "stopAfterAscii": "\r\nA>"
+        },
+        {
+          "id": "invalid-user",
+          "inputAscii": "user 16\r",
+          "stopAfterAscii": "\r\nA>"
+        }
+      ],
+      "expectedTranscript": "\r\nA>era missing.txt\r\r\nNO FILE\r\nA>ren new.txt=missing.txt\r\r\nNO FILE\r\nA>ren readme.txt=smoke.com\r\r\nFILE EXISTS\r\nA>save x foo.com\r\r\nX?\r\n\r\nA>user 16\r\r\n16?\r\n\r\nA>",
+      "expectedTerminal": {
+        "text": "\nA>era missing.txt\nNO FILE\nA>ren new.txt=missing.txt\nNO FILE\nA>ren readme.txt=smoke.com\nFILE EXISTS\nA>save x foo.com\nX?\n\nA>user 16\n16?\n\nA>",
+        "cursorRow": 13,
+        "cursorColumn": 2,
+        "currentAttributes": 0,
+        "wrapPending": false,
+        "bellCount": 0
+      }
+    }
+  ]
+}

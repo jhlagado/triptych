@@ -68,10 +68,13 @@ not a performance expectation; ordinary scenarios retain the default bound.
 
 An optional `initialFiles` array installs repository-owned inputs into the
 scenario's private disk before its initial digest is checked. Each entry names
-the CP/M file, repository-relative source path, and `cpm-text` encoding. Text
-preparation validates ASCII, converts line endings to CRLF, and uses `$1A` for
-record padding. The repository file and original transitional disk remain
-unchanged.
+the CP/M file and encoding. A `cpm-text` entry has a repository-relative source
+path; preparation validates ASCII, converts line endings to CRLF, and uses
+`$1A` for record padding. A `generated-bytes` entry instead has a positive byte
+length, fill byte, and optional bounded byte patches. Generated input is for
+capacity and boundary fixtures whose size is the behavior under test, not for
+encoding guest implementation logic. The repository file and original
+transitional disk remain unchanged.
 
 An optional `initialPrograms` array installs a test-only transient assembled
 from repository-owned Atom-compatible source. Each entry has kind

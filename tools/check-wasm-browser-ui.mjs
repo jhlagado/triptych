@@ -48,6 +48,8 @@ assert.ok(
 assert.ok(
   applicationSource.includes("mobileInput.focus({ preventScroll: true })"),
 );
+assert.ok(applicationSource.includes('"ccp.bin"'));
+assert.ok(applicationSource.includes("disk.set(ccp, CCP_SYSTEM_OFFSET)"));
 assert.ok(styleSource.includes("body.terminal-keyboard-open main"));
 assert.ok(
   styleSource.includes("grid-template-columns: repeat(4, minmax(0, 1fr))"),

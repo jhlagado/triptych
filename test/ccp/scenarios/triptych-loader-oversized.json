@@ -1,0 +1,49 @@
+{
+  "schema": "triptych-cpm-headless-scenario-v1",
+  "id": "triptych-ccp-loader-oversized",
+  "description": "Prove one-record-over-TPA rejection before resident overwrite and recovery through a subsequent transient",
+  "systemCcp": "triptych",
+  "systemBdos": "triptych",
+  "maximumSlices": 1200,
+  "initialFiles": [
+    {
+      "name": "HUGE.COM",
+      "encoding": "generated-bytes",
+      "bytes": 58240,
+      "fillByte": 0,
+      "patches": [{ "offset": 0, "bytes": [195, 0, 0] }]
+    }
+  ],
+  "expectedInitialDriveSha256": "31b4265d3dd3b3afe1463a24da3e470e9471911b61d2c52dbe2c3860c20e3fb4",
+  "sessions": [
+    {
+      "id": "oversized-and-recovery",
+      "interactions": [
+        {
+          "id": "boot",
+          "inputAscii": "",
+          "stopAfterAscii": "\r\nA>"
+        },
+        {
+          "id": "oversized",
+          "inputAscii": "huge\r",
+          "stopAfterAscii": "HUGE?\r\n\r\nA>"
+        },
+        {
+          "id": "recovery",
+          "inputAscii": "dir\r",
+          "stopAfterAscii": "\r\nA>"
+        }
+      ],
+      "expectedTranscript": "\r\nA>huge\r\r\nHUGE?\r\n\r\nA>dir\r\r\nA: README   TXT : SMOKE    COM : ATOM     COM : INPUT    ASM\r\nA: HELLO    ASM : LARGE    ASM : PART1    ASM : PART2    ASM\r\nA: BUILD    ASM : NUC      COM : INPUT    NU  : EDIT     COM\r\nA: HUGE     COM\r\nA>",
+      "expectedTerminal": {
+        "text": "\nA>huge\nHUGE?\n\nA>dir\nA: README   TXT : SMOKE    COM : ATOM     COM : INPUT    ASM\nA: HELLO    ASM : LARGE    ASM : PART1    ASM : PART2    ASM\nA: BUILD    ASM : NUC      COM : INPUT    NU  : EDIT     COM\nA: HUGE     COM\nA>",
+        "cursorRow": 9,
+        "cursorColumn": 2,
+        "currentAttributes": 0,
+        "wrapPending": false,
+        "bellCount": 0
+      }
+    }
+  ]
+}

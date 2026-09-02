@@ -26,8 +26,11 @@ changes only one resident component. Shell extensions remain a later CCP v2
 or transient application.
 
 Tests select `systemCcp: oracle` or `systemCcp: triptych` without exposing that
-choice to guest software. Production native, WASM, and ESP32 image builders
-continue installing the retained CCP until every matrix row passes.
+choice to guest software. Production native and WASM image builders install the
+Triptych CCP after the six built-ins, bundled applications, and self-assembly
+pass. The retained CCP remains available through an explicit oracle selection
+in development tests. The matrix keeps `publicationReady` false until the
+deeper failure, parser, and resident-stack rows pass.
 
 ## Roadmap
 
@@ -50,7 +53,7 @@ Exit: the target and every required behavior have a named acceptance row.
 Exit: a plausible wrong FCB layout, tail boundary, terminator, stack return,
 or warm restart fails before built-in work begins.
 
-### Milestone 2 — prompt, parser, and transient vertical slice (active)
+### Milestone 2 — prompt, parser, and transient vertical slice (complete)
 
 - implement cold/warm entry, prompt, uppercase command buffer, command FCB,
   bounded COM loading, page-zero publication, transient stack, and return;
@@ -61,7 +64,7 @@ or warm restart fails before built-in work begins.
 Exit: the Triptych CCP loads a real transient, supplies both FCBs and the tail,
 returns through warm boot, and recovers from each loader failure.
 
-### Milestone 3 — read-only built-ins
+### Milestone 3 — read-only built-ins (complete)
 
 - implement `DIR` and `TYPE` through BDOS;
 - freeze default arguments, wildcards, user visibility, output pagination and
@@ -71,7 +74,7 @@ returns through warm boot, and recovers from each loader failure.
 Exit: oracle and Triptych scenarios agree on the reviewed `DIR` and `TYPE`
 matrix without a host-side filesystem shortcut.
 
-### Milestone 4 — mutation built-ins
+### Milestone 4 — mutation built-ins (active)
 
 - implement `ERA`, `REN`, and `SAVE` through BDOS;
 - prove confirmation, replacement rejection, read-only, full-disk,
@@ -90,7 +93,7 @@ Exit: every mutating command is failure-atomic at the documented boundary.
 Exit: every parser and built-in matrix row is proved, including recovery by a
 subsequent valid command.
 
-### Milestone 6 — resident and application qualification
+### Milestone 6 — resident and application qualification (active)
 
 - account code, immutable data, mutable workspace, load scratch, private
   stack, and free bytes inside `$E400..$EBFF`;
@@ -102,7 +105,7 @@ subsequent valid command.
 Exit: all matrix rows are `proved`; no byte or dependency lies outside the
 declared boundary.
 
-### Milestone 7 — publication and hardware follow-up
+### Milestone 7 — publication and hardware follow-up (active)
 
 - switch native, browser, and firmware image preparation to the Triptych CCP;
 - run `npm run check`, publish GitHub Pages, and verify the fetched artifact;
@@ -114,6 +117,7 @@ remain explicitly pending until the board arrives.
 
 ## Immediate next checkpoint
 
-Complete Milestone 2 with invalid-command, drive-state, loader-limit, and
-`SMOKE.COM` scenarios. Do not begin built-in implementation until those
-external boundaries distinguish the likely parser and loader failures.
+Publish and verify the browser build containing the Triptych CCP. Then finish
+the Milestone 4 failure matrix for read-only media, directory-full, disk-full,
+and partial-write cases, followed by generated parser boundaries and the
+worst-case stack proof.

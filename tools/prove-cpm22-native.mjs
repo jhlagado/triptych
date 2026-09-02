@@ -17,7 +17,7 @@ const hostExecutable = join(
     : "triptych-host-native",
 );
 const cpmImagePath = process.env.TRIPTYCH_CPM22_IMAGE;
-const systemCcp = process.env.TRIPTYCH_CPM_CCP ?? "oracle";
+const systemCcp = process.env.TRIPTYCH_CPM_CCP ?? "triptych";
 if (!cpmImagePath) {
   throw new Error(
     "TRIPTYCH_CPM22_IMAGE must name a provenance-reviewed CP/M 2.2 disk image",

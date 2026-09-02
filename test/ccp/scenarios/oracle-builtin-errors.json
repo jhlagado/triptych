@@ -1,0 +1,54 @@
+{
+  "schema": "triptych-cpm-headless-scenario-v1",
+  "id": "ccp-oracle-builtin-errors",
+  "description": "Freeze public diagnostics and recovery for USER, ERA, REN, and SAVE without inspecting the oracle implementation",
+  "systemCcp": "oracle",
+  "systemBdos": "triptych",
+  "expectedInitialDriveSha256": "6f4413d04af07746a37b4abc9a67fdb81537a67b4d89b2df8d46d25bbb76681f",
+  "sessions": [
+    {
+      "id": "builtin-errors",
+      "interactions": [
+        {
+          "id": "boot",
+          "inputAscii": "",
+          "stopAfterAscii": "\r\nA>"
+        },
+        {
+          "id": "missing-era",
+          "inputAscii": "era missing.txt\r",
+          "stopAfterAscii": "\r\nA>"
+        },
+        {
+          "id": "missing-ren-source",
+          "inputAscii": "ren new.txt=missing.txt\r",
+          "stopAfterAscii": "\r\nA>"
+        },
+        {
+          "id": "existing-ren-destination",
+          "inputAscii": "ren readme.txt=smoke.com\r",
+          "stopAfterAscii": "\r\nA>"
+        },
+        {
+          "id": "invalid-save-count",
+          "inputAscii": "save x foo.com\r",
+          "stopAfterAscii": "\r\nA>"
+        },
+        {
+          "id": "invalid-user",
+          "inputAscii": "user 16\r",
+          "stopAfterAscii": "\r\nA>"
+        }
+      ],
+      "expectedTranscript": "\r\nA>era missing.txt\r\r\nNO FILE\r\nA>ren new.txt=missing.txt\r\r\nNO FILE\r\nA>ren readme.txt=smoke.com\r\r\nFILE EXISTS\r\nA>save x foo.com\r\r\nX?\r\n\r\nA>user 16\r\r\n16?\r\n\r\nA>",
+      "expectedTerminal": {
+        "text": "\nA>era missing.txt\nNO FILE\nA>ren new.txt=missing.txt\nNO FILE\nA>ren readme.txt=smoke.com\nFILE EXISTS\nA>save x foo.com\nX?\n\nA>user 16\n16?\n\nA>",
+        "cursorRow": 13,
+        "cursorColumn": 2,
+        "currentAttributes": 0,
+        "wrapPending": false,
+        "bellCount": 0
+      }
+    }
+  ]
+}

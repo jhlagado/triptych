@@ -1,0 +1,55 @@
+{
+  "schema": "triptych-cpm-headless-scenario-v1",
+  "id": "triptych-ccp-self-assemble",
+  "description": "Assemble the Triptych CCP source inside CP/M with ATOM.COM and verify the exact resident image",
+  "systemCcp": "triptych",
+  "systemBdos": "triptych",
+  "maximumSlices": 4000,
+  "initialFiles": [
+    {
+      "name": "CCP.ASM",
+      "path": "roms/cpu/ccp/ccp.asm",
+      "encoding": "cpm-text"
+    }
+  ],
+  "initialTools": [
+    {
+      "kind": "retarget-cpm22-atom",
+      "source": "ATOM.COM",
+      "name": "ATCCP.COM",
+      "targetStart": 58368,
+      "targetCapacity": 2048,
+      "sha256": "26cdac36f1cc94a62f8527d3e21125ae0f4de067196669275962196b9bcd2d4f"
+    }
+  ],
+  "expectedInitialDriveSha256": "9323ffde2ce7e307498ff6598198c2fb85af86a55e9e21305e3b74c064cb8277",
+  "sessions": [
+    {
+      "id": "assemble-ccp",
+      "interactions": [
+        { "id": "boot", "inputAscii": "", "stopAfterAscii": "\r\nA>" },
+        {
+          "id": "run-atom",
+          "inputAscii": "atccp ccp.asm ccp.bin\r",
+          "stopAfterAscii": "CCP.BIN written\r\n\r\nA>"
+        }
+      ],
+      "expectedTranscript": "\r\nA>atccp ccp.asm ccp.bin\r\r\n\r\nCCP.BIN written\r\n\r\nA>",
+      "expectedTerminal": {
+        "text": "\nA>atccp ccp.asm ccp.bin\n\nCCP.BIN written\n\nA>",
+        "cursorRow": 5,
+        "cursorColumn": 2,
+        "currentAttributes": 0,
+        "wrapPending": false,
+        "bellCount": 0
+      }
+    }
+  ],
+  "expectedFinalFiles": [
+    {
+      "name": "CCP.BIN",
+      "bytes": 2048,
+      "sha256": "0e6100dd4c825f626d70262943b8e5698143dca1dd1d045f3825aaa5e79e486d"
+    }
+  ]
+}

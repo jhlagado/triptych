@@ -11,7 +11,7 @@
     "path": "roms/cpu/ccp/ccp.asm",
     "loadAddress": 58368,
     "bytes": 2048,
-    "sha256": "618ecfb78b81e8c65f9699d124450daae76efa4b283f25b823f8c35fcaf6c7f7"
+    "sha256": "0e6100dd4c825f626d70262943b8e5698143dca1dd1d045f3825aaa5e79e486d"
   },
   "features": [
     {
@@ -56,16 +56,21 @@
     },
     {
       "id": "drive-selection",
-      "status": "partial",
+      "status": "proved",
       "evidence": [
         "test/ccp/scenarios/oracle-transient-smoke.json",
-        "test/ccp/scenarios/triptych-transient-smoke.json"
+        "test/ccp/scenarios/triptych-transient-smoke.json",
+        "test/ccp/scenarios/oracle-absent-drive.json",
+        "test/ccp/scenarios/triptych-absent-drive.json"
       ]
     },
     {
       "id": "transient-load-errors-and-limit",
-      "status": "planned",
-      "evidence": []
+      "status": "proved",
+      "evidence": [
+        "test/ccp/scenarios/triptych-loader-boundaries.json",
+        "test/ccp/scenarios/triptych-loader-oversized.json"
+      ]
     },
     {
       "id": "dir",
@@ -83,25 +88,100 @@
         "test/ccp/scenarios/triptych-dir-type.json"
       ]
     },
-    { "id": "era", "status": "planned", "evidence": [] },
-    { "id": "ren", "status": "planned", "evidence": [] },
-    { "id": "save", "status": "planned", "evidence": [] },
-    { "id": "user", "status": "planned", "evidence": [] },
-    { "id": "parser-boundaries-and-fuzz", "status": "planned", "evidence": [] },
+    {
+      "id": "era",
+      "status": "proved",
+      "evidence": [
+        "test/ccp/scenarios/oracle-era-all-cancel.json",
+        "test/ccp/scenarios/triptych-era-all-cancel.json",
+        "test/ccp/scenarios/oracle-era-all-confirm.json",
+        "test/ccp/scenarios/triptych-era-all-confirm.json",
+        "test/ccp/scenarios/oracle-mutation-builtins.json",
+        "test/ccp/scenarios/triptych-mutation-builtins.json"
+      ]
+    },
+    {
+      "id": "ren",
+      "status": "proved",
+      "evidence": [
+        "test/ccp/scenarios/oracle-builtin-errors.json",
+        "test/ccp/scenarios/triptych-builtin-errors.json",
+        "test/ccp/scenarios/oracle-mutation-builtins.json",
+        "test/ccp/scenarios/triptych-mutation-builtins.json"
+      ]
+    },
+    {
+      "id": "save",
+      "status": "proved",
+      "evidence": [
+        "test/ccp/scenarios/oracle-builtin-errors.json",
+        "test/ccp/scenarios/triptych-builtin-errors.json",
+        "test/ccp/scenarios/oracle-mutation-builtins.json",
+        "test/ccp/scenarios/triptych-mutation-builtins.json"
+      ]
+    },
+    {
+      "id": "user",
+      "status": "proved",
+      "evidence": [
+        "test/ccp/scenarios/oracle-user.json",
+        "test/ccp/scenarios/triptych-user.json",
+        "test/ccp/scenarios/oracle-builtin-errors.json",
+        "test/ccp/scenarios/triptych-builtin-errors.json"
+      ]
+    },
+    {
+      "id": "parser-boundaries-and-fuzz",
+      "status": "partial",
+      "evidence": [
+        "test/ccp/scenarios/oracle-page-zero.json",
+        "test/ccp/scenarios/triptych-page-zero.json",
+        "test/ccp/scenarios/oracle-builtin-errors.json",
+        "test/ccp/scenarios/triptych-builtin-errors.json"
+      ]
+    },
     {
       "id": "failure-atomicity-and-recovery",
-      "status": "planned",
-      "evidence": []
+      "status": "partial",
+      "evidence": [
+        "test/ccp/scenarios/triptych-loader-oversized.json",
+        "test/ccp/scenarios/triptych-era-all-cancel.json",
+        "test/ccp/scenarios/triptych-builtin-errors.json"
+      ]
     },
-    { "id": "resident-stack-and-size", "status": "planned", "evidence": [] },
-    { "id": "bundled-applications", "status": "planned", "evidence": [] },
-    { "id": "self-assembly", "status": "planned", "evidence": [] },
+    {
+      "id": "resident-stack-and-size",
+      "status": "partial",
+      "evidence": ["docs/reports/atom-ccp-builtins-checkpoint.md"]
+    },
+    {
+      "id": "bundled-applications",
+      "status": "proved",
+      "evidence": [
+        "test/bdos/scenarios/triptych-bdos-edit-ansi-quit.json",
+        "test/bdos/scenarios/triptych-bdos-atom-compile.json",
+        "test/bdos/scenarios/triptych-bdos-nucleus-compile.json",
+        "test/ccp/scenarios/triptych-transient-smoke.json"
+      ]
+    },
+    {
+      "id": "self-assembly",
+      "status": "proved",
+      "evidence": ["test/ccp/scenarios/triptych-self-assemble.json"]
+    },
     {
       "id": "native-wasm-equivalence",
-      "status": "partial",
-      "evidence": ["docs/reports/atom-ccp-first-slice.md"]
+      "status": "proved",
+      "evidence": [
+        "docs/reports/atom-ccp-first-slice.md",
+        "docs/reports/atom-ccp-builtins-checkpoint.md"
+      ]
     },
-    { "id": "published-system", "status": "planned", "evidence": [] },
+    {
+      "id": "published-system",
+      "status": "partial",
+      "evidence": ["docs/reports/atom-ccp-builtins-checkpoint.md"]
+    },
     { "id": "esp32-hardware", "status": "planned", "evidence": [] }
   ]
 }

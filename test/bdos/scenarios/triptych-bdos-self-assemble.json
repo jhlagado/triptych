@@ -1,7 +1,8 @@
 {
   "schema": "triptych-cpm-headless-scenario-v1",
   "id": "triptych-bdos-self-assemble",
-  "description": "Install the Triptych-owned BDOS source in a private CP/M image, assemble it with the real ATOM.COM, and verify the exact resident binary",
+  "description": "Install the Triptych-owned BDOS source in a private CP/M image, assemble it through the Triptych CCP with the real ATOM.COM, and verify the exact resident binary",
+  "systemCcp": "triptych",
   "systemBdos": "triptych",
   "maximumSlices": 4000,
   "initialFiles": [
@@ -21,7 +22,7 @@
       "sha256": "072d43cb9be3a21daaa923399d7423dbeeeb699895d572b5aea4a112ce420cca"
     }
   ],
-  "expectedInitialDriveSha256": "20e0abad8805d72ea09a1db35a49807cecdef8bded589c7fecee939d057c25e0",
+  "expectedInitialDriveSha256": "74cd8b93d0628ee95f4b8e2f6301e43ac9bf61814e0adb85a56bf2facbf7a8b6",
   "sessions": [
     {
       "id": "assemble-bdos",
@@ -38,7 +39,7 @@
         }
       ],
       "expectedTranscript": "\r\nA>ATBDOS BDOS.ASM BDOS.BIN\r\r\n\r\nBDOS.BIN written\r\n\r\nA>",
-      "expectedDriveSha256": "0ee8b674798a53b5feae46d5d0d8ca0399843f35d31e4f2b1ade76645f7e9759",
+      "expectedDriveSha256": "d8bce074e08785653fda1ce3e7ec3ce977fbc1b76c3b49ba7a23744588cf194d",
       "expectedTerminal": {
         "text": "\nA>ATBDOS BDOS.ASM BDOS.BIN\n\nBDOS.BIN written\n\nA>",
         "cursorRow": 5,

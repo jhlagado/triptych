@@ -1,0 +1,56 @@
+{
+  "schema": "triptych-cpm-headless-scenario-v1",
+  "id": "triptych-ccp-loader-exact-limit",
+  "description": "Prove that an exact-TPA program loads and returns without damaging a subsequent transient",
+  "systemCcp": "triptych",
+  "systemBdos": "triptych",
+  "maximumSlices": 1200,
+  "initialFiles": [
+    {
+      "name": "EXACT.COM",
+      "encoding": "generated-bytes",
+      "bytes": 58112,
+      "fillByte": 0,
+      "patches": [{ "offset": 0, "bytes": [195, 0, 0] }]
+    }
+  ],
+  "expectedInitialDriveSha256": "d525c97bd0497dd3e91dde5d97e62c0f9346d1a42db0dff854bbbc5e735e3e06",
+  "expectedFinalFiles": [
+    {
+      "name": "RESULT.TXT",
+      "bytes": 128,
+      "sha256": "82c956e1df9917a965b49b85106feadf27381082ccc03d9fa3e5fc651f5cded3"
+    }
+  ],
+  "sessions": [
+    {
+      "id": "exact-limit-and-recovery",
+      "interactions": [
+        {
+          "id": "boot",
+          "inputAscii": "",
+          "stopAfterAscii": "\r\nA>"
+        },
+        {
+          "id": "exact-limit",
+          "inputAscii": "exact\r",
+          "stopAfterAscii": "\r\nA>"
+        },
+        {
+          "id": "recovery",
+          "inputAscii": "smoke\r",
+          "stopAfterAscii": "Wrote RESULT.TXT\r\n\r\nA>"
+        }
+      ],
+      "expectedTranscript": "\r\nA>exact\r\r\n\r\nA>smoke\r\r\nWrote RESULT.TXT\r\n\r\nA>",
+      "expectedTerminal": {
+        "text": "\nA>exact\n\nA>smoke\nWrote RESULT.TXT\n\nA>",
+        "cursorRow": 6,
+        "cursorColumn": 2,
+        "currentAttributes": 0,
+        "wrapPending": false,
+        "bellCount": 0
+      }
+    }
+  ]
+}

@@ -62,7 +62,7 @@ export async function prepareNativeCpm22Image({
   repositoryRoot,
   sourceImagePath,
   outputDirectory,
-  systemCcp = "oracle",
+  systemCcp = "triptych",
 }) {
   const [{ bootRom, ccp, bdos, bios }, sourceDisk] = await Promise.all([
     assembleTriptychCpuFirmware(repositoryRoot),
@@ -100,7 +100,8 @@ export async function prepareNativeCpm22Image({
 }
 
 /**
- * Installs the current Triptych BDOS and BIOS in an existing working disk.
+ * Installs the current Triptych CCP, BDOS, and BIOS in an existing working
+ * disk.
  * The disk is published by one same-directory rename, so an assembly or write
  * failure cannot leave a partly patched image behind.
  */
@@ -108,9 +109,10 @@ export async function prepareNativeCpm22WorkingImage({
   repositoryRoot,
   workingImagePath,
   outputDirectory,
+  systemCcp = "triptych",
 }) {
   const resolvedDiskPath = resolve(workingImagePath);
-  const [{ bootRom, bdos, bios }, sourceDisk] = await Promise.all([
+  const [{ bootRom, ccp, bdos, bios }, sourceDisk] = await Promise.all([
     assembleTriptychCpuFirmware(repositoryRoot),
     readFile(resolvedDiskPath),
   ]);
@@ -127,6 +129,11 @@ export async function prepareNativeCpm22WorkingImage({
   }
 
   const workingDisk = Uint8Array.from(sourceDisk);
+  if (systemCcp === "triptych") {
+    workingDisk.set(ccp, 0);
+  } else if (systemCcp !== "oracle") {
+    throw new Error(`unsupported system CCP ${systemCcp}`);
+  }
   workingDisk.set(bdos, BDOS_SYSTEM_OFFSET);
   workingDisk.set(bios, BIOS_SYSTEM_OFFSET);
   const temporaryDiskPath = `${resolvedDiskPath}.triptych-system-${process.pid}.tmp`;

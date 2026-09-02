@@ -13,7 +13,7 @@ FCBONE  EQU     $005C
 FCBTWO  EQU     $006C
 CMDTAIL EQU     $0080
 TPA     EQU     $0100
-BDOSBAS EQU     $EC00
+CCPBAS  EQU     $E400
 
 CR      EQU     13
 LF      EQU     10
@@ -51,12 +51,10 @@ MAINLOOP:
         LD      DE,CMDBUF
         LD      C,10
         CALL    BDOS
-        LD      DE,CRLFMSG
-        CALL    PUTSTR
 
         LD      A,(CMDLEN)
         OR      A
-        JR      Z,MAINLOOP
+        JP      Z,STARTED
         LD      B,A
         LD      HL,CMDTXT
 
@@ -79,7 +77,7 @@ UPNEXT:
         CALL    SKIPSP
         LD      A,(HL)
         OR      A
-        JR      Z,MAINLOOP
+        JP      Z,STARTED
         CP      'A'
         JR      C,NOTDRIVE
         CP      'P'+1
@@ -102,9 +100,11 @@ UPNEXT:
         CALL    BDOS
         LD      A,(BOOTDRV)
         LD      (CURDSK),A
-        JP      MAINLOOP
+        JP      STARTED
 
 NOTDRIVE:
+        LD      DE,CRLFMSG
+        CALL    PUTSTR
         LD      HL,CMDTXT
         CALL    SKIPSP
         LD      (CMDSTRT),HL
@@ -117,6 +117,18 @@ NOTDRIVE:
         LD      DE,TYPEKEY
         CALL    ISCMD
         JP      Z,CMDTYPE
+        LD      DE,ERAKEY
+        CALL    ISCMD
+        JP      Z,CMDERA
+        LD      DE,RENKEY
+        CALL    ISCMD
+        JP      Z,CMDREN
+        LD      DE,SAVEKEY
+        CALL    ISCMD
+        JP      Z,CMDSAVE
+        LD      DE,USERKEY
+        CALL    ISCMD
+        JP      Z,CMDUSER
         LD      A,'C'
         LD      (CMDFCB+9),A
         LD      A,'O'
@@ -167,7 +179,7 @@ LOADCOM:
 
 LOADLOOP:
         LD      A,H
-        CP      BDOSBAS/256
+        CP      CCPBAS/256
         JR      Z,LOADLIM
         PUSH    HL
         EX      DE,HL
@@ -387,6 +399,259 @@ TYPENO:
         CALL    PUTSTR
         JP      STARTED
 
+; ERA deletes through BDOS only after the complete operand has parsed.
+CMDERA:
+        LD      HL,(ARGSTRT)
+        CALL    SKIPSP
+        LD      (CMDSTRT),HL
+        LD      A,(HL)
+        OR      A
+        JP      Z,BADCMD
+        LD      DE,CMDFCB
+        CALL    PARSEFCB
+        CALL    SKIPSP
+        LD      A,(HL)
+        OR      A
+        JP      NZ,BADCMD
+        XOR     A
+        LD      (ERAALL),A
+        LD      HL,CMDFCB+1
+        LD      B,11
+
+ERACHK:
+        LD      A,(HL)
+        CP      '?'
+        JR      NZ,ERADEL
+        INC     HL
+        DJNZ    ERACHK
+        LD      DE,ALLQUERY
+        CALL    PUTSTR
+        LD      C,1
+        CALL    BDOS
+        AND     $DF
+        LD      (ERAANS),A
+
+ERADRAIN:
+        LD      C,1
+        CALL    BDOS
+        CP      CR
+        JR      NZ,ERADRAIN
+        LD      A,(ERAANS)
+        CP      'Y'
+        JP      NZ,STARTED
+        LD      A,1
+        LD      (ERAALL),A
+
+ERADEL:
+        LD      DE,CMDFCB
+        LD      C,19
+        CALL    BDOS
+        INC     A
+        JR      Z,ERANO
+        LD      A,(ERAALL)
+        OR      A
+        JP      NZ,STARTED
+        JP      MAINLOOP
+
+ERANO:
+        LD      DE,NOFILE
+        CALL    PUTSTR
+        JP      STARTED
+
+; REN's public syntax is NEW=OLD. A separate destination FCB permits an
+; existence check before the function-23 mutation FCB is assembled.
+CMDREN:
+        LD      HL,(ARGSTRT)
+        CALL    SKIPSP
+        LD      (CMDSTRT),HL
+        LD      A,(HL)
+        OR      A
+        JP      Z,BADCMD
+        LD      DE,RENFCB
+        CALL    PARSEFCB
+        LD      A,(HL)
+        CP      '='
+        JP      NZ,BADCMD
+        INC     HL
+        LD      A,(HL)
+        OR      A
+        JP      Z,BADCMD
+        LD      DE,CMDFCB
+        CALL    PARSEFCB
+        CALL    SKIPSP
+        LD      A,(HL)
+        OR      A
+        JP      NZ,BADCMD
+
+        LD      DE,LOADBUF
+        LD      C,26
+        CALL    BDOS
+        LD      DE,RENFCB
+        LD      C,17
+        CALL    BDOS
+        INC     A
+        JR      NZ,RENEXIST
+
+        LD      HL,RENFCB
+        LD      DE,CMDFCB+16
+        LD      BC,12
+        LDIR
+        LD      DE,CMDFCB
+        LD      C,23
+        CALL    BDOS
+        INC     A
+        JR      Z,ERANO
+        JP      MAINLOOP
+
+RENEXIST:
+        LD      DE,FILEEX
+        CALL    PUTSTR
+        JP      STARTED
+
+; USER accepts one decimal user number in the CP/M 2.2 range 0..15.
+CMDUSER:
+        LD      HL,(ARGSTRT)
+        CALL    SKIPSP
+        LD      (CMDSTRT),HL
+        LD      A,(HL)
+        CP      '0'
+        JP      C,BADCMD
+        CP      '9'+1
+        JP      NC,BADCMD
+        SUB     '0'
+        LD      B,A
+        INC     HL
+        LD      A,(HL)
+        CP      '0'
+        JR      C,USERDONE
+        CP      '9'+1
+        JR      NC,USERDONE
+        LD      A,B
+        CP      1
+        JP      NZ,BADCMD
+        LD      A,(HL)
+        CP      '6'
+        JP      NC,BADCMD
+        SUB     '0'-10
+        LD      B,A
+        INC     HL
+
+USERDONE:
+        CALL    SKIPSP
+        LD      A,(HL)
+        OR      A
+        JP      NZ,BADCMD
+        LD      E,B
+        LD      C,32
+        CALL    BDOS
+        JP      MAINLOOP
+
+; SAVE writes 256-byte pages from the TPA. The Triptych profile rejects a
+; count beyond the 227 pages ending at $E3FF instead of reading resident code.
+CMDSAVE:
+        LD      HL,(ARGSTRT)
+        CALL    SKIPSP
+        LD      (CMDSTRT),HL
+        LD      A,(HL)
+        CP      '0'
+        JP      C,BADCMD
+        CP      '9'+1
+        JP      NC,BADCMD
+        LD      B,0
+
+SAVENUM:
+        LD      A,(HL)
+        CP      '0'
+        JR      C,SAVENEND
+        CP      '9'+1
+        JR      NC,SAVENEND
+        SUB     '0'
+        LD      E,A
+        LD      A,B
+        ADD     A,A
+        LD      D,A
+        ADD     A,A
+        ADD     A,A
+        ADD     A,D
+        JP      C,BADCMD
+        ADD     A,E
+        JP      C,BADCMD
+        LD      B,A
+        INC     HL
+        JR      SAVENUM
+
+SAVENEND:
+        CP      SPACE
+        JP      NZ,BADCMD
+        LD      A,B
+        CP      228
+        JP      NC,BADCMD
+        LD      (SAVEPGS),A
+        CALL    SKIPSP
+        LD      A,(HL)
+        OR      A
+        JP      Z,BADCMD
+        LD      DE,CMDFCB
+        CALL    PARSEFCB
+        CALL    SKIPSP
+        LD      A,(HL)
+        OR      A
+        JP      NZ,BADCMD
+
+        LD      DE,CMDFCB
+        LD      C,19
+        CALL    BDOS
+        LD      DE,CMDFCB
+        LD      C,22
+        CALL    BDOS
+        INC     A
+        JR      Z,SAVENOSP
+        LD      HL,TPA
+        LD      (SAVEADR),HL
+
+SAVELOOP:
+        LD      A,(SAVEPGS)
+        OR      A
+        JR      Z,SAVECLS
+        CALL    SAVE128
+        JR      C,SAVENOSP
+        CALL    SAVE128
+        JR      C,SAVENOSP
+        LD      A,(SAVEPGS)
+        DEC     A
+        LD      (SAVEPGS),A
+        JR      SAVELOOP
+
+SAVE128:
+        LD      DE,(SAVEADR)
+        LD      C,26
+        CALL    BDOS
+        LD      DE,CMDFCB
+        LD      C,21
+        CALL    BDOS
+        OR      A
+        SCF
+        RET     NZ
+        LD      HL,(SAVEADR)
+        LD      DE,128
+        ADD     HL,DE
+        LD      (SAVEADR),HL
+        OR      A
+        RET
+
+SAVECLS:
+        LD      DE,CMDFCB
+        LD      C,16
+        CALL    BDOS
+        INC     A
+        JR      Z,SAVENOSP
+        JP      MAINLOOP
+
+SAVENOSP:
+        LD      DE,NOSPACE
+        CALL    PUTSTR
+        JP      STARTED
+
 ; Publish only documented page-zero transient state after loading succeeds.
 PREPPAGE:
         LD      HL,(ARGSTRT)
@@ -486,6 +751,8 @@ PARFLD:
         RET     Z
         CP      SPACE
         RET     Z
+        CP      '='
+        RET     Z
         CP      '.'
         RET     Z
         CP      '*'
@@ -500,6 +767,8 @@ PARSKIP:
         OR      A
         RET     Z
         CP      SPACE
+        RET     Z
+        CP      '='
         RET     Z
         CP      '.'
         RET     Z
@@ -556,17 +825,33 @@ PUTCHAR:
 CRLFMSG:
         DB      CR,LF,'$'
 DIRSEP:
-        DB      ' : ','$'
+        DB      " : ",'$'
 DIRDRV:
-        DB      ': ','$'
+        DB      ": ",'$'
 NOFILE:
-        DB      'NO FILE','$'
+        DB      "NO FILE",'$'
 DIRKEY:
-        DB      'DIR',0
+        DB      "DIR",0
 TYPEKEY:
-        DB      'TYPE',0
+        DB      "TYPE",0
+ERAKEY:
+        DB      "ERA",0
+RENKEY:
+        DB      "REN",0
+SAVEKEY:
+        DB      "SAVE",0
+USERKEY:
+        DB      "USER",0
+FILEEX:
+        DB      "FILE EXISTS",'$'
+NOSPACE:
+        DB      "NO SPACE",'$'
+ALLQUERY:
+        DB      "ALL (Y/N)?",'$'
 
 CMDFCB:
+        DS      36,0
+RENFCB:
         DS      36,0
 CMDBUF:
         DB      127
@@ -588,6 +873,14 @@ DIRANY:
         DB      0
 DIRENTP:
         DW      0
+SAVEPGS:
+        DB      0
+SAVEADR:
+        DW      0
+ERAANS:
+        DB      0
+ERAALL:
+        DB      0
 
 ; This is both the oversize discriminator and ordinary CCP scratch storage.
 LOADBUF:

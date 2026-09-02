@@ -1,0 +1,67 @@
+{
+  "schema": "triptych-cpm-headless-scenario-v1",
+  "id": "ccp-oracle-mutation-builtins",
+  "description": "Freeze successful REN, ERA, and SAVE behavior at the public console and disk boundaries",
+  "systemCcp": "oracle",
+  "systemBdos": "triptych",
+  "expectedInitialDriveSha256": "6f4413d04af07746a37b4abc9a67fdb81537a67b4d89b2df8d46d25bbb76681f",
+  "expectedFinalFiles": [
+    {
+      "name": "PAGE.COM",
+      "bytes": 256,
+      "sha256": "5341e6b2646979a70e57653007a1f310169421ec9bdd9f1a5648f75ade005af1"
+    }
+  ],
+  "sessions": [
+    {
+      "id": "rename-erase-save",
+      "interactions": [
+        { "id": "boot", "inputAscii": "", "stopAfterAscii": "\r\nA>" },
+        {
+          "id": "rename",
+          "inputAscii": "ren foo.txt=readme.txt\r",
+          "stopAfterAscii": "\r\nA>"
+        },
+        {
+          "id": "type-renamed",
+          "inputAscii": "type foo.txt\r",
+          "stopAfterAscii": "Debug80 CP/M 2.2 platform\r\n\r\nA>"
+        },
+        {
+          "id": "erase",
+          "inputAscii": "era foo.txt\r",
+          "stopAfterAscii": "\r\nA>"
+        },
+        {
+          "id": "confirm-erased",
+          "inputAscii": "dir foo.txt\r",
+          "stopAfterAscii": "NO FILE\r\nA>"
+        },
+        {
+          "id": "save-page",
+          "inputAscii": "save 1 page.com\r",
+          "stopAfterAscii": "\r\nA>"
+        },
+        {
+          "id": "save-existing",
+          "inputAscii": "save 1 page.com\r",
+          "stopAfterAscii": "\r\nA>"
+        },
+        {
+          "id": "confirm-saved",
+          "inputAscii": "dir page.com\r",
+          "stopAfterAscii": "PAGE     COM\r\nA>"
+        }
+      ],
+      "expectedTranscript": "\r\nA>ren foo.txt=readme.txt\r\r\nA>type foo.txt\r\r\nDebug80 CP/M 2.2 platform\r\n\r\nA>era foo.txt\r\r\nA>dir foo.txt\r\r\nNO FILE\r\nA>save 1 page.com\r\r\nA>save 1 page.com\r\r\nA>dir page.com\r\r\nA: PAGE     COM\r\nA>",
+      "expectedTerminal": {
+        "text": "\nA>ren foo.txt=readme.txt\nA>type foo.txt\nDebug80 CP/M 2.2 platform\n\nA>era foo.txt\nA>dir foo.txt\nNO FILE\nA>save 1 page.com\nA>save 1 page.com\nA>dir page.com\nA: PAGE     COM\nA>",
+        "cursorRow": 12,
+        "cursorColumn": 2,
+        "currentAttributes": 0,
+        "wrapPending": false,
+        "bellCount": 0
+      }
+    }
+  ]
+}
