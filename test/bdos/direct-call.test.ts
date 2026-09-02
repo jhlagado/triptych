@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { readFileSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import {
   type BdosDirectCallFixture,
   type BdosDirectCallResult,
@@ -15,6 +15,7 @@ import {
   runBdosDirectCallSequence,
   unexpectedDirectCallWrites,
 } from "../support/bdos-direct-call.js";
+import { assembleZ80ForTest } from "../support/assemble-z80.js";
 
 const repositoryRoot = resolve(import.meta.dirname, "..", "..");
 const referenceDisk = readFileSync(
@@ -23,6 +24,14 @@ const referenceDisk = readFileSync(
 const referenceBdos = referenceDisk.subarray(0x0800, 0x1600);
 const expectedBdosSha256 =
   "258fe1b659a979fa9adab000fd2ee27b165349179f6b5f5b8b5266ea3385ac22";
+const replacementBdosSource = resolve(
+  repositoryRoot,
+  "roms",
+  "cpu",
+  "bdos",
+  "bdos.asm",
+);
+let replacementBdos: Uint8Array;
 const functionFixtureDirectory = resolve(
   repositoryRoot,
   "test",
@@ -43,6 +52,9 @@ const sequenceFixtureDirectory = resolve(
 const sequenceFixtureNames = readdirSync(sequenceFixtureDirectory)
   .filter((name) => name.endsWith(".json"))
   .sort();
+const milestone2SequenceFixtureNames = sequenceFixtureNames.filter((name) =>
+  readSequenceFixture(name).steps.every((step) => step.call.function <= 12),
+);
 
 function readFixture(name: string): BdosDirectCallFixture {
   return JSON.parse(
@@ -185,6 +197,11 @@ function expectFixtureResult(
 }
 
 describe("CP/M 2.2 BDOS direct-call contract", () => {
+  beforeAll(async () => {
+    replacementBdos = await assembleZ80ForTest(replacementBdosSource);
+    expect(replacementBdos).toHaveLength(0x0e00);
+  });
+
   it("has at least one fixture for every function from 0 through 40", () => {
     const covered = new Set([
       ...fixtureNames.map(
@@ -218,6 +235,15 @@ describe("CP/M 2.2 BDOS direct-call contract", () => {
     },
   );
 
+  it.each(fixtureNames)(
+    "runs the %s fixture against the Triptych Milestone 2 replacement",
+    (fixtureName) => {
+      const fixture = readFixture(fixtureName);
+      const result = runBdosDirectCall(replacementBdos, fixture);
+      expectFixtureResult(fixture, result);
+    },
+  );
+
   it.each(sequenceFixtureNames)(
     "runs the %s stateful fixture against the frozen black-box oracle",
     (fixtureName) => {
@@ -232,4 +258,34 @@ describe("CP/M 2.2 BDOS direct-call contract", () => {
       });
     },
   );
+
+  it.each(milestone2SequenceFixtureNames)(
+    "runs the %s stateful fixture against the Triptych Milestone 2 replacement",
+    (fixtureName) => {
+      const fixture = readSequenceFixture(fixtureName);
+      const result = runBdosDirectCallSequence(replacementBdos, fixture);
+      fixture.steps.forEach((step, index) => {
+        expectFixtureResult(step, result.steps[index]!.result);
+      });
+    },
+  );
+
+  it("keeps the Milestone 2 private stack inside its reserved 64 bytes", () => {
+    const results = [
+      ...fixtureNames.map((name) =>
+        runBdosDirectCall(replacementBdos, readFixture(name)),
+      ),
+      ...milestone2SequenceFixtureNames.flatMap((name) =>
+        runBdosDirectCallSequence(
+          replacementBdos,
+          readSequenceFixture(name),
+        ).steps.map(({ result }) => result),
+      ),
+    ];
+    const minimum = Math.min(
+      ...results.map((result) => result.minimumResidentStackPointer ?? 0xffff),
+    );
+    expect(minimum).toBeGreaterThanOrEqual(0xeeac);
+    expect(0xeeec - minimum).toBe(12);
+  });
 });

@@ -145,7 +145,7 @@ Exit: the frozen BDOS passes the harness, every fixture identifies its evidence
 source, and no fixture depends on legacy symbols or implementation addresses
 other than the public `$EC06` entry.
 
-### Milestone 2 — entry, dispatch, and console services
+### Milestone 2 — entry, dispatch, and console services (complete)
 
 Work:
 
@@ -158,7 +158,7 @@ Work:
 Exit: calls 0 through 12 pass direct differential tests, the CCP reaches a
 prompt, and a console-only COM program runs and returns.
 
-### Milestone 3 — disk discovery and read path
+### Milestone 3 — disk discovery and read path (active)
 
 Work:
 

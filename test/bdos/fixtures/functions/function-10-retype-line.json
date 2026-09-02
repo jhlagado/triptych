@@ -1,0 +1,42 @@
+{
+  "schema": "triptych-bdos-direct-call-v1",
+  "id": "function-10-retype-line",
+  "evidence": [
+    {
+      "kind": "published-interface",
+      "source": "Digital Research CP/M Operating System Manual, July 1982",
+      "section": "5.2, function 10; Ctrl-R retypes the current line"
+    },
+    {
+      "kind": "black-box-compatibility",
+      "source": "Frozen Triptych transitional BDOS SHA-256 258fe1b659a979fa9adab000fd2ee27b165349179f6b5f5b8b5266ea3385ac22",
+      "section": "Ctrl-R marker and echo ordering"
+    }
+  ],
+  "call": { "function": 10, "de": 512, "stackPointer": 53248 },
+  "initialMemory": [
+    { "address": 512, "bytes": [8, 0, 0, 0, 0, 0, 0, 0, 0, 0] }
+  ],
+  "biosResponses": [
+    { "entry": 3, "occurrence": 0, "return": { "a": 65 } },
+    { "entry": 3, "occurrence": 1, "return": { "a": 66 } },
+    { "entry": 3, "occurrence": 2, "return": { "a": 18 } },
+    { "entry": 3, "occurrence": 3, "return": { "a": 67 } },
+    { "entry": 3, "occurrence": 4, "return": { "a": 13 } },
+    { "entry": 2, "occurrence": "all", "return": { "a": 0 } }
+  ],
+  "expected": {
+    "returnRegisters": {
+      "a": 0,
+      "b": 0,
+      "h": 0,
+      "l": 0,
+      "sp": 53248,
+      "pc": 260
+    },
+    "memory": [{ "address": 512, "bytes": [8, 3, 65, 66, 67] }],
+    "biosCallCount": 23,
+    "biosTraceSha256": "acc9d12b9b946ba469244c38a8905d27d48a40459ef6d5733e683469f62208c5",
+    "biosConsoleOutputAscii": "AB#\r\nABC\r"
+  }
+}

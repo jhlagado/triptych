@@ -77,7 +77,7 @@ rejection, and injected BIOS read/write failures. Failure cases check the exact
 diagnostic bytes, console acknowledgement, page-zero warm-boot transfer, and
 absence of rejected disk mutations. They compare public BIOS call traces, FCB
 and DMA results, allocation bits, exact directory and data records, and
-disk-write counts. The 21 direct fixtures and 13 stateful fixtures are data
+disk-write counts. The 27 direct fixtures and 14 stateful fixtures are data
 under `test/bdos/fixtures/`, not facts extracted from legacy source symbols.
 All pass against the hashed oracle.
 
@@ -100,9 +100,8 @@ also assert the persisted disk digest.
 
 ## Next proof
 
-Implement the original Atom-compatible BDOS entry, dispatcher, private stack,
-and functions 0 through 12. Run every console fixture against both the frozen
-oracle and the replacement, then cold-boot the retained CCP and run a
-console-only COM program through the same headless serial and ANSI scenario
-boundary. This is Milestone 2; no file or disk service needs to be implemented
-to reach its exit.
+Implement disk discovery and the read path: functions 13 through 20 and 24
+through 32 as their dependencies require. The replacement must consume DPH and
+DPB data from the BIOS, then pass direct fixtures for reset, login, DMA,
+directory search, open, close, and sequential read before `DIR`, `TYPE`, and
+the repository COM programs move from the oracle to the Triptych BDOS.

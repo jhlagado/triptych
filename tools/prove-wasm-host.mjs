@@ -33,6 +33,7 @@ const { TriptychCpu } = require(
 const FIXTURE_FORMAT = "triptych.cpu.conformance.fixture.v1";
 const RESULT_FORMAT = "triptych.cpu.conformance.result.v1";
 const BACKING_SECTOR_BYTES = 512;
+const BDOS_SYSTEM_OFFSET = 0x0800;
 const BIOS_SYSTEM_OFFSET = 0x1600;
 
 function sha256(bytes) {
@@ -244,13 +245,12 @@ async function proveCpm() {
     process.env.TRIPTYCH_CPM22_IMAGE ??
       join(repositoryRoot, "third_party", "cpm22", "cpm22.img"),
   );
-  const [bootRom, bios, sourceDisk] = await Promise.all([
+  const [bootRom, bdos, bios, sourceDisk] = await Promise.all([
     assemble(join(sourceDirectory, "bootstrap.asm")),
+    assemble(join(sourceDirectory, "bdos", "bdos.asm")),
     assemble(join(sourceDirectory, "bios.asm")),
     readFile(resolve(cpmImagePath)),
   ]);
-  const disk = Uint8Array.from(sourceDisk);
-  disk.set(bios, BIOS_SYSTEM_OFFSET);
   const configuredScenario = process.env.TRIPTYCH_CPM_SCENARIO;
   const scenarioPaths = configuredScenario
     ? [resolve(configuredScenario)]
@@ -261,6 +261,16 @@ async function proveCpm() {
   const scenarios = [];
   for (const scenarioPath of scenarioPaths) {
     const scenario = JSON.parse(await readFile(scenarioPath, "utf8"));
+    const disk = Uint8Array.from(sourceDisk);
+    disk.set(bios, BIOS_SYSTEM_OFFSET);
+    if (scenario.systemBdos === "triptych") {
+      disk.set(bdos, BDOS_SYSTEM_OFFSET);
+    } else {
+      assert.ok(
+        scenario.systemBdos === undefined || scenario.systemBdos === "oracle",
+        `${scenario.id} has an unsupported systemBdos`,
+      );
+    }
     const result = runCpmHeadlessScenario({
       scenario,
       initialDrive: padForBackingSectors(disk),
@@ -288,6 +298,7 @@ async function proveCpm() {
     });
     scenarios.push({
       id: result.id,
+      systemBdos: result.systemBdos,
       initialDriveSha256: result.initialDriveSha256,
       sessions: result.sessions,
     });

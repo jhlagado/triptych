@@ -1,0 +1,42 @@
+{
+  "schema": "triptych-bdos-direct-call-v1",
+  "id": "function-10-rubout",
+  "evidence": [
+    {
+      "kind": "published-interface",
+      "source": "Digital Research CP/M Operating System Manual, July 1982",
+      "section": "5.2, function 10; rubout removes and echoes the last character"
+    },
+    {
+      "kind": "black-box-compatibility",
+      "source": "Frozen Triptych transitional BDOS SHA-256 258fe1b659a979fa9adab000fd2ee27b165349179f6b5f5b8b5266ea3385ac22",
+      "section": "Rubout echo ordering"
+    }
+  ],
+  "call": { "function": 10, "de": 512, "stackPointer": 53248 },
+  "initialMemory": [
+    { "address": 512, "bytes": [8, 0, 0, 0, 0, 0, 0, 0, 0, 0] }
+  ],
+  "biosResponses": [
+    { "entry": 3, "occurrence": 0, "return": { "a": 65 } },
+    { "entry": 3, "occurrence": 1, "return": { "a": 66 } },
+    { "entry": 3, "occurrence": 2, "return": { "a": 127 } },
+    { "entry": 3, "occurrence": 3, "return": { "a": 67 } },
+    { "entry": 3, "occurrence": 4, "return": { "a": 13 } },
+    { "entry": 2, "occurrence": "all", "return": { "a": 0 } }
+  ],
+  "expected": {
+    "returnRegisters": {
+      "a": 0,
+      "b": 0,
+      "h": 0,
+      "l": 0,
+      "sp": 53248,
+      "pc": 260
+    },
+    "memory": [{ "address": 512, "bytes": [8, 2, 65, 67] }],
+    "biosCallCount": 15,
+    "biosTraceSha256": "2e94b1fa05a2d0a86af1bc2589c422785217edfbc8d4539d7efb4ee733379d06",
+    "biosConsoleOutputAscii": "ABBC\r"
+  }
+}

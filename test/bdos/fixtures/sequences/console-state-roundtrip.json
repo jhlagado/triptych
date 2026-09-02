@@ -1,0 +1,103 @@
+{
+  "schema": "triptych-bdos-direct-sequence-v1",
+  "id": "console-state-roundtrip",
+  "description": "Preserve console lookahead across calls and transfer to warm boot after echoing Ctrl-C at the start of a buffered line",
+  "steps": [
+    {
+      "id": "buffer-ready-character",
+      "evidence": [
+        {
+          "kind": "published-interface",
+          "source": "Digital Research CP/M Operating System Manual, July 1982",
+          "section": "5.2, function 11"
+        },
+        {
+          "kind": "black-box-compatibility",
+          "source": "Frozen Triptych transitional BDOS SHA-256 258fe1b659a979fa9adab000fd2ee27b165349179f6b5f5b8b5266ea3385ac22",
+          "section": "Console lookahead buffering"
+        }
+      ],
+      "call": { "function": 11, "de": 0, "stackPointer": 53248 },
+      "biosResponses": [
+        { "entry": 2, "occurrence": 0, "return": { "a": 255 } },
+        { "entry": 3, "occurrence": 0, "return": { "a": 66 } }
+      ],
+      "expected": {
+        "returnRegisters": {
+          "a": 1,
+          "b": 0,
+          "h": 0,
+          "l": 1,
+          "sp": 53248,
+          "pc": 260
+        },
+        "biosCallCount": 2,
+        "biosTraceSha256": "31c3a53e95e9323c7bf5b16170fde1a71b3018a65c470d314c3abd1f545ccfb4"
+      }
+    },
+    {
+      "id": "consume-buffered-character",
+      "evidence": [
+        {
+          "kind": "published-interface",
+          "source": "Digital Research CP/M Operating System Manual, July 1982",
+          "section": "5.2, functions 1 and 11"
+        },
+        {
+          "kind": "black-box-compatibility",
+          "source": "Frozen Triptych transitional BDOS SHA-256 258fe1b659a979fa9adab000fd2ee27b165349179f6b5f5b8b5266ea3385ac22",
+          "section": "Buffered-character consumption and echo"
+        }
+      ],
+      "call": { "function": 1, "de": 0, "stackPointer": 53248 },
+      "biosResponses": [{ "entry": 2, "occurrence": 0, "return": { "a": 0 } }],
+      "expected": {
+        "returnRegisters": {
+          "a": 66,
+          "b": 0,
+          "h": 0,
+          "l": 66,
+          "sp": 53248,
+          "pc": 260
+        },
+        "biosCalls": [
+          { "entry": 2, "name": "console-status", "registers": { "c": 66 } },
+          { "entry": 4, "name": "console-output", "registers": { "c": 66 } }
+        ],
+        "biosTraceSha256": "6956e20944f963507b6c409418284c04f1c834620e9863a79dae10a66e74d238"
+      }
+    },
+    {
+      "id": "abort-empty-buffered-line",
+      "evidence": [
+        {
+          "kind": "published-interface",
+          "source": "Digital Research CP/M Operating System Manual, July 1982",
+          "section": "5.2, function 10; Ctrl-C reboots at the beginning of a line"
+        },
+        {
+          "kind": "black-box-compatibility",
+          "source": "Frozen Triptych transitional BDOS SHA-256 258fe1b659a979fa9adab000fd2ee27b165349179f6b5f5b8b5266ea3385ac22",
+          "section": "Caret echo and warm-boot transfer ordering"
+        }
+      ],
+      "call": { "function": 10, "de": 512, "stackPointer": 53248 },
+      "initialMemory": [
+        { "address": 512, "bytes": [8, 0, 0, 0, 0, 0, 0, 0, 0, 0] }
+      ],
+      "biosResponses": [
+        { "entry": 3, "occurrence": 0, "return": { "a": 3 } },
+        { "entry": 2, "occurrence": "all", "return": { "a": 0 } },
+        { "entry": 1, "occurrence": 0, "action": "stop" }
+      ],
+      "expected": {
+        "stop": "bios-transfer",
+        "biosTransferEntry": 1,
+        "memory": [{ "address": 512, "bytes": [8, 0, 3] }],
+        "biosCallCount": 6,
+        "biosTraceSha256": "ab8c897f53158a8fc97a74302d21d71cada3cb2270120ed907e93f6a9e1f8ef6",
+        "biosConsoleOutputAscii": "^C"
+      }
+    }
+  ]
+}

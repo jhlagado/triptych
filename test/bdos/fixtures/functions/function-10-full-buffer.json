@@ -1,0 +1,37 @@
+{
+  "schema": "triptych-bdos-direct-call-v1",
+  "id": "function-10-full-buffer",
+  "evidence": [
+    {
+      "kind": "published-interface",
+      "source": "Digital Research CP/M Operating System Manual, July 1982",
+      "section": "5.2, function 10; a full input buffer terminates the line"
+    },
+    {
+      "kind": "black-box-compatibility",
+      "source": "Frozen Triptych transitional BDOS SHA-256 258fe1b659a979fa9adab000fd2ee27b165349179f6b5f5b8b5266ea3385ac22",
+      "section": "Automatic carriage-return echo on capacity"
+    }
+  ],
+  "call": { "function": 10, "de": 512, "stackPointer": 53248 },
+  "initialMemory": [{ "address": 512, "bytes": [2, 0, 0, 0] }],
+  "biosResponses": [
+    { "entry": 3, "occurrence": 0, "return": { "a": 65 } },
+    { "entry": 3, "occurrence": 1, "return": { "a": 66 } },
+    { "entry": 2, "occurrence": "all", "return": { "a": 0 } }
+  ],
+  "expected": {
+    "returnRegisters": {
+      "a": 0,
+      "b": 0,
+      "h": 0,
+      "l": 0,
+      "sp": 53248,
+      "pc": 260
+    },
+    "memory": [{ "address": 512, "bytes": [2, 2, 65, 66] }],
+    "biosCallCount": 8,
+    "biosTraceSha256": "b28fc74fed801c4f439c03dc909b75e7b31eb3db940440b6e719972a57b001e5",
+    "biosConsoleOutputAscii": "AB\r"
+  }
+}

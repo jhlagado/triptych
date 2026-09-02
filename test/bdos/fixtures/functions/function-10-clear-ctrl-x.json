@@ -1,0 +1,42 @@
+{
+  "schema": "triptych-bdos-direct-call-v1",
+  "id": "function-10-clear-ctrl-x",
+  "evidence": [
+    {
+      "kind": "published-interface",
+      "source": "Digital Research CP/M Operating System Manual, July 1982",
+      "section": "5.2, function 10; Ctrl-X removes the current line"
+    },
+    {
+      "kind": "black-box-compatibility",
+      "source": "Frozen Triptych transitional BDOS SHA-256 258fe1b659a979fa9adab000fd2ee27b165349179f6b5f5b8b5266ea3385ac22",
+      "section": "Ctrl-X erasure ordering"
+    }
+  ],
+  "call": { "function": 10, "de": 512, "stackPointer": 53248 },
+  "initialMemory": [
+    { "address": 512, "bytes": [8, 0, 0, 0, 0, 0, 0, 0, 0, 0] }
+  ],
+  "biosResponses": [
+    { "entry": 3, "occurrence": 0, "return": { "a": 65 } },
+    { "entry": 3, "occurrence": 1, "return": { "a": 66 } },
+    { "entry": 3, "occurrence": 2, "return": { "a": 24 } },
+    { "entry": 3, "occurrence": 3, "return": { "a": 67 } },
+    { "entry": 3, "occurrence": 4, "return": { "a": 13 } },
+    { "entry": 2, "occurrence": "all", "return": { "a": 0 } }
+  ],
+  "expected": {
+    "returnRegisters": {
+      "a": 0,
+      "b": 0,
+      "h": 0,
+      "l": 0,
+      "sp": 53248,
+      "pc": 260
+    },
+    "memory": [{ "address": 512, "bytes": [8, 1, 67, 66] }],
+    "biosCallCount": 19,
+    "biosTraceSha256": "05bbe4f5acab77e2468f2445e9acae729c8eb05f62749dc3bbfe4c341be6fad7",
+    "biosConsoleOutputBytes": [65, 66, 8, 32, 8, 8, 32, 8, 67, 13]
+  }
+}

@@ -30,6 +30,14 @@ Carrying only the exported image between sessions proves process-independent
 disk persistence. RAM, CPU registers, queued input, console output, and
 terminal state do not survive a session boundary.
 
+The optional scenario-level `systemBdos` field selects the resident BDOS
+installed before the first session. Omission or `oracle` retains the frozen
+transitional binary; `triptych` assembles and installs the current
+`roms/cpu/bdos/bdos.asm`. This selection is part of test setup, not a service
+visible to the guest. Each scenario still pins the digest of the resulting
+complete starting image, so changing either implementation cannot silently
+reuse stale expectations.
+
 ## Fixture shape
 
 The JSON schema identifier is `triptych-cpm-headless-scenario-v1`. A scenario

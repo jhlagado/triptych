@@ -162,6 +162,7 @@ export interface BdosDirectCallResult {
   biosDisk?: BdosBiosDiskSnapshot;
   biosOwnedWritableAddresses: number[];
   biosMemoryWrittenAddresses: number[];
+  minimumResidentStackPointer?: number;
   steps: number;
   tStates: number;
 }
@@ -355,10 +356,18 @@ function createBdosDirectRunner(
     const occurrences = new Uint16Array(BIOS_ENTRIES);
     let stop: BdosDirectCallResult["stop"] = "normal-return";
     let biosTransferEntry: number | undefined;
+    let minimumResidentStackPointer: number | undefined;
     let steps = 0;
     let tStates = 0;
     for (; steps < 100_000 && !runtime.isHalted(); steps += 1) {
       const pc = runtime.getPC();
+      const stackPointer = runtime.captureCpuState().sp;
+      if (stackPointer >= BDOS_BASE && stackPointer < BIOS_BASE) {
+        minimumResidentStackPointer = Math.min(
+          minimumResidentStackPointer ?? stackPointer,
+          stackPointer,
+        );
+      }
       if (pc >= BIOS_STUB_BASE && pc < BIOS_STUB_BASE + BIOS_ENTRIES) {
         const entry = pc - BIOS_STUB_BASE;
         const occurrence = occurrences[entry] ?? 0;
@@ -414,6 +423,9 @@ function createBdosDirectRunner(
       ...(biosDisk === undefined ? {} : { biosDisk: biosDisk.snapshot() }),
       biosOwnedWritableAddresses: [...(biosDisk?.ownedWritableAddresses ?? [])],
       biosMemoryWrittenAddresses: [...(biosDisk?.memoryWrittenAddresses ?? [])],
+      ...(minimumResidentStackPointer === undefined
+        ? {}
+        : { minimumResidentStackPointer }),
       steps,
       tStates,
     };

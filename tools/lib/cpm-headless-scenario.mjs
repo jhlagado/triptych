@@ -125,6 +125,12 @@ function sessionInteractions(session) {
 function validateScenario(scenario) {
   assert.equal(scenario.schema, CPM_HEADLESS_SCENARIO_SCHEMA);
   assert.equal(typeof scenario.id, "string");
+  assert.ok(
+    scenario.systemBdos === undefined ||
+      scenario.systemBdos === "oracle" ||
+      scenario.systemBdos === "triptych",
+    `${scenario.id} systemBdos must be oracle or triptych`,
+  );
   assert.match(
     scenario.expectedInitialDriveSha256,
     /^[0-9a-f]{64}$/,
@@ -253,6 +259,7 @@ export function runCpmHeadlessScenario({
 
   return {
     id: scenario.id,
+    systemBdos: scenario.systemBdos ?? "oracle",
     initialDriveSha256,
     sessions: results,
     finalDrive: persisted,
