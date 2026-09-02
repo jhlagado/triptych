@@ -30,6 +30,7 @@ fixing the eventual product name in source identifiers or electrical designs.
 | `firmware/sound`              | future ESP-IDF I²S sound-module firmware                                    |
 | `docs/specifications`         | guest-visible CPU, video, and sound contracts                               |
 | `docs/reports`                | measured proof reports                                                      |
+| `third_party/cpm22`           | transitional CP/M 2.2 demonstration disk, grant, and provenance             |
 
 The TypeScript code is a reference model for interface decisions. It is not the
 ESP32 firmware. Debug80 Runtime is a development-only Z80 test harness; neither
@@ -45,15 +46,16 @@ npm install
 npm run check
 ```
 
-The optional CP/M compatibility proof requires a CP/M 2.2 disk image supplied
-outside the repository:
+Triptych includes a transitional CP/M 2.2 demonstration disk under the Bryan
+Sparks distribution grant recorded in `third_party/cpm22/`. The compatibility
+proof can use that image directly:
 
 ```sh
-TRIPTYCH_CPM22_IMAGE=/path/to/cpm22.img npm run proof:cpm22
+TRIPTYCH_CPM22_IMAGE=third_party/cpm22/cpm22.img npm run proof:cpm22
 ```
 
-The same external image can exercise the production Rust core and native host
-across two fresh processes:
+The same image can exercise the production Rust core and native host across two
+fresh processes:
 
 ```sh
 TRIPTYCH_CPM22_IMAGE=/path/to/cpm22.img npm run proof:cpm22-native
@@ -115,21 +117,21 @@ TRIPTYCH_CPM22_IMAGE=/path/to/cpm22.img \
 npm run proof:wasm-host
 ```
 
-The same toolchain builds an interactive browser terminal. Supplying the disk
-path to the local server starts CP/M automatically:
+The same toolchain builds an interactive browser terminal. The bundled disk
+starts CP/M automatically:
 
 ```sh
-TRIPTYCH_CPM22_IMAGE=/path/to/cpm22.img \
 npm run run:wasm-browser
 ```
 
 Open `http://127.0.0.1:8080/`, click the terminal, and type at the `A>` prompt.
-If `TRIPTYCH_CPM22_IMAGE` is omitted, the page provides a file picker instead.
-The browser modifies only its in-memory disk. The download control exports a
-new image containing guest writes that CP/M has flushed. The page implements
-Triptych's bounded 80-by-24 ANSI profile, including cursor movement, erase,
-bold, underline, reverse video, scrolling, and arrow-key input, so full-screen
-CP/M programs such as `EDIT.COM` work without displaying raw escape sequences.
+Set `TRIPTYCH_CPM22_IMAGE` to override the bundled disk; the page also retains
+its file picker. The browser modifies only its in-memory disk. The download
+control exports a new image containing guest writes that CP/M has flushed. The
+page implements Triptych's bounded 80-by-24 ANSI profile, including cursor
+movement, erase, bold, underline, reverse video, scrolling, and arrow-key
+input, so full-screen CP/M programs such as `EDIT.COM` work without displaying
+raw escape sequences.
 
 The ESP32-S3 firmware uses a separate pinned Espressif Xtensa toolchain. Its
 [setup and build instructions](firmware/cpu/README.md) produce both an

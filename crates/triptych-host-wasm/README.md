@@ -64,14 +64,14 @@ page:
 npm run build:wasm-browser
 ```
 
-For a complete local session:
+For a complete local session using the bundled transitional CP/M 2.2 disk:
 
 ```sh
-TRIPTYCH_CPM22_IMAGE=/path/to/cpm22.img \
 npm run run:wasm-browser
 ```
 
-The server listens only on `127.0.0.1`. Without the environment variable, the
-page waits for a disk selected through its file picker. The supplied image is
-never modified. `Download working disk` exports the in-memory image; only guest
-writes flushed through the disk controller are present.
+The server listens only on `127.0.0.1`. `TRIPTYCH_CPM22_IMAGE` can override the
+bundled disk, and the page retains a file picker for selecting another image.
+The supplied image is never modified. `Download working disk` exports the
+in-memory image; only guest writes flushed through the disk controller are
+present.

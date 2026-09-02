@@ -1,0 +1,15 @@
+# CP/M distribution grant
+
+The following clarification was provided by Bryan Sparks, President of DRDOS,
+Inc., on 2022-07-07 and published by the Unofficial CP/M Web Site on
+2022-07-09:
+
+> Let this paragraph represent a right to use, distribute, modify, enhance,
+> and otherwise make available in a nonexclusive manner CP/M and its
+> derivatives. This right comes from the company, DRDOS, Inc.'s purchase of
+> Digital Research, the company and all assets, dating back to the mid-1990's.
+> DRDOS, Inc. and I, Bryan Sparks, President of DRDOS, Inc. as its
+> representative, is the owner of CP/M and the successor in interest of
+> Digital Research assets.
+
+Source: https://www.cpm.z80.de/license.html

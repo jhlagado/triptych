@@ -11,6 +11,12 @@ those packages remain separately maintained dependencies. CP/M and CP/Mish
 artifacts require their own provenance and licence records before they are
 vendored or distributed here.
 
+`third_party/cpm22/cpm22.img` is a transitional demonstration disk distributed
+under the CP/M grant recorded beside it. Its provenance record identifies the
+exact source revision, artifact digest, and licences of the additional Atom,
+Nucleus, and Debug80-authored files. The hosted Triptych system replaces the
+image's BIOS with the current Triptych BIOS before execution.
+
 The optional native working-disk proof accepts Atom's external
 `atom-cpm22.com` artifact and example source only after matching their pinned
 SHA-256 digests. Atom is GPL-3.0-only and remains outside this repository; the

@@ -5,9 +5,13 @@ import { basename, extname, join, relative, resolve } from "node:path";
 
 const repositoryRoot = resolve(import.meta.dirname, "..");
 const documentRoot = join(repositoryRoot, "dist", "wasm-browser");
-const diskPath = process.env.TRIPTYCH_CPM22_IMAGE
-  ? resolve(process.env.TRIPTYCH_CPM22_IMAGE)
-  : undefined;
+const bundledDiskPath = join(
+  repositoryRoot,
+  "third_party",
+  "cpm22",
+  "cpm22.img",
+);
+const diskPath = resolve(process.env.TRIPTYCH_CPM22_IMAGE ?? bundledDiskPath);
 const requestedPort = Number.parseInt(process.env.PORT ?? "8080", 10);
 if (
   !Number.isInteger(requestedPort) ||
@@ -27,7 +31,7 @@ const contentTypes = new Map([
 ]);
 
 await stat(documentRoot);
-if (diskPath !== undefined) await stat(diskPath);
+await stat(diskPath);
 
 function sendJson(response, value, method) {
   const body = `${JSON.stringify(value)}\n`;
@@ -69,14 +73,14 @@ const server = createServer(async (request, response) => {
       sendJson(
         response,
         {
-          diskUrl: diskPath === undefined ? null : "/cpm22.img",
-          diskName: diskPath === undefined ? null : basename(diskPath),
+          diskUrl: "/cpm22.img",
+          diskName: basename(diskPath),
         },
         method,
       );
       return;
     }
-    if (url.pathname === "/cpm22.img" && diskPath !== undefined) {
+    if (url.pathname === "/cpm22.img") {
       await sendFile(response, diskPath, method);
       return;
     }
@@ -106,10 +110,6 @@ server.listen(requestedPort, "127.0.0.1", () => {
       ? address.port
       : requestedPort;
   console.log(`Triptych WASM terminal: http://127.0.0.1:${port}/`);
-  if (diskPath === undefined) {
-    console.log("Choose a CP/M disk image in the page.");
-  } else {
-    console.log(`CP/M disk: ${diskPath}`);
-  }
+  console.log(`CP/M disk: ${diskPath}`);
   console.log("Press Ctrl-C to stop.");
 });

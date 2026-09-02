@@ -1,5 +1,6 @@
 import { spawnSync } from "node:child_process";
-import { copyFile, mkdir, writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 
 import { assembleTriptychCpuFirmware } from "./cpm22-native-image.mjs";
@@ -24,6 +25,14 @@ const wasmPath = join(
 );
 const wasmBindgen = process.env.WASM_BINDGEN ?? "wasm-bindgen";
 const expectedVersion = "wasm-bindgen 0.2.127";
+const bundledDiskPath = join(
+  repositoryRoot,
+  "third_party",
+  "cpm22",
+  "cpm22.img",
+);
+const bundledDiskSha256 =
+  "51b61f8c8d26a252890b08e78627ba82e1bd92b2dc4a640fd6b64201aa5cb6be";
 
 function run(command, commandArguments) {
   const result = spawnSync(command, commandArguments, {
@@ -76,7 +85,18 @@ if (browser) {
     "triptych-host-wasm",
     "web",
   );
-  const { bootRom, bios } = await assembleTriptychCpuFirmware(repositoryRoot);
+  const [{ bootRom, bios }, bundledDisk] = await Promise.all([
+    assembleTriptychCpuFirmware(repositoryRoot),
+    readFile(bundledDiskPath),
+  ]);
+  const actualDiskSha256 = createHash("sha256")
+    .update(bundledDisk)
+    .digest("hex");
+  if (actualDiskSha256 !== bundledDiskSha256) {
+    throw new Error(
+      `bundled CP/M disk digest changed: expected ${bundledDiskSha256}, got ${actualDiskSha256}`,
+    );
+  }
   await Promise.all([
     copyFile(
       join(sourceDirectory, "index.html"),
@@ -93,9 +113,14 @@ if (browser) {
     ),
     writeFile(join(outputDirectory, "bootstrap.bin"), bootRom),
     writeFile(join(outputDirectory, "bios.bin"), bios),
+    writeFile(join(outputDirectory, "cpm22.img"), bundledDisk),
     writeFile(
       join(outputDirectory, "config.json"),
-      `${JSON.stringify({ diskUrl: null, diskName: null }, undefined, 2)}\n`,
+      `${JSON.stringify(
+        { diskUrl: "cpm22.img", diskName: "triptych-cpm22.img" },
+        undefined,
+        2,
+      )}\n`,
       "utf8",
     ),
     writeFile(join(outputDirectory, ".nojekyll"), "", "utf8"),
