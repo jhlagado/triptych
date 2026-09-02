@@ -1,0 +1,31 @@
+{
+  "schema": "triptych-cpm-headless-scenario-v1",
+  "id": "ccp-file-roundtrip",
+  "description": "Cold-boot the CCP twice, create a file through BDOS, then display it from a fresh machine using the persisted disk",
+  "sessions": [
+    {
+      "id": "create-with-smoke",
+      "inputAscii": "SMOKE\r",
+      "stopAfterAscii": "Wrote RESULT.TXT\r\n\r\nA>",
+      "expectedTranscript": "\r\nA>SMOKE\r\r\nWrote RESULT.TXT\r\n\r\nA>",
+      "expectedTerminal": {
+        "text": "\nA>SMOKE\nWrote RESULT.TXT\n\nA>",
+        "cursorRow": 4,
+        "cursorColumn": 2,
+        "bellCount": 0
+      }
+    },
+    {
+      "id": "read-with-ccp-type",
+      "inputAscii": "TYPE RESULT.TXT\r",
+      "stopAfterAscii": "CP/M file services are working\r\n\r\nA>",
+      "expectedTranscript": "\r\nA>TYPE RESULT.TXT\r\r\nCP/M file services are working\r\n\r\nA>",
+      "expectedTerminal": {
+        "text": "\nA>TYPE RESULT.TXT\nCP/M file services are working\n\nA>",
+        "cursorRow": 4,
+        "cursorColumn": 2,
+        "bellCount": 0
+      }
+    }
+  ]
+}

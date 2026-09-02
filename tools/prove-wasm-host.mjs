@@ -8,6 +8,7 @@ import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 
 import { compile, defaultFormatWriters } from "@jhlagado/azm/compile";
+import { TerminalBuffer } from "../crates/triptych-host-wasm/web/terminal.js";
 
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = resolve(scriptDirectory, "..");
@@ -18,6 +19,13 @@ const fixtureDirectory = join(
   "fixtures",
 );
 const sourceDirectory = join(repositoryRoot, "roms", "cpu");
+const headlessScenarioPath = join(
+  repositoryRoot,
+  "test",
+  "bdos",
+  "scenarios",
+  "ccp-file-roundtrip.json",
+);
 const require = createRequire(import.meta.url);
 const { TriptychCpu } = require(
   join(repositoryRoot, "dist", "wasm", "triptych_host_wasm.js"),
@@ -248,39 +256,59 @@ async function proveCpm() {
       "TRIPTYCH_CPM22_IMAGE must name a provenance-reviewed CP/M 2.2 image",
     );
   }
-  const [bootRom, bios, sourceDisk] = await Promise.all([
+  const [bootRom, bios, sourceDisk, scenario] = await Promise.all([
     assemble(join(sourceDirectory, "bootstrap.asm")),
     assemble(join(sourceDirectory, "bios.asm")),
     readFile(resolve(cpmImagePath)),
+    readFile(headlessScenarioPath, "utf8").then(JSON.parse),
   ]);
+  assert.equal(scenario.schema, "triptych-cpm-headless-scenario-v1");
   const disk = Uint8Array.from(sourceDisk);
   disk.set(bios, BIOS_SYSTEM_OFFSET);
 
-  const first = new TriptychCpu(bootRom);
-  let persisted;
-  try {
-    first.install_drive(0, padForBackingSectors(disk), true);
-    first.enqueue_serial_input(Buffer.from("SMOKE\r", "ascii"));
-    const suffix = "Wrote RESULT.TXT\r\n\r\nA>";
-    assert.equal(runUntilOutput(first, suffix), `\r\nA>SMOKE\r\r\n${suffix}`);
-    persisted = first.export_drive(0);
-  } finally {
-    first.free();
-  }
+  let persisted = padForBackingSectors(disk);
+  const results = [];
+  for (const session of scenario.sessions) {
+    const machine = new TriptychCpu(bootRom);
+    try {
+      machine.install_drive(0, persisted, true);
+      machine.enqueue_serial_input(Buffer.from(session.inputAscii, "ascii"));
+      const transcript = runUntilOutput(machine, session.stopAfterAscii);
+      assert.equal(transcript, session.expectedTranscript, session.id);
 
-  const second = new TriptychCpu(bootRom);
-  try {
-    second.install_drive(0, persisted, true);
-    second.enqueue_serial_input(Buffer.from("TYPE RESULT.TXT\r", "ascii"));
-    const text = "CP/M file services are working";
-    const suffix = `${text}\r\n\r\nA>`;
-    assert.equal(
-      runUntilOutput(second, suffix),
-      `\r\nA>TYPE RESULT.TXT\r\r\n${suffix}`,
-    );
-  } finally {
-    second.free();
+      const terminal = new TerminalBuffer();
+      terminal.write(Buffer.from(transcript, "latin1"));
+      const terminalSnapshot = terminal.snapshot();
+      assert.equal(terminal.text(), session.expectedTerminal.text, session.id);
+      assert.equal(
+        terminalSnapshot.cursorRow,
+        session.expectedTerminal.cursorRow,
+        session.id,
+      );
+      assert.equal(
+        terminalSnapshot.cursorColumn,
+        session.expectedTerminal.cursorColumn,
+        session.id,
+      );
+      assert.equal(
+        terminalSnapshot.bellCount,
+        session.expectedTerminal.bellCount,
+        session.id,
+      );
+
+      persisted = machine.export_drive(0);
+      results.push({
+        id: session.id,
+        terminalRows: terminalSnapshot.rows,
+        terminalColumns: terminalSnapshot.columns,
+        cursorRow: terminalSnapshot.cursorRow,
+        cursorColumn: terminalSnapshot.cursorColumn,
+      });
+    } finally {
+      machine.free();
+    }
   }
+  return { id: scenario.id, sessions: results };
 }
 
 // Keep temporary-directory creation in the proof so an interrupted run never
@@ -297,18 +325,14 @@ try {
     );
     passed.push(runFixture(fixture));
   }
-  await proveCpm();
+  const cpm = await proveCpm();
   console.log(
     JSON.stringify(
       {
         status: "passed",
         host: "triptych-host-wasm",
         fixtures: passed,
-        cpm: {
-          processes: 2,
-          program: "SMOKE.COM",
-          persistentFile: "RESULT.TXT",
-        },
+        cpm,
       },
       undefined,
       2,

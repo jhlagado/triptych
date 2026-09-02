@@ -268,11 +268,13 @@ Work:
 - cold-boot the existing CP/M 2.2 compatibility image;
 - run a `.COM` program, write and flush a file, recreate the host, and read it
   after a second cold boot;
-- then begin the separately provenance-recorded CP/Mish machine port.
+- freeze the retained CCP and BDOS as compatibility oracles; and
+- begin the separately specified Triptych-authored Atom BDOS replacement.
 
 Exit: the native Rust run produces the same guest-visible transcript and
-persistent-file result as the retained TypeScript proof. CP/Mish is a later
-substage and does not redefine the machine to make its port easier.
+persistent-file result as the retained TypeScript proof. The replacement BDOS
+follows the [Atom BDOS roadmap](atom-bdos-roadmap.md) and does not redefine the
+machine or BIOS to make its implementation easier.
 
 ### Stage 5 — add the headless WASM host
 
@@ -391,7 +393,7 @@ These remain open until the stage that can measure them:
 - internal-RAM versus PSRAM placement beyond the initial conservative plan;
 - FreeRTOS task priority and core affinity;
 - native USB versus USB-to-UART as the finished console;
-- CP/Mish image construction and distributable component provenance;
+- the post-BDOS design of a Triptych-authored CCP;
 - a graphical native or browser debugger;
 - banked RAM and any firmware-service ABI.
 
@@ -401,12 +403,11 @@ absent.
 
 ## Immediate next work
 
-The native macOS workflow now has a persistent CP/M working-disk utility. Its
-retained proof imports pinned Atom and source files, assembles inside the guest,
-reopens the disk in another native-host process, and runs the generated COM.
-The next native-first slice should repeat that boundary with the separately
-provenanced Nucleus compiler and a small Nucleus source, then compare the
-exported output with its existing host proof. Out-of-band native debugger
+The native macOS and browser workflows now boot the same transitional CP/M 2.2
+system, run Atom and Nucleus programs, and preserve the defined disk boundary.
+The next native-first work is Milestone 1 of the
+[Atom BDOS roadmap](atom-bdos-roadmap.md): build the differential direct-call
+harness before implementing the replacement. Out-of-band native debugger
 controls remain a separate Stage 3 convenience and must not change the guest
 machine.
 
@@ -417,6 +418,8 @@ proof is ESP32 hardware evidence.
 ## References
 
 - [CPU v0.1 machine profile](../specifications/cpu-v0.1.md)
+- [Atom BDOS replacement roadmap](atom-bdos-roadmap.md)
+- [BDOS v0.1 contract](../specifications/bdos-v0.1.md)
 - [Current CPU proof report](../reports/cpu-v0.1-proof.md)
 - [Stage 1 conformance and Z80-engine decision](../reports/cpu-stage1-conformance.md)
 - [Waveshare ESP32-S3 development-board documentation](https://docs.waveshare.com/ESP32-S3-DEV-KIT-N8R8)

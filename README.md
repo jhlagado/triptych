@@ -146,7 +146,11 @@ the [specifications](docs/specifications/) contain the experimental register
 contracts. Current implementation work is limited to the CPU module; the
 [CPU development plan](docs/plans/cpu-development.md) records the portable
 Rust, native, WebAssembly, ESP32-S3, and breadboard stages and their proof
-gates. The [CPU conformance contract](docs/specifications/cpu-conformance-v1.md)
+gates. The [Atom BDOS roadmap](docs/plans/atom-bdos-roadmap.md) and
+[BDOS contract](docs/specifications/bdos-v0.1.md) define the independent,
+interface-driven replacement of the transitional BDOS while retaining the
+existing CCP and Triptych BIOS. The
+[CPU conformance contract](docs/specifications/cpu-conformance-v1.md)
 and [Stage 1 report](docs/reports/cpu-stage1-conformance.md) retain the first
 cross-language fixtures and the Rust Z80-engine decision. The
 [CPU Alpha report](docs/reports/cpu-alpha.md) records the exact native, Linux,

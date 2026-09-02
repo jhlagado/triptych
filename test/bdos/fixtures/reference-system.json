@@ -1,0 +1,39 @@
+{
+  "schema": "triptych-bdos-reference-system-v1",
+  "description": "Frozen transitional CP/M 2.2 system used only as a black-box compatibility oracle",
+  "sourceRevision": "f3f50e5aff92be7436e23892376ca433175b5d30",
+  "image": {
+    "path": "third_party/cpm22/cpm22.img",
+    "bytes": 256256,
+    "sha256": "51b61f8c8d26a252890b08e78627ba82e1bd92b2dc4a640fd6b64201aa5cb6be"
+  },
+  "layout": {
+    "systemLoadAddress": 58368,
+    "components": [
+      {
+        "name": "ccp",
+        "loadAddress": 58368,
+        "diskOffset": 0,
+        "bytes": 2048,
+        "sha256": "67fda0f138c3654a2fb15ae49acb2e663c848774779fa9822eda0f6d3a9b8da3"
+      },
+      {
+        "name": "bdos",
+        "loadAddress": 60416,
+        "diskOffset": 2048,
+        "bytes": 3584,
+        "sha256": "258fe1b659a979fa9adab000fd2ee27b165349179f6b5f5b8b5266ea3385ac22",
+        "publicEntry": 60422
+      },
+      {
+        "name": "embedded-bios",
+        "loadAddress": 64000,
+        "diskOffset": 5632,
+        "bytes": 1024,
+        "sha256": "3b575ee7990ee5865c6ddbf26b1b2c75a8fac81c47ddc285d18d488f83cd5b9d",
+        "jumpEntries": 17,
+        "runtimeDisposition": "replaced by a fresh assembly of roms/cpu/bios.asm before execution"
+      }
+    ]
+  }
+}

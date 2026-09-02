@@ -16,7 +16,7 @@ The authority order is:
 
 1. documented Z80 instruction, flag, reset, interrupt, and I/O semantics;
 2. this machine profile;
-3. the CP/Mish machine BIOS;
+3. the Triptych CP/M BIOS and BDOS contracts;
 4. ESP32 and host reference implementations.
 
 ESP32 task calls, Node callbacks, FAT paths, and SPI packets are not part of the
@@ -204,22 +204,25 @@ CP/M warm boot and orderly shutdown must issue it.
 `GET_CAPACITY` reports the count of addressable 128-byte records. Record zero
 is the first record and `capacity - 1` is the last.
 
-## CP/Mish placement
+## CP/M placement
 
-The first CP/Mish port will retain a large transient area and place its static
-components at the top of RAM. Exact CCP, BDOS, and BIOS addresses are outputs of
-the CP/Mish build and are not frozen here. The required conventional entries
-remain `$0000` for warm boot, `$0005` for BDOS, and `$0100` for `.COM` programs.
+The version 0.1 system fixes a 58,112-byte TPA at `$0100..$E3FF`, a 2,048-byte
+CCP at `$E400..$EBFF`, a 3,584-byte BDOS at `$EC00..$F9FF`, and a 1,024-byte
+BIOS at `$FA00..$FDFF`. Conventional entries remain `$0000` for warm boot,
+`$0005` for BDOS calls through the public `$EC06` entry, and `$0100` for `.COM`
+programs.
 
-The boot ROM reads the system records from drive 0, places the linked CP/Mish
-image at its build-selected high-memory address, initializes page zero, removes
-the ROM overlay, and enters the BIOS cold-boot routine. The BIOS alone converts
-CP/M track and sector requests into this profile's linear record numbers.
+The boot ROM reads 52 system records from drive 0 into `$E400`, removes the ROM
+overlay, and enters the BIOS cold-boot routine. Warm boot reloads the CCP and
+BDOS while retaining the resident BIOS. The BIOS alone converts CP/M track and
+sector requests into this profile's linear record numbers.
 
-CP/Mish is tracked from upstream commit
-`1f60541b619c1e983f05e68a064c027d1cdeb113` for the first port. It uses ZSDOS,
-ZCPR1, and a machine BIOS; it is an aggregate distributed under GPLv2. A future
-vendored or generated artifact must record component provenance and licences.
+The current CCP and third-party BDOS binary are transitional compatibility
+components with provenance and grant recorded under `third_party/cpm22/`. The
+active [Atom BDOS roadmap](../plans/atom-bdos-roadmap.md) replaces the BDOS
+with original Triptych source against the
+[BDOS v0.1 contract](bdos-v0.1.md). The existing Triptych BIOS remains the
+hardware-dependent CP/M component. A later CCP replacement is separate work.
 
 ## Required version 0.1 proofs
 
@@ -239,7 +242,7 @@ vendored or generated artifact must record component provenance and licences.
   transports without overlap;
 - the Z80 executes the boot ROM, removes the overlay, and executes a loaded RAM
   image;
-- CP/Mish cold boots over serial, runs a `.COM` file, and returns to ZCPR1;
+- CP/M cold boots over serial, runs a `.COM` file, and returns to the CCP;
 - a guest disk write remains after flush and a fresh provider instance.
 
 The final two proofs are the milestone discriminator. VDP, sound, banked RAM,
