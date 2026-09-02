@@ -61,12 +61,13 @@ default; `TRIPTYCH_CPM_SCENARIO` selects one fixture.
 
 The static page in `web/` uses the same `TriptychCpu` class. It accepts a CP/M
 disk through the page or the local development server, installs the generated
-Triptych BIOS in a browser-memory copy, and executes bounded CPU slices between
-browser frames. Its host-owned 80-by-24 screen consumes the bounded Triptych
-ANSI profile, renders per-cell bold, underline, and reverse attributes, and
-shows the emulated cursor. Keyboard events supply raw serial bytes, including
-ANSI arrow-key sequences; reset uses the machine's existing reset contract.
-The parser is UI code and does not enter the WASM adapter or portable CPU core.
+Triptych BDOS and BIOS in a browser-memory copy, and executes bounded CPU slices
+between browser frames. Its host-owned 80-by-24 screen consumes the bounded
+Triptych ANSI profile, renders per-cell bold, underline, and reverse attributes,
+and shows the emulated cursor. Keyboard events supply raw serial bytes,
+including ANSI arrow-key sequences; reset uses the machine's existing reset
+contract. The parser is UI code and does not enter the WASM adapter or portable
+CPU core.
 
 The exact matching `wasm-bindgen` executable builds the browser bindings and
 page:
@@ -75,7 +76,8 @@ page:
 npm run build:wasm-browser
 ```
 
-For a complete local session using the bundled transitional CP/M 2.2 disk:
+For a complete local session using the bundled CP/M 2.2 disk with the current
+Triptych BDOS and BIOS installed at boot:
 
 ```sh
 npm run run:wasm-browser
@@ -83,6 +85,7 @@ npm run run:wasm-browser
 
 The server listens only on `127.0.0.1`. `TRIPTYCH_CPM22_IMAGE` can override the
 bundled disk, and the page retains a file picker for selecting another image.
-The supplied image is never modified. `Download working disk` exports the
-in-memory image; only guest writes flushed through the disk controller are
-present.
+The current Triptych resident components are installed into either source
+image in browser memory; the supplied image is never modified. `Download
+working disk` exports the in-memory image, including only guest writes flushed
+through the disk controller.

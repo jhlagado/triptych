@@ -69,9 +69,9 @@ TRIPTYCH_CPM22_IMAGE=/path/to/cpm22.img npm run run:cpm22-native
 ```
 
 The launcher prints the source image's SHA-256 digest, assembles Triptych's
-boot ROM and BIOS, and installs them in a temporary copy of the disk. CP/M disk
-writes last for the session and are discarded when the launcher exits with
-Ctrl-C; the supplied image is never modified.
+boot ROM, BDOS, and BIOS, and installs the resident components in a temporary
+copy of the disk. CP/M disk writes last for the session and are discarded when
+the launcher exits with Ctrl-C; the supplied image is never modified.
 
 For continuing development, create a persistent native-host working disk and
 address its contents by CP/M filename:
@@ -101,9 +101,9 @@ TRIPTYCH_CPM22_WORK_DISK=/path/to/triptych-working.img \
 npm run run:cpm22-native
 ```
 
-The launcher installs the current Triptych BIOS atomically before boot. Guest
-writes that reach the disk controller's flush boundary remain in the named
-working image across host processes.
+The launcher installs the current Triptych BDOS and BIOS atomically before
+boot. Guest writes that reach the disk controller's flush boundary remain in
+the named working image across host processes.
 
 The Stage 5 WebAssembly proof additionally needs the exactly matching
 `wasm-bindgen` 0.2.127 command-line tool:
@@ -119,9 +119,10 @@ npm run proof:wasm-host
 
 CCP and application sessions can also be replayed without the browser. The
 default proof boots the repository's provenance-reviewed disk and runs every
-scenario under `test/bdos/scenarios/`: a scripted CCP file round trip in fresh
-machines and a staged `EDIT.COM` ANSI session. It checks exact serial bytes,
-complete ANSI screen state, and declared disk digests:
+scenario under `test/bdos/scenarios/`: CCP file and `DIR`/`TYPE` workflows, a
+staged `EDIT.COM` ANSI session, and an `ATOM.COM` assembly followed by execution
+of its output in a fresh machine. It checks exact serial bytes, complete ANSI
+screen state, and declared disk digests:
 
 ```sh
 npm run proof:cpm-headless
@@ -133,8 +134,9 @@ Set `TRIPTYCH_CPM_SCENARIO=/path/to/scenario.json` to replay another CCP or
 defines readable ASCII and arbitrary byte inputs, terminal snapshots, and
 cross-session disk persistence.
 
-The same toolchain builds an interactive browser terminal. The bundled disk
-starts CP/M automatically:
+The same toolchain builds an interactive browser terminal. It installs the
+current Triptych BDOS and BIOS into the bundled or user-selected disk before
+starting CP/M automatically:
 
 ```sh
 npm run run:wasm-browser

@@ -4,8 +4,10 @@ import { join, resolve } from "node:path";
 
 import { compile, defaultFormatWriters } from "@jhlagado/azm/compile";
 
+const BDOS_SYSTEM_OFFSET = 0x0800;
 const BIOS_SYSTEM_OFFSET = 0x1600;
 const BOOT_ROM_BYTES = 0x100;
+const BDOS_BYTES = 0x0e00;
 const BIOS_BYTES = 0x400;
 const BACKING_SECTOR_BYTES = 512;
 
@@ -60,7 +62,7 @@ export async function prepareNativeCpm22Image({
   sourceImagePath,
   outputDirectory,
 }) {
-  const [{ bootRom, bios }, sourceDisk] = await Promise.all([
+  const [{ bootRom, bdos, bios }, sourceDisk] = await Promise.all([
     assembleTriptychCpuFirmware(repositoryRoot),
     readFile(resolve(sourceImagePath)),
   ]);
@@ -72,6 +74,7 @@ export async function prepareNativeCpm22Image({
   }
 
   const workingDisk = Uint8Array.from(sourceDisk);
+  workingDisk.set(bdos, BDOS_SYSTEM_OFFSET);
   workingDisk.set(bios, BIOS_SYSTEM_OFFSET);
   const paddedDisk = padForBackingSectors(workingDisk);
   const bootRomPath = join(outputDirectory, "bootstrap.bin");
@@ -90,7 +93,7 @@ export async function prepareNativeCpm22Image({
 }
 
 /**
- * Installs the current Triptych BIOS in an existing persistent working disk.
+ * Installs the current Triptych BDOS and BIOS in an existing working disk.
  * The disk is published by one same-directory rename, so an assembly or write
  * failure cannot leave a partly patched image behind.
  */
@@ -100,7 +103,7 @@ export async function prepareNativeCpm22WorkingImage({
   outputDirectory,
 }) {
   const resolvedDiskPath = resolve(workingImagePath);
-  const [{ bootRom, bios }, sourceDisk] = await Promise.all([
+  const [{ bootRom, bdos, bios }, sourceDisk] = await Promise.all([
     assembleTriptychCpuFirmware(repositoryRoot),
     readFile(resolvedDiskPath),
   ]);
@@ -117,8 +120,9 @@ export async function prepareNativeCpm22WorkingImage({
   }
 
   const workingDisk = Uint8Array.from(sourceDisk);
+  workingDisk.set(bdos, BDOS_SYSTEM_OFFSET);
   workingDisk.set(bios, BIOS_SYSTEM_OFFSET);
-  const temporaryDiskPath = `${resolvedDiskPath}.triptych-bios-${process.pid}.tmp`;
+  const temporaryDiskPath = `${resolvedDiskPath}.triptych-system-${process.pid}.tmp`;
   try {
     await writeFile(temporaryDiskPath, workingDisk, { flag: "wx" });
     await rename(temporaryDiskPath, resolvedDiskPath);
@@ -139,8 +143,9 @@ export async function prepareNativeCpm22WorkingImage({
 
 export async function assembleTriptychCpuFirmware(repositoryRoot) {
   const sourceDirectory = join(repositoryRoot, "roms", "cpu");
-  const [bootRom, bios] = await Promise.all([
+  const [bootRom, bdos, bios] = await Promise.all([
     assemble(join(sourceDirectory, "bootstrap.asm")),
+    assemble(join(sourceDirectory, "bdos", "bdos.asm")),
     assemble(join(sourceDirectory, "bios.asm")),
   ]);
   if (bootRom.length !== BOOT_ROM_BYTES) {
@@ -151,5 +156,8 @@ export async function assembleTriptychCpuFirmware(repositoryRoot) {
   if (bios.length !== BIOS_BYTES) {
     throw new Error(`BIOS is ${bios.length} bytes; expected ${BIOS_BYTES}`);
   }
-  return { bootRom, bios };
+  if (bdos.length !== BDOS_BYTES) {
+    throw new Error(`BDOS is ${bdos.length} bytes; expected ${BDOS_BYTES}`);
+  }
+  return { bootRom, bdos, bios };
 }

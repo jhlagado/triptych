@@ -375,14 +375,43 @@ FNOPEN:
         JP      RETA
 
 FNCLSE:
+        CALL    CLOSEFCB
+        JP      RETA
+
+CLOSEFCB:
         LD      HL,(PARAM)
         LD      DE,14
         ADD     HL,DE
         LD      A,(HL)
         AND     $80
-        JP      NZ,RETZERO
-        LD      A,$FF
-        JP      RETA
+        JR      Z,CLOSEDIR
+        XOR     A
+        RET
+
+CLOSEDIR:
+        CALL    FINDEXCT
+        CP      $FF
+        RET     Z
+        LD      HL,(PARAM)
+        LD      BC,12
+        ADD     HL,BC
+        LD      DE,(MATCHPTR)
+        EX      DE,HL
+        ADD     HL,BC
+        EX      DE,HL
+        LD      BC,20
+        LDIR
+        CALL    WRITEDIR
+        LD      A,(RETCODE)
+        RET
+
+FINDEXCT:
+        LD      HL,(PARAM)
+        LD      (SRCHFCB),HL
+        LD      A,4
+        LD      (OPENMOD),A
+        CALL    NEWSRCH
+        JP      FINDENT
 
 FNSRCHF:
         LD      HL,(PARAM)
@@ -398,6 +427,267 @@ FNSRCHN:
         LD      (OPENMOD),A
         CALL    FINDENT
         JP      RETA
+
+FNDELETE:
+        CALL    CHKRO
+        LD      HL,(PARAM)
+        LD      (SRCHFCB),HL
+        LD      A,2
+        LD      (OPENMOD),A
+        CALL    NEWSRCH
+        XOR     A
+        LD      (WRTYPE),A
+
+DELLOOP:
+        CALL    FINDENT
+        CP      $FF
+        JR      Z,DELDONE
+        LD      HL,(MATCHPTR)
+        LD      DE,9
+        ADD     HL,DE
+        LD      A,(HL)
+        AND     $80
+        JR      Z,DELFREE
+        LD      HL,ERRFILE
+        CALL    DISKERR
+        JP      BIOWBT
+
+DELFREE:
+        CALL    FREEENT
+        LD      HL,(MATCHPTR)
+        LD      (HL),$E5
+        CALL    WRDIRNOW
+        LD      A,1
+        LD      (WRTYPE),A
+        JR      DELLOOP
+
+DELDONE:
+        LD      A,(WRTYPE)
+        OR      A
+        LD      A,$FF
+        JP      Z,RETA
+        XOR     A
+        JP      RETA
+
+; Create an empty extent in the first unused directory slot. The caller FCB
+; is initialized independently of the directory-buffer representation.
+FNMAKE:
+        CALL    CHKRO
+        XOR     A
+        LD      (WRTYPE),A
+        CALL    MAKEFCB
+        JP      RETA
+
+MAKEFCB:
+        LD      HL,(PARAM)
+        LD      DE,12
+        ADD     HL,DE
+        LD      A,(WRTYPE)
+        OR      A
+        JR      Z,MAKESRCH
+        LD      A,(HL)
+        LD      (TARGEX),A
+        INC     HL
+        INC     HL
+        LD      A,(HL)
+        AND     $3F
+        LD      (TARGS2),A
+
+MAKESRCH:
+        LD      HL,(PARAM)
+        LD      (SRCHFCB),HL
+        LD      A,3
+        LD      (OPENMOD),A
+        CALL    NEWSRCH
+        CALL    FINDENT
+        CP      $FF
+        RET     Z
+
+        LD      HL,(PARAM)
+        LD      DE,12
+        ADD     HL,DE
+        LD      B,24
+        XOR     A
+
+MAKEZERO:
+        LD      (HL),A
+        INC     HL
+        DJNZ    MAKEZERO
+
+        LD      A,(WRTYPE)
+        OR      A
+        JR      Z,MAKECOPY
+        LD      HL,(PARAM)
+        LD      DE,12
+        ADD     HL,DE
+        LD      A,(TARGEX)
+        LD      (HL),A
+        INC     HL
+        INC     HL
+        LD      A,(TARGS2)
+        LD      (HL),A
+
+MAKECOPY:
+        LD      HL,(MATCHPTR)
+        LD      A,(USERNO)
+        LD      (HL),A
+        INC     HL
+        EX      DE,HL
+        LD      HL,(PARAM)
+        INC     HL
+        LD      BC,31
+        LDIR
+
+        LD      HL,(PARAM)
+        LD      DE,14
+        ADD     HL,DE
+        LD      A,(HL)
+        OR      $80
+        LD      (HL),A
+        LD      HL,(SRCHIDX)
+        LD      DE,(DIRUSED)
+        OR      A
+        SBC     HL,DE
+        JR      C,MAKEUSED
+        LD      HL,(SRCHIDX)
+        LD      (DIRUSED),HL
+
+MAKEUSED:
+        CALL    WRITEDIR
+        LD      A,(RETCODE)
+        RET
+
+FNWRITE:
+        CALL    CHKRO
+        XOR     A
+        LD      (ZEROFIL),A
+        CALL    WRITESEQ
+        JP      RETA
+
+FNATTR:
+        CALL    CHKRO
+        CALL    FINDEXCT
+        CP      $FF
+        JP      Z,RETA
+        LD      HL,(PARAM)
+        INC     HL
+        JR      NEWNAME
+
+FNRENAME:
+        CALL    CHKRO
+        CALL    FINDEXCT
+        CP      $FF
+        JP      Z,RETA
+        LD      HL,(PARAM)
+        LD      DE,17
+        ADD     HL,DE
+
+NEWNAME:
+        LD      DE,(MATCHPTR)
+        INC     DE
+        LD      BC,11
+        LDIR
+        CALL    WRITEDIR
+        LD      A,(RETCODE)
+        JP      RETA
+
+WRITESEQ:
+        LD      HL,(PARAM)
+        LD      DE,32
+        ADD     HL,DE
+        LD      A,(HL)
+        CP      128
+        JR      C,WRITEPOS
+        CALL    ADVEXT
+        OR      A
+        RET     NZ
+        LD      HL,(PARAM)
+        LD      DE,32
+        ADD     HL,DE
+        LD      A,(HL)
+
+WRITEPOS:
+        LD      (SEQREC),A
+        XOR     A
+        LD      (WRTYPE),A
+        CALL    FCBLOCK
+        LD      A,D
+        OR      E
+        JR      NZ,WRITEBLK
+        CALL    ALLOCBLK
+        OR      A
+        RET     NZ
+        LD      A,2
+        LD      (WRTYPE),A
+        LD      A,(ZEROFIL)
+        OR      A
+        CALL    NZ,ZEROBLK
+
+WRITEBLK:
+        CALL    POSREC
+        CALL    ADVWRITE
+        LD      A,(WRTYPE)
+        LD      C,A
+        CALL    BIOWRS
+        OR      A
+        JR      NZ,WRITEBAD
+        LD      HL,(PARAM)
+        LD      DE,32
+        ADD     HL,DE
+        LD      A,(HL)
+        CP      128
+        CALL    Z,ADVEXT
+        XOR     A
+        RET
+
+WRITEBAD:
+        CALL    BADSECT
+        RET
+
+WRITEEND:
+        LD      A,1
+        RET
+
+ADVEXT:
+        CALL    CLOSEFCB
+        CALL    NEXTEXT
+        OR      A
+        JR      Z,EXTCLEAR
+        LD      A,1
+        LD      (WRTYPE),A
+        CALL    MAKEFCB
+        CP      $FF
+        JR      Z,WRITEEND
+
+EXTCLEAR:
+        LD      HL,(PARAM)
+        LD      DE,32
+        ADD     HL,DE
+        XOR     A
+        LD      (HL),A
+        RET
+
+ADVWRITE:
+        LD      HL,(PARAM)
+        LD      DE,32
+        ADD     HL,DE
+        INC     (HL)
+        LD      A,(HL)
+        LD      B,A
+        LD      HL,(PARAM)
+        LD      DE,15
+        ADD     HL,DE
+        CP      (HL)
+        JR      C,WRITERC
+        LD      (HL),B
+
+WRITERC:
+        DEC     HL
+        LD      A,(HL)
+        AND     $7F
+        LD      (HL),A
+        XOR     A
+        RET
 
 FNREADSQ:
         CALL    READSEQ
@@ -434,66 +724,7 @@ READCHK:
         LD      A,D
         OR      E
         JP      Z,READ_EOF
-
-        EX      DE,HL
-        LD      DE,(DPBPTR)
-        INC     DE
-        INC     DE
-        LD      A,(DE)
-        LD      B,A
-        LD      A,B
-        OR      A
-        JR      Z,BLOCKSCA
-
-BLOCKSHF:
-        ADD     HL,HL
-        DJNZ    BLOCKSHF
-
-BLOCKSCA:
-        LD      DE,(DPBPTR)
-        INC     DE
-        INC     DE
-        INC     DE
-        LD      A,(DE)
-        LD      B,A
-        LD      A,(SEQREC)
-        AND     B
-        LD      E,A
-        LD      D,0
-        ADD     HL,DE
-
-        LD      DE,0
-        LD      IX,(DPBPTR)
-        LD      C,(IX+0)
-        LD      B,(IX+1)
-
-DIVTRACK:
-        OR      A
-        SBC     HL,BC
-        JR      C,DIVDONE
-        INC     DE
-        JR      DIVTRACK
-
-DIVDONE:
-        ADD     HL,BC
-        LD      (IOSEC),HL
-        EX      DE,HL
-        LD      E,(IX+13)
-        LD      D,(IX+14)
-        ADD     HL,DE
-        LD      (IOTRK),HL
-
-        LD      B,H
-        LD      C,L
-        CALL    BIOTRK
-        LD      HL,(IOSEC)
-        LD      B,H
-        LD      C,L
-        LD      DE,(XLTPTR)
-        CALL    BIOTRN
-        LD      B,H
-        LD      C,L
-        CALL    BIOSEC
+        CALL    POSREC
         LD      HL,(PARAM)
         LD      DE,32
         ADD     HL,DE
@@ -508,6 +739,44 @@ READ_EOF:
         RET
 
 FNRREAD:
+        CALL    RANDPREP
+        JR      C,RANDRET
+        CALL    READSEQ
+        JR      RANDDONE
+
+FNRWRITE:
+        XOR     A
+        JR      RANDWRT
+
+FNWRZERO:
+        LD      A,1
+
+RANDWRT:
+        LD      (ZEROFIL),A
+        CALL    CHKRO
+        CALL    RANDPREP
+        JR      C,RANDRET
+        CALL    WRITESEQ
+
+RANDDONE:
+        PUSH    AF
+        LD      HL,(PARAM)
+        LD      DE,32
+        ADD     HL,DE
+        LD      A,(ZEROFIL)
+        OR      A
+        LD      A,(SAVEDCR)
+        JR      Z,RANDSAVE
+        LD      A,(SEQREC)
+
+RANDSAVE:
+        LD      (HL),A
+        POP     AF
+
+RANDRET:
+        JP      RETA
+
+RANDPREP:
         LD      HL,(PARAM)
         LD      DE,32
         ADD     HL,DE
@@ -595,23 +864,30 @@ RANDPOS:
         ADD     HL,DE
         LD      A,(SEQREC)
         LD      (HL),A
-        CALL    READSEQ
-        PUSH    AF
-        LD      HL,(PARAM)
-        LD      DE,32
-        ADD     HL,DE
-        LD      A,(SAVEDCR)
-        LD      (HL),A
-        POP     AF
-        JP      RETA
+        XOR     A
+        RET
 
 RANDMISS:
         LD      A,1
-        JP      RETA
+        SCF
+        RET
 
 ; Locate the allocation block containing the FCB's current sequential record.
 ; DSM selects the public one-byte or two-byte allocation-map representation.
 FCBLOCK:
+        CALL    FCBADDR
+        LD      E,(HL)
+        LD      D,0
+        LD      IX,(DPBPTR)
+        LD      A,(IX+6)
+        OR      A
+        RET     Z
+        INC     HL
+        LD      D,(HL)
+        RET
+
+; Return the allocation-map cell for SEQREC in HL.
+FCBADDR:
         LD      A,(SEQREC)
         LD      HL,(DPBPTR)
         INC     HL
@@ -643,9 +919,6 @@ BLOCKIDX:
         LD      BC,16
         ADD     HL,BC
         ADD     HL,DE
-        LD      E,(HL)
-        INC     HL
-        LD      D,(HL)
         RET
 
 BLOCKBYT:
@@ -655,9 +928,169 @@ BLOCKBYT:
         LD      BC,16
         ADD     HL,BC
         ADD     HL,DE
-        LD      E,(HL)
-        LD      D,0
         RET
+
+; Claim the first free block through the BIOS-owned allocation vector, publish
+; it in the current FCB allocation cell, and return the block in DE.
+ALLOCBLK:
+        LD      HL,(ALVPTR)
+        LD      IX,(DPBPTR)
+        LD      DE,0
+        LD      C,$80
+
+ALLOCLOP:
+        LD      A,(HL)
+        AND     C
+        JR      Z,ALFOUND
+        LD      A,D
+        CP      (IX+6)
+        JR      NZ,ALNEXT
+        LD      A,E
+        CP      (IX+5)
+        JR      Z,ALFULL
+
+ALNEXT:
+        INC     DE
+        SRL     C
+        JR      NZ,ALLOCLOP
+        INC     HL
+        LD      C,$80
+        JR      ALLOCLOP
+
+ALFOUND:
+        LD      A,(HL)
+        OR      C
+        LD      (HL),A
+        PUSH    DE
+        CALL    FCBADDR
+        POP     DE
+        LD      (HL),E
+        LD      A,(IX+6)
+        OR      A
+        JR      Z,ALLOCDON
+        INC     HL
+        LD      (HL),D
+
+ALLOCDON:
+        XOR     A
+        RET
+
+ALFULL:
+        LD      A,2
+        RET
+
+; CP/M function 40 clears a newly allocated block before publishing the
+; caller's target record. The BIOS directory buffer is reusable scratch here.
+ZEROBLK:
+        LD      (ZEROBN),DE
+        LD      A,(SEQREC)
+        LD      (TARGEX),A
+        LD      HL,(DIRPTR)
+        LD      (HL),0
+        LD      D,H
+        LD      E,L
+        INC     DE
+        LD      BC,127
+        LDIR
+        LD      HL,(DIRPTR)
+        LD      B,H
+        LD      C,L
+        CALL    BIODMA
+        LD      IX,(DPBPTR)
+        LD      A,(IX+3)
+        INC     A
+        LD      (ALLEFT),A
+        DEC     A
+        CPL
+        LD      B,A
+        LD      A,(SEQREC)
+        AND     B
+        LD      (SEQREC),A
+
+ZEROLOOP:
+        LD      DE,(ZEROBN)
+        CALL    POSREC
+        LD      C,2
+        CALL    BIOWRS
+        OR      A
+        CALL    NZ,BADSECT
+        LD      A,(SEQREC)
+        INC     A
+        LD      (SEQREC),A
+        LD      A,(ALLEFT)
+        DEC     A
+        LD      (ALLEFT),A
+        JR      NZ,ZEROLOOP
+        LD      HL,(CURDMA)
+        LD      B,H
+        LD      C,L
+        CALL    BIODMA
+        LD      A,(TARGEX)
+        LD      (SEQREC),A
+        LD      DE,(ZEROBN)
+        RET
+
+; Position the BIOS at SEQREC within allocation block DE.
+POSREC:
+        EX      DE,HL
+        LD      DE,(DPBPTR)
+        INC     DE
+        INC     DE
+        LD      A,(DE)
+        LD      B,A
+        LD      A,B
+        OR      A
+        JR      Z,BLOCKSCA
+
+BLOCKSHF:
+        ADD     HL,HL
+        DJNZ    BLOCKSHF
+
+BLOCKSCA:
+        LD      DE,(DPBPTR)
+        INC     DE
+        INC     DE
+        INC     DE
+        LD      A,(DE)
+        LD      B,A
+        LD      A,(SEQREC)
+        AND     B
+        LD      E,A
+        LD      D,0
+        ADD     HL,DE
+
+        LD      DE,0
+        LD      IX,(DPBPTR)
+        LD      C,(IX+0)
+        LD      B,(IX+1)
+
+DIVTRACK:
+        OR      A
+        SBC     HL,BC
+        JR      C,DIVDONE
+        INC     DE
+        JR      DIVTRACK
+
+DIVDONE:
+        ADD     HL,BC
+        LD      (IOSEC),HL
+        EX      DE,HL
+        LD      E,(IX+13)
+        LD      D,(IX+14)
+        ADD     HL,DE
+        LD      (IOTRK),HL
+
+        LD      B,H
+        LD      C,L
+        CALL    BIOTRK
+        LD      HL,(IOSEC)
+        LD      B,H
+        LD      C,L
+        LD      DE,(XLTPTR)
+        CALL    BIOTRN
+        LD      B,H
+        LD      C,L
+        JP      BIOSEC
 
 NEXTEXT:
         LD      HL,(PARAM)
@@ -768,34 +1201,7 @@ SIZELOOP:
         CP      $FF
         JR      Z,SIZEDONE
         LD      HL,(MATCHPTR)
-        LD      DE,12
-        ADD     HL,DE
-        LD      A,(HL)
-        AND     $1F
-        LD      C,A
-        INC     HL
-        INC     HL
-        LD      A,(HL)
-        AND     $3F
-        LD      H,0
-        LD      L,A
-        ADD     HL,HL
-        ADD     HL,HL
-        ADD     HL,HL
-        ADD     HL,HL
-        ADD     HL,HL
-        LD      E,C
-        LD      D,0
-        ADD     HL,DE
-        XOR     A
-        LD      B,7
-
-SIZESHFT:
-        ADD     HL,HL
-        RLA
-        DJNZ    SIZESHFT
-        LD      (CAND0),HL
-        LD      (CAND2),A
+        CALL    RECBASE
         LD      HL,(MATCHPTR)
         LD      DE,15
         ADD     HL,DE
@@ -850,34 +1256,7 @@ SIZEDONE:
 ; Convert the sequential EX/S2/CR position to the public 24-bit random record.
 FNSETRR:
         LD      HL,(PARAM)
-        LD      DE,12
-        ADD     HL,DE
-        LD      A,(HL)
-        AND     $1F
-        LD      C,A
-        INC     HL
-        INC     HL
-        LD      A,(HL)
-        AND     $3F
-        LD      H,0
-        LD      L,A
-        ADD     HL,HL
-        ADD     HL,HL
-        ADD     HL,HL
-        ADD     HL,HL
-        ADD     HL,HL
-        LD      E,C
-        LD      D,0
-        ADD     HL,DE
-        XOR     A
-        LD      B,7
-
-RRSHIFT:
-        ADD     HL,HL
-        RLA
-        DJNZ    RRSHIFT
-        LD      (CAND0),HL
-        LD      (CAND2),A
+        CALL    RECBASE
         LD      HL,(PARAM)
         LD      DE,32
         ADD     HL,DE
@@ -901,6 +1280,38 @@ RRSHIFT:
         LD      A,(CAND2)
         LD      (HL),A
         JP      RETZERO
+
+; Convert an FCB-shaped EX/S2 position at HL to its 24-bit record base.
+RECBASE:
+        LD      DE,12
+        ADD     HL,DE
+        LD      A,(HL)
+        AND     $1F
+        LD      C,A
+        INC     HL
+        INC     HL
+        LD      A,(HL)
+        AND     $3F
+        LD      H,0
+        LD      L,A
+        ADD     HL,HL
+        ADD     HL,HL
+        ADD     HL,HL
+        ADD     HL,HL
+        ADD     HL,HL
+        LD      E,C
+        LD      D,0
+        ADD     HL,DE
+        XOR     A
+        LD      B,7
+
+RECBSHFT:
+        ADD     HL,HL
+        RLA
+        DJNZ    RECBSHFT
+        LD      (CAND0),HL
+        LD      (CAND2),A
+        RET
 
 FNRESETD:
         LD      DE,(PARAM)
@@ -949,6 +1360,12 @@ NEWSRCH:
 FINDENT:
         LD      HL,(SRCHIDX)
         LD      DE,(DIRUSED)
+        LD      A,(OPENMOD)
+        CP      3
+        JR      NZ,FINDLIM
+        LD      DE,(DIRCNT)
+
+FINDLIM:
         OR      A
         SBC     HL,DE
         JR      NC,NOENTRY
@@ -1027,6 +1444,15 @@ NOENTRY:
 ; single-character wildcards. Directory attribute bits are not name bits.
 ; Open also requires the requested logical extent.
 MATCHFCB:
+        LD      A,(OPENMOD)
+        CP      3
+        JR      NZ,MATCHUSR
+        LD      A,(HL)
+        CP      $E5
+        JR      Z,ISMATCH
+        JR      NOMATCH
+
+MATCHUSR:
         LD      A,(USERNO)
         LD      B,A
         LD      A,(HL)
@@ -1039,6 +1465,7 @@ MATCHFCB:
 
 NAMELOOP:
         LD      A,(DE)
+        AND     $7F
         CP      '?'
         JR      Z,NAMEOK
         LD      C,A
@@ -1085,10 +1512,12 @@ NOMATCH:
 
 READDIR:
         LD      HL,(CURTRK)
+        LD      (DIRTRK),HL
         LD      B,H
         LD      C,L
         CALL    BIOTRK
         LD      HL,(CURSEC)
+        LD      (DIRSEC),HL
         LD      B,H
         LD      C,L
         LD      DE,(XLTPTR)
@@ -1110,6 +1539,55 @@ READDIR:
         OR      A
         JP      NZ,RDFAIL
         CALL    ADVSEC
+        RET
+
+; Write the current directory buffer back to the exact record READDIR loaded.
+WRITEDIR:
+        LD      HL,(DIRTRK)
+        LD      B,H
+        LD      C,L
+        CALL    BIOTRK
+        LD      HL,(DIRSEC)
+        LD      B,H
+        LD      C,L
+        LD      DE,(XLTPTR)
+        CALL    BIOTRN
+        LD      B,H
+        LD      C,L
+        CALL    BIOSEC
+        LD      HL,(DIRPTR)
+        LD      B,H
+        LD      C,L
+        CALL    BIODMA
+        LD      C,1
+        CALL    BIOWRS
+        PUSH    AF
+        LD      HL,(CURDMA)
+        LD      B,H
+        LD      C,L
+        CALL    BIODMA
+        POP     AF
+        OR      A
+        CALL    NZ,BADSECT
+        RET
+
+; The delete loop writes immediately after READDIR, so the BIOS remains on the
+; matching directory record and only the DMA needs changing.
+WRDIRNOW:
+        LD      HL,(DIRPTR)
+        LD      B,H
+        LD      C,L
+        CALL    BIODMA
+        LD      C,1
+        CALL    BIOWRS
+        PUSH    AF
+        LD      HL,(CURDMA)
+        LD      B,H
+        LD      C,L
+        CALL    BIODMA
+        POP     AF
+        OR      A
+        CALL    NZ,BADSECT
         RET
 
 ADVSEC:
@@ -1219,37 +1697,12 @@ DIRSCAN:
         LD      A,H
         OR      L
         RET     Z
-        LD      HL,(CURTRK)
-        LD      B,H
-        LD      C,L
-        CALL    BIOTRK
-        LD      HL,(CURSEC)
-        LD      B,H
-        LD      C,L
-        LD      DE,(XLTPTR)
-        CALL    BIOTRN
-        LD      B,H
-        LD      C,L
-        CALL    BIOSEC
-        LD      HL,(DIRPTR)
-        LD      B,H
-        LD      C,L
-        CALL    BIODMA
-        CALL    BIORDS
-        PUSH    AF
-        LD      HL,(CURDMA)
-        LD      B,H
-        LD      C,L
-        CALL    BIODMA
-        POP     AF
-        OR      A
-        JP      NZ,RDFAIL
+        CALL    READDIR
         CALL    PARDIR
 
         LD      HL,(DIRLEFT)
         DEC     HL
         LD      (DIRLEFT),HL
-        CALL    ADVSEC
         JR      DIRSCAN
 
 ; Clear the BIOS-owned allocation vector and copy the reserved-directory
@@ -1368,7 +1821,64 @@ PARWLOOP:
         JR      NZ,PARWLOOP
         RET
 
+FREEENT:
+        LD      HL,(MATCHPTR)
+        LD      DE,16
+        ADD     HL,DE
+        LD      IX,(DPBPTR)
+        LD      A,(IX+6)
+        OR      A
+        JR      NZ,FREEWORD
+        LD      A,16
+        LD      (ALLEFT),A
+
+FREEBYTE:
+        LD      E,(HL)
+        LD      D,0
+        INC     HL
+        PUSH    HL
+        CALL    CLRBLK
+        POP     HL
+        LD      A,(ALLEFT)
+        DEC     A
+        LD      (ALLEFT),A
+        JR      NZ,FREEBYTE
+        RET
+
+FREEWORD:
+        LD      A,8
+        LD      (ALLEFT),A
+
+FREEWLOP:
+        LD      E,(HL)
+        INC     HL
+        LD      D,(HL)
+        INC     HL
+        PUSH    HL
+        CALL    CLRBLK
+        POP     HL
+        LD      A,(ALLEFT)
+        DEC     A
+        LD      (ALLEFT),A
+        JR      NZ,FREEWLOP
+        RET
+
 MARKBLK:
+        CALL    BITPTR
+        RET     Z
+        OR      (HL)
+        LD      (HL),A
+        RET
+
+CLRBLK:
+        CALL    BITPTR
+        RET     Z
+        CPL
+        AND     (HL)
+        LD      (HL),A
+        RET
+
+BITPTR:
         LD      A,D
         OR      E
         RET     Z
@@ -1389,15 +1899,14 @@ MARKBLK:
         LD      A,B
         OR      A
         LD      A,C
-        JR      Z,SETABIT
+        JR      Z,BITDONE
 
 SHIFBIT:
         RRCA
         DJNZ    SHIFBIT
 
-SETABIT:
-        OR      (HL)
-        LD      (HL),A
+BITDONE:
+        OR      A
         RET
 
 DRVMASK:
@@ -1413,19 +1922,26 @@ MASKLOOP:
         DJNZ    MASKLOOP
         RET
 
+CHKRO:
+        CALL    DRVMASK
+        LD      DE,(ROVEC)
+        LD      A,L
+        AND     E
+        LD      L,A
+        LD      A,H
+        AND     D
+        OR      L
+        RET     Z
+        LD      HL,ERRRO
+        CALL    DISKERR
+        JP      BIOWBT
+
 ; Failure diagnostics are deliberately kept behind one routine so later
 ; milestones can add the exact CP/M retry/abort interaction without coupling
 ; normal disk algorithms to console policy.
 SELFAIL:
-        LD      HL,ERRHEAD
-        CALL    ERRTEXT
-        LD      A,(CURDRV)
-        ADD     A,'A'
-        LD      C,A
-        CALL    OUTCHAR
         LD      HL,ERRSEL
-        CALL    ERRTEXT
-        CALL    GETCHAR
+        CALL    DISKERR
         JP      BIOWBT
 
 ERRTEXT:
@@ -1443,17 +1959,22 @@ RDFAIL:
         JP      BIOWBT
 
 BADSECT:
+        LD      HL,ERRBAD
+        CALL    DISKERR
+        XOR     A
+        RET
+
+DISKERR:
+        PUSH    HL
         LD      HL,ERRHEAD
         CALL    ERRTEXT
         LD      A,(CURDRV)
         ADD     A,'A'
         LD      C,A
         CALL    OUTCHAR
-        LD      HL,ERRBAD
+        POP     HL
         CALL    ERRTEXT
-        CALL    GETCHAR
-        XOR     A
-        RET
+        JP      GETCHAR
 
 GETCHAR:
         LD      A,(PENDING)
@@ -1569,11 +2090,11 @@ ERASE1:
 FNTAB:
         DW      FNZERO,FNCIN,FNCOUT,FNREAD,FNPUNCH,FNLIST,FNDIRECT
         DW      FNGETIO,FNSETIO,FNPRINT,FNLINE,FNSTAT,FNVERS
-        DW      FNRESET,FNSEL,FNOPEN,FNCLSE,FNSRCHF,FNSRCHN,RETZERO
-        DW      FNREADSQ,RETZERO,RETZERO,RETZERO,FNLOGIN,FNCURDSK,FNSETDMA
-        DW      FNGETALV,FNWRPROT,FNGETRO,RETZERO,FNGETDPB,FNUSER
-        DW      FNRREAD,RETZERO,FNSIZE,FNSETRR,FNRESETD,RETZERO
-        DW      RETZERO,RETZERO
+        DW      FNRESET,FNSEL,FNOPEN,FNCLSE,FNSRCHF,FNSRCHN,FNDELETE
+        DW      FNREADSQ,FNWRITE,FNMAKE,FNRENAME,FNLOGIN,FNCURDSK,FNSETDMA
+        DW      FNGETALV,FNWRPROT,FNGETRO,FNATTR,FNGETDPB,FNUSER
+        DW      FNRREAD,FNRWRITE,FNSIZE,FNSETRR,FNRESETD,RETZERO
+        DW      RETZERO,FNWRZERO
 
 OLDSP:  DW      0
 PARAM:  DW      0
@@ -1619,9 +2140,16 @@ CAND2:  DB      0
 SAVEDCR: DB     0
 TARGEX: DB      0
 TARGS2: DB      0
+WRTYPE: DB      0
+ZEROFIL: DB     0
+ZEROBN: DW      0
+DIRTRK: DW      0
+DIRSEC: DW      0
 ERRHEAD: DB     CR,LF,"Bdos Err On ",0
 ERRSEL: DB      ": Select",0
 ERRBAD: DB      ": Bad Sector",0
+ERRRO:  DB      ": R/O",0
+ERRFILE: DB     ": File R/O",0
 
 STKBASE:
         DS      64,0

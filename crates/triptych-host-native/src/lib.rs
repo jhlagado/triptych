@@ -47,6 +47,10 @@ impl TerminalConsole {
     pub fn captured_output(&self) -> &[u8] {
         &self.captured_output
     }
+
+    pub fn enqueue_scripted(&mut self, input: impl IntoIterator<Item = u8>) {
+        self.scripted_input.extend(input);
+    }
 }
 
 impl Console for TerminalConsole {

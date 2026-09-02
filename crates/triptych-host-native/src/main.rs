@@ -32,13 +32,15 @@ fn run() -> Result<(), Box<dyn Error>> {
     })?;
     let mut ram = Box::new([0; RAM_BYTES]);
     let mut machine = Machine::new();
-    let mut console = match arguments.input {
-        Some(input) => TerminalConsole::scripted(input.bytes()),
+    let mut console = match arguments.input.as_ref() {
+        Some(input) if arguments.input_after.is_none() => TerminalConsole::scripted(input.bytes()),
+        Some(_) => TerminalConsole::scripted([]),
         None => TerminalConsole::open(),
     };
     let mut sectors = FileSectorStore::open(&drive_paths)?;
     let budget = RunBudget::from_values(50_000, 500_000).expect("non-zero budget");
     let mut total_steps = 0_u64;
+    let mut input_queued = arguments.input_after.is_none();
 
     loop {
         let exit = {
@@ -47,6 +49,21 @@ fn run() -> Result<(), Box<dyn Error>> {
             machine.run_slice(&mut memory, &mut devices, budget)
         };
         total_steps = total_steps.saturating_add(exit.steps);
+        if !input_queued
+            && arguments
+                .input_after
+                .as_ref()
+                .is_some_and(|suffix| console.captured_output().ends_with(suffix.as_bytes()))
+        {
+            console.enqueue_scripted(
+                arguments
+                    .input
+                    .as_ref()
+                    .expect("input-after requires input")
+                    .bytes(),
+            );
+            input_queued = true;
+        }
         if arguments
             .stop_after
             .as_ref()
@@ -71,6 +88,7 @@ struct Arguments {
     rom: PathBuf,
     drives: Vec<PathBuf>,
     input: Option<String>,
+    input_after: Option<String>,
     stop_after: Option<String>,
     max_steps: Option<u64>,
 }
@@ -78,6 +96,7 @@ struct Arguments {
 fn parse_arguments(arguments: impl Iterator<Item = OsString>) -> Result<Arguments, Box<dyn Error>> {
     let mut positional = Vec::new();
     let mut input = None;
+    let mut input_after = None;
     let mut stop_after = None;
     let mut max_steps = None;
     let mut arguments = arguments;
@@ -85,6 +104,9 @@ fn parse_arguments(arguments: impl Iterator<Item = OsString>) -> Result<Argument
         match argument.to_str() {
             Some("--input-ascii") => {
                 input = Some(next_utf8(&mut arguments, "--input-ascii")?);
+            }
+            Some("--input-after") => {
+                input_after = Some(next_utf8(&mut arguments, "--input-after")?);
             }
             Some("--stop-after") => {
                 stop_after = Some(next_utf8(&mut arguments, "--stop-after")?);
@@ -106,10 +128,14 @@ fn parse_arguments(arguments: impl Iterator<Item = OsString>) -> Result<Argument
     if drives.is_empty() {
         return Err("at least one drive image is required".into());
     }
+    if input_after.is_some() && input.is_none() {
+        return Err("--input-after requires --input-ascii".into());
+    }
     Ok(Arguments {
         rom,
         drives,
         input,
+        input_after,
         stop_after,
         max_steps,
     })

@@ -1,0 +1,61 @@
+{
+  "schema": "triptych-cpm-headless-scenario-v1",
+  "id": "triptych-bdos-atom-compile",
+  "description": "Assemble HELLO.ASM with the real ATOM.COM through the Triptych BDOS, then execute the persisted HELLO.COM in a fresh machine",
+  "systemBdos": "triptych",
+  "expectedInitialDriveSha256": "e6fb64119c5d44ba85ccc9e23b8018da17399aeebb21d80b7bfc736bbdf25002",
+  "sessions": [
+    {
+      "id": "assemble-hello",
+      "interactions": [
+        {
+          "id": "boot",
+          "inputAscii": "",
+          "stopAfterAscii": "\r\nA>"
+        },
+        {
+          "id": "run-atom",
+          "inputAscii": "ATOM HELLO.ASM\r",
+          "stopAfterAscii": "HELLO.COM written\r\n\r\nA>"
+        }
+      ],
+      "expectedTranscript": "\r\nA>ATOM HELLO.ASM\r\r\n\r\nHELLO.COM written\r\n\r\nA>",
+      "expectedDriveSha256": "1beb995bcbea53514f6b5f9d2abd26f80c89d5ed190753575e922668f052b981",
+      "expectedTerminal": {
+        "text": "\nA>ATOM HELLO.ASM\n\nHELLO.COM written\n\nA>",
+        "cursorRow": 5,
+        "cursorColumn": 2,
+        "currentAttributes": 0,
+        "wrapPending": false,
+        "bellCount": 0,
+        "screenSha256": "637688ece49a080d7fdebf01e8662d8e465a3d5cd112741b5347f22819526d17"
+      }
+    },
+    {
+      "id": "run-generated-program",
+      "interactions": [
+        {
+          "id": "boot",
+          "inputAscii": "",
+          "stopAfterAscii": "\r\nA>"
+        },
+        {
+          "id": "run-hello",
+          "inputAscii": "HELLO\r",
+          "stopAfterAscii": "Hello from native Atom\r\n\r\nA>"
+        }
+      ],
+      "expectedTranscript": "\r\nA>HELLO\r\r\nHello from native Atom\r\n\r\nA>",
+      "expectedDriveSha256": "1beb995bcbea53514f6b5f9d2abd26f80c89d5ed190753575e922668f052b981",
+      "expectedTerminal": {
+        "text": "\nA>HELLO\nHello from native Atom\n\nA>",
+        "cursorRow": 4,
+        "cursorColumn": 2,
+        "currentAttributes": 0,
+        "wrapPending": false,
+        "bellCount": 0,
+        "screenSha256": "ce4926467b7de204bfbd4972d84a23164ccc99e798b768c90920b708da27afcb"
+      }
+    }
+  ]
+}

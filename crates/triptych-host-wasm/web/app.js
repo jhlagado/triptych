@@ -1,6 +1,7 @@
 import init, { TriptychCpu } from "./triptych_host_wasm.js";
 import { keyEventToBytes, renderTerminal, TerminalBuffer } from "./terminal.js";
 
+const BDOS_SYSTEM_OFFSET = 0x0800;
 const BIOS_SYSTEM_OFFSET = 0x1600;
 const BACKING_SECTOR_BYTES = 512;
 
@@ -13,6 +14,7 @@ const terminal = new TerminalBuffer();
 
 let machine;
 let bootRom;
+let bdos;
 let bios;
 let diskName = "triptych-cpm22.img";
 let runGeneration = 0;
@@ -48,6 +50,7 @@ function workingDisk(source) {
     Math.ceil(source.length / BACKING_SECTOR_BYTES) * BACKING_SECTOR_BYTES;
   const disk = new Uint8Array(length);
   disk.set(source);
+  disk.set(bdos, BDOS_SYSTEM_OFFSET);
   disk.set(bios, BIOS_SYSTEM_OFFSET);
   return disk;
 }
@@ -132,8 +135,8 @@ downloadButton.addEventListener("click", () => {
 
 try {
   await init();
-  [bootRom, bios] = await Promise.all(
-    ["bootstrap.bin", "bios.bin"].map(async (name) => {
+  [bootRom, bdos, bios] = await Promise.all(
+    ["bootstrap.bin", "bdos.bin", "bios.bin"].map(async (name) => {
       const response = await fetch(name, { cache: "no-store" });
       if (!response.ok) throw new Error(`Could not load ${name}.`);
       return new Uint8Array(await response.arrayBuffer());

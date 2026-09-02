@@ -25,6 +25,8 @@ const wasmPath = join(
 );
 const wasmBindgen = process.env.WASM_BINDGEN ?? "wasm-bindgen";
 const expectedVersion = "wasm-bindgen 0.2.127";
+const BDOS_SYSTEM_OFFSET = 0x0800;
+const BIOS_SYSTEM_OFFSET = 0x1600;
 const bundledDiskPath = join(
   repositoryRoot,
   "third_party",
@@ -85,7 +87,7 @@ if (browser) {
     "triptych-host-wasm",
     "web",
   );
-  const [{ bootRom, bios }, bundledDisk] = await Promise.all([
+  const [{ bootRom, bdos, bios }, bundledDisk] = await Promise.all([
     assembleTriptychCpuFirmware(repositoryRoot),
     readFile(bundledDiskPath),
   ]);
@@ -97,6 +99,9 @@ if (browser) {
       `bundled CP/M disk digest changed: expected ${bundledDiskSha256}, got ${actualDiskSha256}`,
     );
   }
+  const systemDisk = Uint8Array.from(bundledDisk);
+  systemDisk.set(bdos, BDOS_SYSTEM_OFFSET);
+  systemDisk.set(bios, BIOS_SYSTEM_OFFSET);
   await Promise.all([
     copyFile(
       join(sourceDirectory, "index.html"),
@@ -112,8 +117,9 @@ if (browser) {
       join(outputDirectory, "style.css"),
     ),
     writeFile(join(outputDirectory, "bootstrap.bin"), bootRom),
+    writeFile(join(outputDirectory, "bdos.bin"), bdos),
     writeFile(join(outputDirectory, "bios.bin"), bios),
-    writeFile(join(outputDirectory, "cpm22.img"), bundledDisk),
+    writeFile(join(outputDirectory, "cpm22.img"), systemDisk),
     writeFile(
       join(outputDirectory, "config.json"),
       `${JSON.stringify(

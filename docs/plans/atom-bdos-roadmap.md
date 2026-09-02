@@ -158,15 +158,13 @@ Work:
 Exit: calls 0 through 12 pass direct differential tests, the CCP reaches a
 prompt, and a console-only COM program runs and returns.
 
-### Milestone 3 — disk discovery and read path (active)
+### Milestone 3 — disk discovery and read path (complete)
 
-Current checkpoint: disk state, open, unmodified close, search first/next,
-sequential read, random read, file size, and sequential-to-random conversion
-now pass their enabled differential fixtures. The retained CCP runs `DIR` and
-`TYPE`, and `EDIT.COM` opens and displays `INPUT.NU`, through the replacement
-under the headless WASM/ANSI model. Two-byte allocation maps and a deliberately
-non-IBM geometry have independent fixtures. Mutation services and the
-remaining metadata/error paths are still incomplete.
+Disk state, open, unmodified close, search first/next, sequential read, random
+read, file size, and sequential-to-random conversion pass their differential
+fixtures. The retained CCP runs `DIR` and `TYPE`; `EDIT.COM` opens and displays
+`INPUT.NU`; and `ATOM.COM` reads `HELLO.ASM`. Two-byte allocation maps and a
+deliberately non-IBM geometry have independent fixtures.
 
 Work:
 
@@ -182,7 +180,14 @@ Exit: the retained CCP implements `DIR` and `TYPE`, and `ATOM.COM`, `NUC.COM`,
 and `EDIT.COM` can open and read their inputs under direct and whole-system
 proofs.
 
-### Milestone 4 — mutation and durability
+### Milestone 4 — mutation and durability (complete)
+
+Current checkpoint: delete, make, rename, sequential write, attributes, dirty
+close, read-only rejection, full-directory and full-disk rejection, injected
+write failure, and a 129-record two-extent write all match the reviewed oracle
+boundary. `ATOM.COM` creates `HELLO.COM`, and the file executes in a fresh WASM
+machine. The same create-and-read workflow now survives two fresh native host
+processes with the Triptych BDOS and BIOS installed into the working image.
 
 Work:
 
@@ -194,7 +199,13 @@ Work:
 Exit: create, replace, rename, delete, and multi-extent file scenarios produce
 the expected directory and data bytes without corrupting neighboring files.
 
-### Milestone 5 — random access and complete function set
+### Milestone 5 — random access and complete function set (active)
+
+Current checkpoint: all public function numbers 0 through 40 are dispatched;
+random read/write, file size, sequential-to-random conversion, and zero-filled
+random write pass the complete reviewed random-access sequence. Functions 38
+and 39 return deterministic zero. Randomized filesystem state-machine coverage
+remains.
 
 Work:
 
@@ -245,13 +256,12 @@ must not retroactively weaken the BDOS compatibility tests.
 
 ## Immediate next work
 
-The direct harness now has basic evidence-tagged cases for every function from
-0 through 40 and an out-of-range call. Stateful disk cases initialize BDOS
-through public calls and compare public BIOS traces, exact disk records, FCBs,
-DMA, allocation state, and write counts. The remaining Milestone 1 slice is the
-adversarial matrix: wildcards, users, extent boundaries, absent drives,
-read-only state, full directory/disk, and injected BIOS I/O failure with
-rejection atomicity.
+The next checkpoint records the exact deployed browser image digest and adds a
+randomized filesystem state machine. In parallel, the resident code needs
+another measured compression pass: the complete function set currently leaves
+only a narrow margin before the private stack. The remaining system work is a
+successful Nucleus compile-and-run scenario and assembling the BDOS's own
+source through the documented in-guest Atom path.
 
 ## References
 

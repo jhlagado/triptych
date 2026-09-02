@@ -15,7 +15,7 @@ import {
   runBdosDirectCallSequence,
   unexpectedDirectCallWrites,
 } from "../support/bdos-direct-call.js";
-import { assembleZ80ForTest } from "../support/assemble-z80.js";
+import { assembleZ80WithLabelsForTest } from "../support/assemble-z80.js";
 
 const repositoryRoot = resolve(import.meta.dirname, "..", "..");
 const referenceDisk = readFileSync(
@@ -32,6 +32,7 @@ const replacementBdosSource = resolve(
   "bdos.asm",
 );
 let replacementBdos: Uint8Array;
+let replacementLabels: Readonly<Record<string, number>>;
 const functionFixtureDirectory = resolve(
   repositoryRoot,
   "test",
@@ -59,20 +60,18 @@ const replacementSequenceFixtureNames = sequenceFixtureNames.filter((name) =>
     "disk-geometry-discovery.json",
     "disk-state-roundtrip.json",
     "extent-boundary.json",
+    "file-mutation-roundtrip.json",
     "file-read-roundtrip.json",
     "file-read-word-allocation.json",
+    "full-directory.json",
+    "full-disk.json",
     "io-byte-roundtrip.json",
+    "random-access-roundtrip.json",
+    "read-only-disk.json",
+    "read-only-file.json",
     "wildcard-user-isolation.json",
   ].includes(name),
 );
-const randomMetadataStepIds = new Set([
-  "reset-and-login",
-  "set-data-dma",
-  "open-file",
-  "read-random-record-zero",
-  "compute-file-size",
-  "set-random-from-sequential",
-]);
 
 function readFixture(name: string): BdosDirectCallFixture {
   return JSON.parse(
@@ -86,14 +85,68 @@ function readSequenceFixture(name: string): BdosDirectCallSequenceFixture {
   ) as BdosDirectCallSequenceFixture;
 }
 
+function sequentialExtentWriteFixture(): BdosDirectCallSequenceFixture {
+  const disk = readSequenceFixture("file-mutation-roundtrip.json").biosDisk;
+  if (disk === undefined) throw new Error("mutation fixture has no BIOS disk");
+  const evidence = [
+    {
+      kind: "published-interface" as const,
+      source: "Digital Research CP/M Operating System Manual, July 1982",
+      section: "5.2, function 21; sequential record and extent fields",
+    },
+  ];
+  const call = (id: string, fn: number) => ({
+    id,
+    evidence,
+    call: { function: fn, de: 512, stackPointer: 53248 },
+    biosResponses: [],
+    expected: {},
+  });
+  return {
+    schema: "triptych-bdos-direct-sequence-v1",
+    id: "sequential-write-extent-rollover",
+    description: "Write and close 129 records across two CP/M extents",
+    biosDisk: disk,
+    steps: [
+      { ...call("reset", 13), call: { ...call("reset", 13).call, de: 0 } },
+      {
+        ...call("set-dma", 26),
+        call: { ...call("set-dma", 26).call, de: 768 },
+        initialMemory: [{ address: 768, length: 128, fill: 90 }],
+      },
+      {
+        ...call("make", 22),
+        initialMemory: [
+          {
+            address: 512,
+            length: 36,
+            fill: 0,
+            patches: [
+              {
+                offset: 1,
+                bytes: [77, 85, 76, 84, 73, 32, 32, 32, 68, 65, 84],
+              },
+            ],
+          },
+        ],
+      },
+      ...Array.from({ length: 129 }, (_, index) => call(`write-${index}`, 21)),
+      call("close", 16),
+    ],
+  };
+}
+
 function expectPartialRegisters(
   observed: BdosObservedRegisters,
   expected: Partial<BdosObservedRegisters>,
+  context: string,
 ): void {
   for (const register of Object.keys(expected) as Array<
     keyof BdosObservedRegisters
   >) {
-    expect(observed[register], register).toBe(expected[register]);
+    expect(observed[register], `${context} ${register}`).toBe(
+      expected[register],
+    );
   }
 }
 
@@ -105,7 +158,11 @@ function expectFixtureResult(
   expect(result.stop).toBe(fixture.expected.stop ?? "normal-return");
   expect(result.biosTransferEntry).toBe(fixture.expected.biosTransferEntry);
   if (fixture.expected.returnRegisters !== undefined) {
-    expectPartialRegisters(result.registers, fixture.expected.returnRegisters);
+    expectPartialRegisters(
+      result.registers,
+      fixture.expected.returnRegisters,
+      fixture.id,
+    );
   }
   if (fixture.expected.biosCalls !== undefined) {
     expect(result.biosCalls).toHaveLength(fixture.expected.biosCalls.length);
@@ -114,7 +171,11 @@ function expectFixtureResult(
       expect(observedCall?.entry).toBe(expectedCall.entry);
       expect(observedCall?.name).toBe(expectedCall.name);
       if (expectedCall.registers !== undefined && observedCall !== undefined) {
-        expectPartialRegisters(observedCall.registers, expectedCall.registers);
+        expectPartialRegisters(
+          observedCall.registers,
+          expectedCall.registers,
+          `${fixture.id} BIOS call ${index}`,
+        );
       }
     });
   }
@@ -216,7 +277,9 @@ function expectFixtureResult(
 
 describe("CP/M 2.2 BDOS direct-call contract", () => {
   beforeAll(async () => {
-    replacementBdos = await assembleZ80ForTest(replacementBdosSource);
+    const assembled = await assembleZ80WithLabelsForTest(replacementBdosSource);
+    replacementBdos = assembled.bytes;
+    replacementLabels = assembled.labels;
     expect(replacementBdos).toHaveLength(0x0e00);
   });
 
@@ -288,25 +351,49 @@ describe("CP/M 2.2 BDOS direct-call contract", () => {
     },
   );
 
-  it("runs the implemented physical-read failure path against the Triptych replacement", () => {
+  it("runs physical read and write failure paths against the Triptych replacement", () => {
     const fixture = readSequenceFixture("disk-error-paths.json");
-    const implemented = { ...fixture, steps: fixture.steps.slice(0, 4) };
-    const result = runBdosDirectCallSequence(replacementBdos, implemented);
-    implemented.steps.forEach((step, index) => {
+    const result = runBdosDirectCallSequence(replacementBdos, fixture);
+    fixture.steps.forEach((step, index) => {
       expectFixtureResult(step, result.steps[index]!.result);
     });
   });
 
-  it("runs implemented random-record metadata calls against the Triptych replacement", () => {
-    const fixture = readSequenceFixture("random-access-roundtrip.json");
-    const implemented = {
-      ...fixture,
-      steps: fixture.steps.filter((step) => randomMetadataStepIds.has(step.id)),
-    };
-    const result = runBdosDirectCallSequence(replacementBdos, implemented);
-    implemented.steps.forEach((step, index) => {
-      expectFixtureResult(step, result.steps[index]!.result);
+  it("matches the oracle across a 128-record sequential extent rollover", () => {
+    const fixture = sequentialExtentWriteFixture();
+    const oracle = runBdosDirectCallSequence(referenceBdos, fixture);
+    const replacement = runBdosDirectCallSequence(replacementBdos, fixture);
+    expect(replacement.steps).toHaveLength(oracle.steps.length);
+    replacement.steps.forEach((step, index) => {
+      const expected = oracle.steps[index]!.result;
+      expect(step.result.registers.a, step.id).toBe(expected.registers.a);
+      expect(step.result.registers.l, step.id).toBe(expected.registers.l);
+      expect(step.result.biosCalls.length, step.id).toBe(
+        expected.biosCalls.length,
+      );
+      expect(bdosBiosTraceSha256(step.result.biosCalls), step.id).toBe(
+        bdosBiosTraceSha256(expected.biosCalls),
+      );
+      expect(
+        step.result.minimumResidentStackPointer,
+        step.id,
+      ).toBeGreaterThanOrEqual(replacementLabels.STKBASE!);
     });
+    const actual = replacement.steps.at(-1)!.result;
+    const expected = oracle.steps.at(-1)!.result;
+    expect([...actual.memory.slice(512, 548)]).toEqual([
+      ...expected.memory.slice(512, 548),
+    ]);
+    expect([...actual.memory.slice(64800, 64804)]).toEqual([
+      ...expected.memory.slice(64800, 64804),
+    ]);
+    expect(actual.biosDisk).toEqual(expected.biosDisk);
+    const minimum = Math.min(
+      ...replacement.steps.map(
+        (step) => step.result.minimumResidentStackPointer ?? 0xffff,
+      ),
+    );
+    expect(replacementLabels.STKTOP! - minimum).toBe(14);
   });
 
   it("keeps the replacement private stack inside its reserved 64 bytes", () => {
@@ -320,21 +407,15 @@ describe("CP/M 2.2 BDOS direct-call contract", () => {
           readSequenceFixture(name),
         ).steps.map(({ result }) => result),
       ),
-      ...runBdosDirectCallSequence(replacementBdos, {
-        ...readSequenceFixture("disk-error-paths.json"),
-        steps: readSequenceFixture("disk-error-paths.json").steps.slice(0, 4),
-      }).steps.map(({ result }) => result),
-      ...runBdosDirectCallSequence(replacementBdos, {
-        ...readSequenceFixture("random-access-roundtrip.json"),
-        steps: readSequenceFixture("random-access-roundtrip.json").steps.filter(
-          (step) => randomMetadataStepIds.has(step.id),
-        ),
-      }).steps.map(({ result }) => result),
+      ...runBdosDirectCallSequence(
+        replacementBdos,
+        readSequenceFixture("disk-error-paths.json"),
+      ).steps.map(({ result }) => result),
     ];
     const minimum = Math.min(
       ...results.map((result) => result.minimumResidentStackPointer ?? 0xffff),
     );
-    expect(minimum).toBeGreaterThanOrEqual(0xf650);
-    expect(0xf690 - minimum).toBe(16);
+    expect(minimum).toBeGreaterThanOrEqual(replacementLabels.STKBASE!);
+    expect(replacementLabels.STKTOP! - minimum).toBe(20);
   });
 });

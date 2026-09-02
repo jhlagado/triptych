@@ -29,6 +29,8 @@ function runHost(bootRomPath, diskPath, input, stopAfter) {
     [
       "--input-ascii",
       input,
+      "--input-after",
+      "\r\nA>",
       "--stop-after",
       stopAfter,
       "--max-steps",
