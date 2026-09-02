@@ -1,11 +1,14 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use triptych_cpm_image::{DISK_IMAGE_BYTES, WORKING_IMAGE_BYTES};
 
 struct TemporaryDirectory(PathBuf);
+
+static TEMPORARY_DIRECTORY_SEQUENCE: AtomicU64 = AtomicU64::new(0);
 
 impl TemporaryDirectory {
     fn new() -> Self {
@@ -13,8 +16,11 @@ impl TemporaryDirectory {
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_nanos();
-        let path =
-            std::env::temp_dir().join(format!("triptych-cpm-cli-{}-{nonce}", std::process::id()));
+        let sequence = TEMPORARY_DIRECTORY_SEQUENCE.fetch_add(1, Ordering::Relaxed);
+        let path = std::env::temp_dir().join(format!(
+            "triptych-cpm-cli-{}-{nonce}-{sequence}",
+            std::process::id()
+        ));
         fs::create_dir(&path).unwrap();
         Self(path)
     }
