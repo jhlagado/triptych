@@ -53,15 +53,28 @@ This report records files and host-side assembly only. It contains no ESP32-S3
 hardware measurement and makes no claim about SD timing, serial reliability,
 power, pacing, or sustained physical operation.
 
-## Next proof
+## Direct-harness seed
 
-Milestone 1 will add a direct-call harness with a scripted BIOS. The first two
-fixtures will cover function 12 (return version) and function 2 (console
-output), establishing register, stack, and BIOS-trace capture before disk state
-is introduced.
+Milestone 1 has begun with `test/support/bdos-direct-call.ts`. It loads only the
+frozen BDOS slot, invokes the public `$EC06` path from a small transient, and
+replaces the BIOS with 17 one-byte return stubs. The harness records registers
+at every BIOS entry, applies fixture-defined return values, checks caller-stack
+restoration, and rejects writes outside the resident BDOS region and the
+caller's two-byte return slot.
+
+The first evidence-tagged fixtures prove function 12 (return version), function
+2 (console output with no pending input), and an out-of-range function. They
+are data under `test/bdos/fixtures/functions/`, not facts extracted from legacy
+source symbols. All three pass against the hashed oracle.
 
 The existing WASM proof now reads
 `test/bdos/scenarios/ccp-file-roundtrip.json` and feeds each fresh-process CCP
 session into the DOM-free ANSI terminal model. It checks the raw transcript,
 visible screen text, cursor, and bell state. Later editor and compiler scenarios
 will use the same format and add attribute and disk assertions.
+
+## Next proof
+
+Extend the direct-call matrix through console functions 0 to 12, including
+scripted input, tab expansion, control-S pause/resume, control-P printer echo,
+line editing, and warm boot. Only then should replacement assembly begin.

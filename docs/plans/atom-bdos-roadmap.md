@@ -112,7 +112,7 @@ mutable state in the CCP or TPA.
 
 ## Roadmap
 
-### Milestone 0 — freeze the boundary and oracle
+### Milestone 0 — freeze the boundary and oracle (complete)
 
 Work:
 
@@ -126,7 +126,7 @@ Exit: the repository rejects a silently changed oracle or system layout and
 clearly separates third-party compatibility material from future Triptych
 source.
 
-### Milestone 1 — build the differential contract harness
+### Milestone 1 — build the differential contract harness (active)
 
 Work:
 

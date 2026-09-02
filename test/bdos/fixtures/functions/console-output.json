@@ -1,0 +1,50 @@
+{
+  "schema": "triptych-bdos-direct-call-v1",
+  "id": "function-2-console-output",
+  "evidence": [
+    {
+      "kind": "published-interface",
+      "source": "Digital Research CP/M Operating System Manual, July 1982",
+      "section": "Chapter 5, Function 2"
+    },
+    {
+      "kind": "black-box-compatibility",
+      "source": "Frozen BDOS SHA-256 258fe1b659a979fa9adab000fd2ee27b165349179f6b5f5b8b5266ea3385ac22",
+      "section": "BIOS trace with no pending console input"
+    }
+  ],
+  "call": {
+    "function": 2,
+    "de": 21825,
+    "stackPointer": 53248
+  },
+  "biosResponses": [
+    {
+      "entry": 2,
+      "occurrence": 0,
+      "return": {
+        "a": 0
+      }
+    }
+  ],
+  "expected": {
+    "biosCalls": [
+      {
+        "entry": 2,
+        "name": "console-status",
+        "registers": {
+          "c": 65,
+          "e": 65
+        }
+      },
+      {
+        "entry": 4,
+        "name": "console-output",
+        "registers": {
+          "c": 65,
+          "e": 65
+        }
+      }
+    ]
+  }
+}

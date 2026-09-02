@@ -1,0 +1,28 @@
+{
+  "schema": "triptych-bdos-direct-call-v1",
+  "id": "function-41-out-of-range",
+  "evidence": [
+    {
+      "kind": "published-interface",
+      "source": "Digital Research CP/M Operating System Manual, July 1982",
+      "section": "Chapter 5, Operating System Call Conventions"
+    }
+  ],
+  "call": {
+    "function": 41,
+    "de": 4660,
+    "stackPointer": 53248
+  },
+  "biosResponses": [],
+  "expected": {
+    "returnRegisters": {
+      "a": 0,
+      "b": 0,
+      "h": 0,
+      "l": 0,
+      "sp": 53248,
+      "pc": 260
+    },
+    "biosCalls": []
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "schema": "triptych-bdos-direct-call-v1",
+  "id": "function-12-return-version",
+  "evidence": [
+    {
+      "kind": "published-interface",
+      "source": "Digital Research CP/M Operating System Manual, July 1982",
+      "section": "Chapter 5, Function 12 and System Function Summary"
+    }
+  ],
+  "call": {
+    "function": 12,
+    "de": 23130,
+    "stackPointer": 53248
+  },
+  "biosResponses": [],
+  "expected": {
+    "returnRegisters": {
+      "a": 34,
+      "b": 0,
+      "h": 0,
+      "l": 34,
+      "sp": 53248,
+      "pc": 260
+    },
+    "biosCalls": []
+  }
+}
