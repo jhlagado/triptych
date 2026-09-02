@@ -5,7 +5,7 @@
   "image": {
     "path": "third_party/cpm22/cpm22.img",
     "bytes": 256256,
-    "sha256": "51b61f8c8d26a252890b08e78627ba82e1bd92b2dc4a640fd6b64201aa5cb6be"
+    "sha256": "7d2898386a77ff3c1e84b0141dad251a19be795befadb7dd8a9ba5965ba4654f"
   },
   "layout": {
     "systemLoadAddress": 58368,

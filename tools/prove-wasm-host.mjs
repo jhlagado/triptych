@@ -91,6 +91,7 @@ function runFixture(fixture) {
   assert.equal(fixture.format, FIXTURE_FORMAT);
   const machine = new TriptychCpu(materialize(fixture.initial.bootRom));
   try {
+    machine.set_io_trace_enabled(true);
     fixture.initial.drives.forEach((drive, index) => {
       machine.install_drive(index, materialize(drive), true);
     });

@@ -27,8 +27,11 @@ scheduled. Use `run_slice` for ordinary bounded execution. Its result codes
 are zero for HALT, one for the step limit, and two for the T-state limit.
 
 RAM, serial output, drive images, CPU snapshots, and packed I/O operations are
-returned as copies. A packed I/O word uses bits 0–7 for the byte, bits 8–23 for
-the complete Z80 port, and bit 24 for write versus read.
+returned as copies. I/O tracing is disabled by default so a long-lived host
+cannot retain an unbounded diagnostic history. A trace consumer must call
+`set_io_trace_enabled(true)` before execution and periodically drain the trace
+with `take_io_trace`. A packed I/O word uses bits 0–7 for the byte, bits 8–23
+for the complete Z80 port, and bit 24 for write versus read.
 
 The non-default `conformance` feature adds only a pre-reset architectural-state
 patcher used by the language-neutral fixture runner. Normal builds do not

@@ -4,7 +4,9 @@
 
 - File: `cpm22.img`
 - Bytes: 256,256
-- SHA-256: `51b61f8c8d26a252890b08e78627ba82e1bd92b2dc4a640fd6b64201aa5cb6be`
+- SHA-256: `7d2898386a77ff3c1e84b0141dad251a19be795befadb7dd8a9ba5965ba4654f`
+- Original imported SHA-256:
+  `51b61f8c8d26a252890b08e78627ba82e1bd92b2dc4a640fd6b64201aa5cb6be`
 - Source repository: https://github.com/jhlagado/debug80
 - Source commit: `2cb5cb6138ac7864b0c97ea32482f617de97da97`
 - Source path: `apps/debug80-vscode/roms/cpm22/cpm22.img`
@@ -15,6 +17,13 @@ The digest is checked whenever Triptych builds the browser host. This is a
 transitional development image, not the intended final Triptych system disk.
 The hosted runtime copies the disk into memory and installs the current
 Triptych BIOS over its system-track BIOS slot before executing it.
+
+Triptych subsequently normalized the line endings in `INPUT.ASM`, `HELLO.ASM`,
+and `LARGE.ASM` from Unix LF to CP/M CRLF. The reproducible transformation is
+`npm run normalize:cpm22-text`; `npm run check:cpm22-text` checks every bundled
+text file for ASCII, CRLF line endings, and `$1A` record padding. This changed
+only the three named directory files and their allocation records; the system
+track and executable components retain the imported bytes and hashes.
 
 ## Components
 

@@ -1,5 +1,11 @@
 import init, { TriptychCpu } from "./triptych_host_wasm.js";
-import { keyEventToBytes, renderTerminal, TerminalBuffer } from "./terminal.js";
+import {
+  inputTypeToBytes,
+  keyEventToBytes,
+  renderTerminal,
+  TerminalBuffer,
+  textInputToBytes,
+} from "./terminal.js";
 
 const BDOS_SYSTEM_OFFSET = 0x0800;
 const BIOS_SYSTEM_OFFSET = 0x1600;
@@ -10,6 +16,10 @@ const statusElement = document.querySelector("#status");
 const diskInput = document.querySelector("#disk-input");
 const resetButton = document.querySelector("#reset");
 const downloadButton = document.querySelector("#download");
+const mobileInput = document.querySelector("#mobile-terminal-input");
+const showKeyboardButton = document.querySelector("#show-keyboard");
+const controlKeyButton = document.querySelector("#terminal-control-key");
+const mobileKeyButtons = document.querySelectorAll("[data-terminal-key]");
 const terminal = new TerminalBuffer();
 
 let machine;
@@ -18,6 +28,39 @@ let bdos;
 let bios;
 let diskName = "triptych-cpm22.img";
 let runGeneration = 0;
+let controlPending = false;
+
+function stopMachine(error) {
+  runGeneration += 1;
+  machine = undefined;
+  resetButton.disabled = true;
+  downloadButton.disabled = true;
+  setStatus(
+    "Machine stopped after a WebAssembly fault. Reload the page to restart.",
+    "error",
+  );
+  console.error("Triptych WebAssembly machine stopped", error);
+}
+
+function enqueueInput(bytes) {
+  if (machine === undefined || bytes.length === 0) return false;
+  try {
+    machine.enqueue_serial_input(bytes);
+    return true;
+  } catch (error) {
+    stopMachine(error);
+    return false;
+  }
+}
+
+function focusMobileInput() {
+  mobileInput.focus({ preventScroll: true });
+}
+
+function setControlPending(pending) {
+  controlPending = pending;
+  controlKeyButton.setAttribute("aria-pressed", String(pending));
+}
 
 function setStatus(message, state = "idle") {
   statusElement.textContent = message;
@@ -34,11 +77,16 @@ function renderOutput() {
 
 function runMachine(generation) {
   if (machine === undefined || generation !== runGeneration) return;
-  const deadline = performance.now() + 6;
-  do {
-    machine.run_slice(25_000, 250_000);
-  } while (performance.now() < deadline);
-  renderOutput();
+  try {
+    const deadline = performance.now() + 6;
+    do {
+      machine.run_slice(25_000, 250_000);
+    } while (performance.now() < deadline);
+    renderOutput();
+  } catch (error) {
+    stopMachine(error);
+    return;
+  }
   requestAnimationFrame(() => runMachine(generation));
 }
 
@@ -67,7 +115,10 @@ function boot(source, name) {
   diskName = name.replace(/\.(dsk|img)$/iu, "") + "-triptych.img";
   resetButton.disabled = false;
   downloadButton.disabled = false;
-  setStatus(`Running ${name}; click the terminal and type at A>.`, "running");
+  setStatus(
+    `Running ${name}; click or tap the terminal and type at A>.`,
+    "running",
+  );
   terminalElement.focus();
   const generation = runGeneration;
   requestAnimationFrame(() => runMachine(generation));
@@ -80,22 +131,68 @@ async function bootFromUrl(url, name) {
 }
 
 terminalElement.addEventListener("keydown", (event) => {
-  if (machine === undefined) return;
   const bytes = keyEventToBytes(event);
   if (bytes === undefined) return;
-  event.preventDefault();
-  machine.enqueue_serial_input(bytes);
+  if (enqueueInput(bytes)) event.preventDefault();
 });
 
 terminalElement.addEventListener("paste", (event) => {
   if (machine === undefined) return;
   event.preventDefault();
-  const text = event.clipboardData.getData("text").replace(/\r?\n/gu, "\r");
-  const bytes = Uint8Array.from(
-    text,
-    (character) => character.charCodeAt(0) & 0xff,
-  );
-  machine.enqueue_serial_input(bytes);
+  enqueueInput(textInputToBytes(event.clipboardData.getData("text")));
+});
+
+terminalElement.addEventListener("pointerup", (event) => {
+  if (event.pointerType === "touch" || event.pointerType === "pen") {
+    focusMobileInput();
+  }
+});
+
+showKeyboardButton.addEventListener("click", focusMobileInput);
+
+controlKeyButton.addEventListener("click", () => {
+  setControlPending(!controlPending);
+  focusMobileInput();
+});
+
+for (const button of mobileKeyButtons) {
+  button.addEventListener("click", () => {
+    const bytes = keyEventToBytes({
+      key: button.dataset.terminalKey,
+      altKey: false,
+      ctrlKey: false,
+      metaKey: false,
+    });
+    if (bytes !== undefined) enqueueInput(bytes);
+    setControlPending(false);
+    focusMobileInput();
+  });
+}
+
+mobileInput.addEventListener("beforeinput", (event) => {
+  if (event.isComposing) return;
+  const bytes = inputTypeToBytes(event.inputType);
+  if (bytes === undefined) return;
+  event.preventDefault();
+  enqueueInput(bytes);
+  setControlPending(false);
+});
+
+mobileInput.addEventListener("keydown", (event) => {
+  if (event.isComposing || (!event.ctrlKey && event.key.length === 1)) return;
+  const bytes = keyEventToBytes(event);
+  if (bytes === undefined) return;
+  if (enqueueInput(bytes)) event.preventDefault();
+  setControlPending(false);
+});
+
+mobileInput.addEventListener("input", (event) => {
+  if (event.isComposing) return;
+  const text = mobileInput.value;
+  mobileInput.value = "";
+  if (text.length === 0) return;
+  enqueueInput(textInputToBytes(text, { control: controlPending }));
+  setControlPending(false);
 });
 
 diskInput.addEventListener("change", async () => {

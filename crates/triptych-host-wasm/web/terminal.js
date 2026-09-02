@@ -344,3 +344,29 @@ export function keyEventToBytes(event) {
   const code = event.key.charCodeAt(0);
   return code <= 255 ? Uint8Array.of(code) : undefined;
 }
+
+export function textInputToBytes(text, { control = false } = {}) {
+  const bytes = [];
+  let controlPending = control;
+  const normalized = text.replace(/\r\n|\n|\r/gu, "\r");
+  for (const character of normalized) {
+    let code = character.codePointAt(0);
+    if (code > 0xff) continue;
+    if (controlPending) {
+      const upperCode = character.toUpperCase().codePointAt(0);
+      if (upperCode >= 64 && upperCode <= 95) code = upperCode & 0x1f;
+      controlPending = false;
+    }
+    bytes.push(code);
+  }
+  return Uint8Array.from(bytes);
+}
+
+export function inputTypeToBytes(inputType) {
+  if (inputType === "deleteContentBackward") return Uint8Array.of(ASCII_BS);
+  if (inputType === "deleteContentForward") return Uint8Array.of(0x7f);
+  if (inputType === "insertLineBreak" || inputType === "insertParagraph") {
+    return Uint8Array.of(ASCII_CR);
+  }
+  return undefined;
+}

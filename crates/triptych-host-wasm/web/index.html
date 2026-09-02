@@ -31,17 +31,51 @@
         </button>
       </section>
 
-      <pre
-        id="terminal"
-        role="log"
-        aria-label="CP/M terminal"
-        aria-live="off"
-        tabindex="0"
-      ></pre>
+      <div class="terminal-shell">
+        <pre
+          id="terminal"
+          role="log"
+          aria-label="CP/M terminal"
+          aria-live="off"
+          tabindex="0"
+        ></pre>
+        <textarea
+          id="mobile-terminal-input"
+          aria-label="Terminal keyboard input"
+          autocapitalize="off"
+          autocomplete="off"
+          autocorrect="off"
+          enterkeyhint="enter"
+          inputmode="text"
+          spellcheck="false"
+        ></textarea>
+      </div>
+
+      <div class="mobile-terminal-controls" aria-label="Terminal keys">
+        <button id="show-keyboard" type="button">Keyboard</button>
+        <button type="button" data-terminal-key="Escape">Esc</button>
+        <button id="terminal-control-key" type="button" aria-pressed="false">
+          Ctrl
+        </button>
+        <button type="button" data-terminal-key="Tab">Tab</button>
+        <button type="button" data-terminal-key="ArrowLeft" aria-label="Left">
+          ←
+        </button>
+        <button type="button" data-terminal-key="ArrowUp" aria-label="Up">
+          ↑
+        </button>
+        <button type="button" data-terminal-key="ArrowDown" aria-label="Down">
+          ↓
+        </button>
+        <button type="button" data-terminal-key="ArrowRight" aria-label="Right">
+          →
+        </button>
+      </div>
 
       <footer>
-        Click the terminal before typing. Return sends CR; paste converts line
-        endings for CP/M. Downloaded images contain flushed guest writes.
+        Click or tap the terminal before typing. On mobile, use the terminal
+        keys for Ctrl, Esc, Tab, and arrows. Return sends CR; paste converts
+        line endings for CP/M. Downloaded images contain flushed guest writes.
       </footer>
     </main>
     <script type="module" src="app.js"></script>

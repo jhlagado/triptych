@@ -85,6 +85,13 @@ impl TriptychCpu {
         self.last_interrupt_accepted = false;
     }
 
+    /// Enable or disable retention of the ordered I/O trace. Tracing is off by
+    /// default so a long-lived host cannot accumulate an unbounded diagnostic
+    /// buffer when it has no trace consumer.
+    pub fn set_io_trace_enabled(&mut self, enabled: bool) {
+        self.observer.set_enabled(enabled);
+    }
+
     /// Execute one complete instruction, then optionally present the proven
     /// `$FF` maskable interrupt at that instruction boundary.
     pub fn step(&mut self, maskable_interrupt_ff: bool) -> u32 {
@@ -192,8 +199,9 @@ impl TriptychCpu {
         self.last_interrupt_accepted
     }
 
-    /// Return and clear packed I/O operations. Bits 0..7 are the byte, bits
-    /// 8..23 are the full port, and bit 24 is one for writes and zero for reads.
+    /// Return and clear packed retained I/O operations. Bits 0..7 are the byte,
+    /// bits 8..23 are the full port, and bit 24 is one for writes and zero for
+    /// reads. Returns an empty vector while tracing is disabled.
     pub fn take_io_trace(&mut self) -> Vec<u32> {
         std::mem::take(&mut self.observer.operations)
             .into_iter()
@@ -331,12 +339,51 @@ impl SectorStore for WasmSectorStore {
 
 #[derive(Default)]
 struct WasmObserver {
+    enabled: bool,
     operations: Vec<IoOperation>,
+}
+
+impl WasmObserver {
+    fn set_enabled(&mut self, enabled: bool) {
+        self.enabled = enabled;
+        self.operations.clear();
+    }
 }
 
 impl IoObserver for WasmObserver {
     fn observe(&mut self, operation: IoOperation) {
-        self.operations.push(operation);
+        if self.enabled {
+            self.operations.push(operation);
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn operation(value: u8) -> IoOperation {
+        IoOperation {
+            direction: IoDirection::Read,
+            port: 0x1234,
+            value,
+        }
+    }
+
+    #[test]
+    fn io_observer_retains_operations_only_while_enabled() {
+        let mut observer = WasmObserver::default();
+        observer.observe(operation(1));
+        assert!(observer.operations.is_empty());
+
+        observer.set_enabled(true);
+        observer.observe(operation(2));
+        assert_eq!(observer.operations, [operation(2)]);
+
+        observer.set_enabled(false);
+        assert!(observer.operations.is_empty());
+        observer.observe(operation(3));
+        assert!(observer.operations.is_empty());
     }
 }
 

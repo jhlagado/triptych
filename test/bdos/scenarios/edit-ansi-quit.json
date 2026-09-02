@@ -2,7 +2,7 @@
   "schema": "triptych-cpm-headless-scenario-v1",
   "id": "edit-ansi-quit",
   "description": "Launch EDIT.COM, prove its ANSI-rendered screen, then inject Ctrl-Q only after the editor is ready and return to the CCP",
-  "expectedInitialDriveSha256": "2e2e14dc3d8af3a36054994a5cf41b3d1bb6087a36aa837d43d9c65b01ec375f",
+  "expectedInitialDriveSha256": "d7230fc79550e49e8590147c417e6448d75c8864adce7be4ad2328b20c8aa066",
   "sessions": [
     {
       "id": "open-and-quit-editor",
@@ -28,7 +28,7 @@
         }
       ],
       "expectedTranscript": "\r\nA>EDIT INPUT.NU\r\r\n\u001b[2J\u001b[Hsub main() fails\r\n    writeOutputByte('O') else fail\r\n    writeOutputByte('K') else fail\r\nend\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\u001b[24;1H\u001b[7mEDIT INPUT   .NU       ^S Save  ^Q Quit                                         \u001b[0m\u001b[1;1H\u001b[2J\u001b[H\r\nA>",
-      "expectedDriveSha256": "2e2e14dc3d8af3a36054994a5cf41b3d1bb6087a36aa837d43d9c65b01ec375f",
+      "expectedDriveSha256": "d7230fc79550e49e8590147c417e6448d75c8864adce7be4ad2328b20c8aa066",
       "expectedTerminal": {
         "text": "\nA>",
         "cursorRow": 1,

@@ -34,7 +34,7 @@ const bundledDiskPath = join(
   "cpm22.img",
 );
 const bundledDiskSha256 =
-  "51b61f8c8d26a252890b08e78627ba82e1bd92b2dc4a640fd6b64201aa5cb6be";
+  "7d2898386a77ff3c1e84b0141dad251a19be795befadb7dd8a9ba5965ba4654f";
 
 function run(command, commandArguments) {
   const result = spawnSync(command, commandArguments, {

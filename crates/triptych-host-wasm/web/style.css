@@ -115,6 +115,10 @@ button:disabled {
   opacity: 0.45;
 }
 
+.terminal-shell {
+  position: relative;
+}
+
 #terminal {
   width: 100%;
   height: 34.4em;
@@ -177,6 +181,47 @@ button:disabled {
     inset 0 0 2rem rgb(0 0 0 / 35%);
 }
 
+.terminal-shell:focus-within #terminal {
+  border-color: #8ed69e;
+  box-shadow:
+    0 0 0 2px rgb(142 214 158 / 18%),
+    inset 0 0 2rem rgb(0 0 0 / 35%);
+}
+
+#mobile-terminal-input {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  font-size: 16px;
+  resize: none;
+}
+
+.mobile-terminal-controls {
+  display: none;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.65rem;
+}
+
+.mobile-terminal-controls button {
+  min-width: 2.8rem;
+  min-height: 2.8rem;
+  padding: 0 0.7rem;
+  touch-action: manipulation;
+}
+
+#terminal-control-key[aria-pressed="true"] {
+  border-color: #9deaac;
+  background: #314b37;
+  color: #baf7c6;
+}
+
 footer {
   margin-top: 0.75rem;
   color: #819086;
@@ -195,6 +240,16 @@ footer {
 
   #terminal {
     height: 34.4em;
+  }
+
+  .mobile-terminal-controls {
+    display: flex;
+  }
+}
+
+@media (hover: none), (pointer: coarse) {
+  .mobile-terminal-controls {
+    display: flex;
   }
 }
 

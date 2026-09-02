@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 
 import {
+  inputTypeToBytes,
   keyEventToBytes,
+  textInputToBytes,
   TERMINAL_ATTRIBUTE_BOLD,
   TERMINAL_ATTRIBUTE_REVERSE,
   TERMINAL_ATTRIBUTE_UNDERLINE,
@@ -171,5 +173,26 @@ assert.deepEqual([...keyEventToBytes(keyEvent("ArrowRight"))], [27, 91, 67]);
 assert.deepEqual([...keyEventToBytes(keyEvent("ArrowLeft"))], [27, 91, 68]);
 assert.equal(keyEventToBytes(keyEvent("v", { metaKey: true })), undefined);
 assert.deepEqual([...keyEventToBytes(keyEvent("é"))], [0xe9]);
+
+assert.deepEqual([...textInputToBytes("hello")], [104, 101, 108, 108, 111]);
+assert.deepEqual(
+  [...textInputToBytes("one\ntwo\r\nthree\rfour")],
+  [
+    111, 110, 101, 13, 116, 119, 111, 13, 116, 104, 114, 101, 101, 13, 102, 111,
+    117, 114,
+  ],
+);
+assert.deepEqual([...textInputToBytes("é🙂")], [0xe9]);
+assert.deepEqual([...textInputToBytes("q", { control: true })], [17]);
+assert.deepEqual(
+  [...textInputToBytes("Qmore", { control: true })],
+  [17, 109, 111, 114, 101],
+);
+assert.deepEqual([...textInputToBytes("?", { control: true })], [0x3f]);
+assert.deepEqual([...inputTypeToBytes("deleteContentBackward")], [8]);
+assert.deepEqual([...inputTypeToBytes("deleteContentForward")], [0x7f]);
+assert.deepEqual([...inputTypeToBytes("insertLineBreak")], [13]);
+assert.deepEqual([...inputTypeToBytes("insertParagraph")], [13]);
+assert.equal(inputTypeToBytes("insertText"), undefined);
 
 console.log("WASM browser ANSI terminal checks passed");

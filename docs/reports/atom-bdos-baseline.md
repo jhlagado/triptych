@@ -20,7 +20,7 @@ revision `f3f50e5aff92be7436e23892376ca433175b5d30`.
 
 | Artifact                   | Disk offset | Load range     |   Bytes | SHA-256                                                            |
 | -------------------------- | ----------: | -------------- | ------: | ------------------------------------------------------------------ |
-| Complete disk              |           — | —              | 256,256 | `51b61f8c8d26a252890b08e78627ba82e1bd92b2dc4a640fd6b64201aa5cb6be` |
+| Complete disk              |           — | —              | 256,256 | `7d2898386a77ff3c1e84b0141dad251a19be795befadb7dd8a9ba5965ba4654f` |
 | CCP                        |     `$0000` | `$E400..$EBFF` |   2,048 | `67fda0f138c3654a2fb15ae49acb2e663c848774779fa9822eda0f6d3a9b8da3` |
 | BDOS oracle                |     `$0800` | `$EC00..$F9FF` |   3,584 | `258fe1b659a979fa9adab000fd2ee27b165349179f6b5f5b8b5266ea3385ac22` |
 | Embedded transitional BIOS |     `$1600` | `$FA00..$FDFF` |   1,024 | `3b575ee7990ee5865c6ddbf26b1b2c75a8fac81c47ddc285d18d488f83cd5b9d` |
@@ -32,6 +32,12 @@ both the embedded and freshly assembled Triptych BIOS images have all 17
 absolute-jump vector entries. The two BIOS binaries are intentionally not
 equal: every host replaces the transitional disk's embedded BIOS with a fresh
 assembly of `roms/cpu/bios.asm` before execution.
+
+The complete-disk digest differs from the originally imported
+`51b61f8c8d26a252890b08e78627ba82e1bd92b2dc4a640fd6b64201aa5cb6be`
+artifact only because Triptych normalized the text records for `INPUT.ASM`,
+`HELLO.ASM`, and `LARGE.ASM` from Unix LF to CP/M CRLF. The system track and
+the CCP, BDOS, and BIOS component hashes above are unchanged.
 
 These hashes identify the oracle. A new BDOS is expected to have different
 bytes and internal addresses.
