@@ -1,0 +1,58 @@
+{
+  "schema": "triptych-cpm-headless-scenario-v1",
+  "id": "triptych-bdos-dir-type",
+  "description": "Use the retained CCP to list and read files through the Triptych BDOS, with staged terminal input and exact ANSI snapshots",
+  "systemBdos": "triptych",
+  "expectedInitialDriveSha256": "542359b30cd9ddad8a81f33edb24b778406a33e63a376d46ab496048c7925ddb",
+  "sessions": [
+    {
+      "id": "dir-and-type",
+      "interactions": [
+        {
+          "id": "boot",
+          "inputAscii": "",
+          "stopAfterAscii": "\r\nA>",
+          "expectedTerminal": {
+            "text": "\nA>",
+            "cursorRow": 1,
+            "cursorColumn": 2,
+            "currentAttributes": 0,
+            "wrapPending": false,
+            "bellCount": 0,
+            "screenSha256": "f503d6e0b46796eeab75c842dfcaf4dfe60e28ba30354e80a8db890bf7d9dae7"
+          }
+        },
+        {
+          "id": "directory",
+          "inputAscii": "DIR\r",
+          "stopAfterAscii": "EDIT     COM\r\nA>",
+          "expectedTerminal": {
+            "text": "\nA>DIR\nA: README   TXT : SMOKE    COM : ATOM     COM : INPUT    ASM\nA: HELLO    ASM : LARGE    ASM : PART1    ASM : PART2    ASM\nA: BUILD    ASM : NUC      COM : INPUT    NU  : EDIT     COM\nA>",
+            "cursorRow": 5,
+            "cursorColumn": 2,
+            "currentAttributes": 0,
+            "wrapPending": false,
+            "bellCount": 0,
+            "screenSha256": "6e51a59a74c37f93a65677367d902c2c3f5358d9573219e477bfc0823cb0712e"
+          }
+        },
+        {
+          "id": "type-readme",
+          "inputAscii": "TYPE README.TXT\r",
+          "stopAfterAscii": "Debug80 CP/M 2.2 platform\r\n\r\nA>"
+        }
+      ],
+      "expectedTranscript": "\r\nA>DIR\r\r\nA: README   TXT : SMOKE    COM : ATOM     COM : INPUT    ASM\r\nA: HELLO    ASM : LARGE    ASM : PART1    ASM : PART2    ASM\r\nA: BUILD    ASM : NUC      COM : INPUT    NU  : EDIT     COM\r\nA>TYPE README.TXT\r\r\nDebug80 CP/M 2.2 platform\r\n\r\nA>",
+      "expectedDriveSha256": "542359b30cd9ddad8a81f33edb24b778406a33e63a376d46ab496048c7925ddb",
+      "expectedTerminal": {
+        "text": "\nA>DIR\nA: README   TXT : SMOKE    COM : ATOM     COM : INPUT    ASM\nA: HELLO    ASM : LARGE    ASM : PART1    ASM : PART2    ASM\nA: BUILD    ASM : NUC      COM : INPUT    NU  : EDIT     COM\nA>TYPE README.TXT\nDebug80 CP/M 2.2 platform\n\nA>",
+        "cursorRow": 8,
+        "cursorColumn": 2,
+        "currentAttributes": 0,
+        "wrapPending": false,
+        "bellCount": 0,
+        "screenSha256": "9bb6cd6bb32ea33491d1b2a4d53bf4e1ed19139b003bb7f3a2eccb890b31566c"
+      }
+    }
+  ]
+}

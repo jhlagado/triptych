@@ -196,7 +196,7 @@ export function runCpmHeadlessScenario({
         }
         assert.ok(
           endsWith(transcript, suffix),
-          `${interactionId} timed out after ${maximumSlices} slices`,
+          `${interactionId} timed out after ${maximumSlices} slices: ${JSON.stringify(Buffer.from(transcript).toString("ascii"))}`,
         );
         totalSlices += slices + 1;
         const interactionResult = {
@@ -217,7 +217,7 @@ export function runCpmHeadlessScenario({
       assert.deepEqual(
         transcript,
         expectedTranscript,
-        `${session.id} raw serial transcript`,
+        `${session.id} raw serial transcript: ${JSON.stringify(Buffer.from(transcript).toString("ascii"))}`,
       );
 
       const { snapshot, screenSha256 } = assertTerminal(

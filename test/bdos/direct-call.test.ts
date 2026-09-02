@@ -58,9 +58,21 @@ const replacementSequenceFixtureNames = sequenceFixtureNames.filter((name) =>
     "console-state-roundtrip.json",
     "disk-geometry-discovery.json",
     "disk-state-roundtrip.json",
+    "extent-boundary.json",
+    "file-read-roundtrip.json",
+    "file-read-word-allocation.json",
     "io-byte-roundtrip.json",
+    "wildcard-user-isolation.json",
   ].includes(name),
 );
+const randomMetadataStepIds = new Set([
+  "reset-and-login",
+  "set-data-dma",
+  "open-file",
+  "read-random-record-zero",
+  "compute-file-size",
+  "set-random-from-sequential",
+]);
 
 function readFixture(name: string): BdosDirectCallFixture {
   return JSON.parse(
@@ -276,6 +288,27 @@ describe("CP/M 2.2 BDOS direct-call contract", () => {
     },
   );
 
+  it("runs the implemented physical-read failure path against the Triptych replacement", () => {
+    const fixture = readSequenceFixture("disk-error-paths.json");
+    const implemented = { ...fixture, steps: fixture.steps.slice(0, 4) };
+    const result = runBdosDirectCallSequence(replacementBdos, implemented);
+    implemented.steps.forEach((step, index) => {
+      expectFixtureResult(step, result.steps[index]!.result);
+    });
+  });
+
+  it("runs implemented random-record metadata calls against the Triptych replacement", () => {
+    const fixture = readSequenceFixture("random-access-roundtrip.json");
+    const implemented = {
+      ...fixture,
+      steps: fixture.steps.filter((step) => randomMetadataStepIds.has(step.id)),
+    };
+    const result = runBdosDirectCallSequence(replacementBdos, implemented);
+    implemented.steps.forEach((step, index) => {
+      expectFixtureResult(step, result.steps[index]!.result);
+    });
+  });
+
   it("keeps the replacement private stack inside its reserved 64 bytes", () => {
     const results = [
       ...fixtureNames.map((name) =>
@@ -287,11 +320,21 @@ describe("CP/M 2.2 BDOS direct-call contract", () => {
           readSequenceFixture(name),
         ).steps.map(({ result }) => result),
       ),
+      ...runBdosDirectCallSequence(replacementBdos, {
+        ...readSequenceFixture("disk-error-paths.json"),
+        steps: readSequenceFixture("disk-error-paths.json").steps.slice(0, 4),
+      }).steps.map(({ result }) => result),
+      ...runBdosDirectCallSequence(replacementBdos, {
+        ...readSequenceFixture("random-access-roundtrip.json"),
+        steps: readSequenceFixture("random-access-roundtrip.json").steps.filter(
+          (step) => randomMetadataStepIds.has(step.id),
+        ),
+      }).steps.map(({ result }) => result),
     ];
     const minimum = Math.min(
       ...results.map((result) => result.minimumResidentStackPointer ?? 0xffff),
     );
-    expect(minimum).toBeGreaterThanOrEqual(0xf1ad);
-    expect(0xf1ed - minimum).toBe(14);
+    expect(minimum).toBeGreaterThanOrEqual(0xf650);
+    expect(0xf690 - minimum).toBe(16);
   });
 });

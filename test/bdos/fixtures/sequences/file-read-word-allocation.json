@@ -1,0 +1,203 @@
+{
+  "schema": "triptych-bdos-direct-sequence-v1",
+  "id": "file-read-word-allocation",
+  "description": "Open and read a file from a DPB that uses two-byte allocation block references",
+  "biosDisk": {
+    "drives": [
+      {
+        "number": 0,
+        "dphAddress": 64512,
+        "directoryBufferAddress": 64640,
+        "dpbAddress": 64528,
+        "checkVectorAddress": 64768,
+        "allocationVectorAddress": 64800,
+        "firstSector": 1,
+        "defaultRecordByte": 229,
+        "dpb": {
+          "sectorsPerTrack": 16,
+          "blockShift": 4,
+          "blockMask": 15,
+          "extentMask": 0,
+          "maximumBlock": 300,
+          "maximumDirectoryEntry": 3,
+          "directoryAllocation0": 128,
+          "directoryAllocation1": 0,
+          "checkVectorBytes": 1,
+          "reservedTracks": 1
+        },
+        "records": [
+          {
+            "record": 16,
+            "fill": 229,
+            "patches": [
+              {
+                "offset": 0,
+                "bytes": [
+                  0, 66, 73, 71, 32, 32, 32, 32, 32, 68, 65, 84, 0, 0, 0, 1, 2,
+                  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+                ]
+              }
+            ]
+          },
+          {
+            "record": 48,
+            "fill": 26,
+            "patches": [
+              {
+                "offset": 0,
+                "bytes": [
+                  87, 79, 82, 68, 32, 65, 76, 76, 79, 67, 65, 84, 73, 79, 78,
+                  13, 10
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "steps": [
+    {
+      "id": "reset-word-allocation-disk",
+      "evidence": [
+        {
+          "kind": "published-interface",
+          "source": "Digital Research CP/M Operating System Manual, July 1982",
+          "section": "5.2, function 13; 6.10 DPB DSM and two-byte allocation references"
+        }
+      ],
+      "call": { "function": 13, "de": 0, "stackPointer": 53248 },
+      "biosResponses": [],
+      "expected": {
+        "returnRegisters": {
+          "a": 0,
+          "b": 0,
+          "h": 0,
+          "l": 0,
+          "sp": 53248,
+          "pc": 260
+        },
+        "memory": [{ "address": 64800, "bytes": [160, 0] }],
+        "biosCallCount": 9,
+        "biosTraceSha256": "c6899bdb2fd4407e9e55c19461ecb0bdac79c9e52baf8c4482fd3288474e4bf7",
+        "biosDiskState": {
+          "selectedDrive": 0,
+          "track": 1,
+          "sector": 1,
+          "dma": 128
+        }
+      }
+    },
+    {
+      "id": "set-word-allocation-dma",
+      "evidence": [
+        {
+          "kind": "published-interface",
+          "source": "Digital Research CP/M Operating System Manual, July 1982",
+          "section": "5.2, function 26"
+        }
+      ],
+      "call": { "function": 26, "de": 768, "stackPointer": 53248 },
+      "biosResponses": [],
+      "expected": {
+        "returnRegisters": { "a": 0, "l": 0, "sp": 53248, "pc": 260 },
+        "biosCalls": [
+          { "entry": 12, "name": "set-dma", "registers": { "b": 3, "c": 0 } }
+        ],
+        "biosTraceSha256": "fdb6c6e3fc80d94db451af534910015d563deda3e1808dc271925a5ec2634f67",
+        "biosDiskState": { "dma": 768 }
+      }
+    },
+    {
+      "id": "open-word-allocation-file",
+      "evidence": [
+        {
+          "kind": "published-interface",
+          "source": "Digital Research CP/M Operating System Manual, July 1982",
+          "section": "5.2, function 15; 6.10 directory entry"
+        }
+      ],
+      "call": { "function": 15, "de": 512, "stackPointer": 53248 },
+      "initialMemory": [
+        {
+          "address": 512,
+          "length": 36,
+          "fill": 0,
+          "patches": [
+            {
+              "offset": 1,
+              "bytes": [66, 73, 71, 32, 32, 32, 32, 32, 68, 65, 84]
+            }
+          ]
+        }
+      ],
+      "biosResponses": [],
+      "expected": {
+        "returnRegisters": { "a": 0, "l": 0, "sp": 53248, "pc": 260 },
+        "memory": [
+          {
+            "address": 512,
+            "length": 36,
+            "fill": 0,
+            "patches": [
+              {
+                "offset": 1,
+                "bytes": [66, 73, 71, 32, 32, 32, 32, 32, 68, 65, 84]
+              },
+              { "offset": 14, "bytes": [128, 1, 2] }
+            ]
+          }
+        ],
+        "biosCallCount": 7,
+        "biosTraceSha256": "a33cbdb207557ccbe3ee065cd4974664add9a39bd67f26c9e8b6afd97d7b8fe4"
+      }
+    },
+    {
+      "id": "read-word-allocation-file",
+      "evidence": [
+        {
+          "kind": "published-interface",
+          "source": "Digital Research CP/M Operating System Manual, July 1982",
+          "section": "5.2, function 20; 6.10 two-byte allocation references"
+        }
+      ],
+      "call": { "function": 20, "de": 512, "stackPointer": 53248 },
+      "biosResponses": [],
+      "expected": {
+        "returnRegisters": { "a": 0, "l": 0, "sp": 53248, "pc": 260 },
+        "memory": [
+          {
+            "address": 512,
+            "length": 36,
+            "fill": 0,
+            "patches": [
+              {
+                "offset": 1,
+                "bytes": [66, 73, 71, 32, 32, 32, 32, 32, 68, 65, 84]
+              },
+              { "offset": 14, "bytes": [128, 1, 2] },
+              { "offset": 32, "bytes": [1] }
+            ]
+          },
+          {
+            "address": 768,
+            "length": 128,
+            "fill": 26,
+            "patches": [
+              {
+                "offset": 0,
+                "bytes": [
+                  87, 79, 82, 68, 32, 65, 76, 76, 79, 67, 65, 84, 73, 79, 78,
+                  13, 10
+                ]
+              }
+            ]
+          }
+        ],
+        "biosCallCount": 4,
+        "biosTraceSha256": "1bb0cf11105a93cbeaf01b419e585bfb90eed68afb8e40737b2376cbfc942b81",
+        "biosDiskState": { "track": 3, "sector": 1, "dma": 768 }
+      }
+    }
+  ]
+}

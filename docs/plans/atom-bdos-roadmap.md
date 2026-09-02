@@ -160,15 +160,17 @@ prompt, and a console-only COM program runs and returns.
 
 ### Milestone 3 — disk discovery and read path (active)
 
-Current checkpoint: functions 13, 14, 24 through 29, 31, 32, and 37 now
-pass the reviewed disk-state and absent-drive sequences. Login consumes the
-BIOS DPH and DPB, reconstructs the allocation vector by scanning the declared
-directory extent, and has also passed a deliberately non-IBM geometry fixture.
-Open, search, and sequential read remain before this milestone is complete.
+Current checkpoint: disk state, open, unmodified close, search first/next,
+sequential read, random read, file size, and sequential-to-random conversion
+now pass their enabled differential fixtures. The retained CCP runs `DIR` and
+`TYPE`, and `EDIT.COM` opens and displays `INPUT.NU`, through the replacement
+under the headless WASM/ANSI model. Two-byte allocation maps and a deliberately
+non-IBM geometry have independent fixtures. Mutation services and the
+remaining metadata/error paths are still incomplete.
 
 Work:
 
-- implement calls 13 through 20 and 24 through 32 as their dependencies
+- implement calls 13 through 18, 20, and 24 through 32 as their dependencies
   require;
 - consume DPH and DPB data supplied by the BIOS rather than embedding the
   current geometry in BDOS code;
@@ -184,7 +186,7 @@ proofs.
 
 Work:
 
-- implement delete, make, rename, sequential write, and attributes;
+- implement call 19 delete, make, rename, sequential write, and attributes;
 - prove block allocation, extent rollover, full-directory, full-disk,
   read-only, and failed-write behavior; and
 - prove that a successful close/flush survives a fresh native host process.

@@ -3,14 +3,14 @@
   "id": "triptych-bdos-console-boot",
   "description": "Cold-boot the retained CCP with the current Triptych BDOS and reproduce its initial prompt through the headless ANSI terminal model",
   "systemBdos": "triptych",
-  "expectedInitialDriveSha256": "35258fb3da544511639e2bbd99a98fb438bd8c89ce9552ac65485902216818e5",
+  "expectedInitialDriveSha256": "542359b30cd9ddad8a81f33edb24b778406a33e63a376d46ab496048c7925ddb",
   "sessions": [
     {
       "id": "cold-boot-prompt",
       "inputAscii": "",
       "stopAfterAscii": "\r\nA>",
       "expectedTranscript": "\r\nA>",
-      "expectedDriveSha256": "35258fb3da544511639e2bbd99a98fb438bd8c89ce9552ac65485902216818e5",
+      "expectedDriveSha256": "542359b30cd9ddad8a81f33edb24b778406a33e63a376d46ab496048c7925ddb",
       "expectedTerminal": {
         "text": "\nA>",
         "cursorRow": 1,
