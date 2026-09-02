@@ -54,8 +54,8 @@ ANSI terminal states, and disk digests.
 The browser and native image preparation paths now assemble and install both
 the Triptych BDOS and Triptych BIOS. A user-selected browser disk is patched in
 memory; its source file remains unchanged. The Pages artifact receives a
-preinstalled Triptych system disk. The clean browser-build artifact has
-SHA-256
+preinstalled Triptych system disk. The clean browser-build artifact and the
+file served by GitHub Pages both have SHA-256
 `e67234b50fe63aea7cb769b0517b0360450745f7765754c9d77fa7f65924d30c`;
 its `$0800..$15FF` BDOS and `$1600..$19FF` BIOS slices are byte-identical to
 the separately published firmware binaries.
@@ -95,7 +95,5 @@ The next acceptance steps are:
    atomicity proofs;
 2. compress the resident implementation while retaining every direct and
    headless discriminator;
-3. establish a successful Nucleus compile-and-run scenario;
-4. assemble the BDOS source through the in-guest Atom path; and
-5. confirm the browser artifact digest through the deployed GitHub Pages
-   workflow.
+3. establish a successful Nucleus compile-and-run scenario; and
+4. assemble the BDOS source through the in-guest Atom path.
