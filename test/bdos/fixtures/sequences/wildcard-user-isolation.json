@@ -1,0 +1,253 @@
+{
+  "schema": "triptych-bdos-direct-sequence-v1",
+  "id": "wildcard-user-isolation",
+  "description": "Search an interleaved directory with wildcard FCBs and prove that each CP/M user sees only its own entries",
+  "biosDisk": {
+    "drives": [
+      {
+        "number": 0,
+        "dphAddress": 64512,
+        "directoryBufferAddress": 64640,
+        "dpbAddress": 64528,
+        "checkVectorAddress": 64768,
+        "allocationVectorAddress": 64800,
+        "firstSector": 1,
+        "defaultRecordByte": 229,
+        "dpb": {
+          "sectorsPerTrack": 26,
+          "blockShift": 3,
+          "blockMask": 7,
+          "extentMask": 0,
+          "maximumBlock": 242,
+          "maximumDirectoryEntry": 63,
+          "directoryAllocation0": 192,
+          "directoryAllocation1": 0,
+          "checkVectorBytes": 16,
+          "reservedTracks": 2
+        },
+        "records": [
+          {
+            "record": 52,
+            "fill": 229,
+            "patches": [
+              {
+                "offset": 0,
+                "bytes": [
+                  0, 70, 79, 79, 32, 32, 32, 32, 32, 84, 88, 84, 0, 0, 0, 1, 2,
+                  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 66, 65, 82,
+                  32, 32, 32, 32, 32, 84, 88, 84, 0, 0, 0, 1, 3, 0, 0, 0, 0, 0,
+                  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 70, 73, 90, 90, 32, 32, 32,
+                  32, 67, 79, 77, 0, 0, 0, 1, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                  0, 0, 0, 0, 0
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "steps": [
+    {
+      "id": "reset-disk-system",
+      "evidence": [
+        {
+          "kind": "published-interface",
+          "source": "Digital Research CP/M Operating System Manual, July 1982",
+          "section": "5.2, functions 13 and 32; 6.10 directory format"
+        }
+      ],
+      "call": { "function": 13, "de": 0, "stackPointer": 53248 },
+      "biosResponses": [],
+      "expected": {
+        "returnRegisters": { "a": 0, "l": 0, "sp": 53248, "pc": 260 },
+        "memory": [{ "address": 64800, "bytes": [248, 0] }],
+        "biosCallCount": 99,
+        "biosTraceSha256": "05c7a536d3c51532c4e8d9827c001038fed1e98b45b2fedfbaff7d2254c6670a"
+      }
+    },
+    {
+      "id": "set-search-dma",
+      "evidence": [
+        {
+          "kind": "published-interface",
+          "source": "Digital Research CP/M Operating System Manual, July 1982",
+          "section": "5.2, function 26"
+        }
+      ],
+      "call": { "function": 26, "de": 768, "stackPointer": 53248 },
+      "biosResponses": [],
+      "expected": {
+        "returnRegisters": { "a": 0, "l": 0, "sp": 53248, "pc": 260 },
+        "biosCalls": [
+          { "entry": 12, "name": "set-dma", "registers": { "b": 3, "c": 0 } }
+        ],
+        "biosDiskState": { "dma": 768 }
+      }
+    },
+    {
+      "id": "user-zero-search-first",
+      "evidence": [
+        {
+          "kind": "published-interface",
+          "source": "Digital Research CP/M Operating System Manual, July 1982",
+          "section": "5.2, function 17 wildcard matching and user code"
+        }
+      ],
+      "call": { "function": 17, "de": 512, "stackPointer": 53248 },
+      "initialMemory": [
+        {
+          "address": 512,
+          "length": 36,
+          "fill": 0,
+          "patches": [
+            {
+              "offset": 1,
+              "bytes": [63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63]
+            }
+          ]
+        }
+      ],
+      "biosResponses": [],
+      "expected": {
+        "returnRegisters": { "a": 0, "l": 0, "sp": 53248, "pc": 260 },
+        "memory": [
+          {
+            "address": 768,
+            "length": 128,
+            "fill": 229,
+            "patches": [
+              {
+                "offset": 0,
+                "bytes": [
+                  0, 70, 79, 79, 32, 32, 32, 32, 32, 84, 88, 84, 0, 0, 0, 1, 2,
+                  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 66, 65, 82,
+                  32, 32, 32, 32, 32, 84, 88, 84, 0, 0, 0, 1, 3, 0, 0, 0, 0, 0,
+                  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 70, 73, 90, 90, 32, 32, 32,
+                  32, 67, 79, 77, 0, 0, 0, 1, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                  0, 0, 0, 0, 0
+                ]
+              }
+            ]
+          }
+        ],
+        "biosCallCount": 7,
+        "biosTraceSha256": "3fcbf2a44fc7b71b5e1b58f2c3450d93217e73f7f755e153dbe4709807b66440"
+      }
+    },
+    {
+      "id": "user-zero-search-next",
+      "evidence": [
+        {
+          "kind": "published-interface",
+          "source": "Digital Research CP/M Operating System Manual, July 1982",
+          "section": "5.2, function 18 search continuation"
+        }
+      ],
+      "call": { "function": 18, "de": 0, "stackPointer": 53248 },
+      "biosResponses": [],
+      "expected": {
+        "returnRegisters": { "a": 2, "l": 2, "sp": 53248, "pc": 260 },
+        "biosCalls": []
+      }
+    },
+    {
+      "id": "user-zero-search-exhausted",
+      "evidence": [
+        {
+          "kind": "published-interface",
+          "source": "Digital Research CP/M Operating System Manual, July 1982",
+          "section": "5.2, function 18 search continuation"
+        }
+      ],
+      "call": { "function": 18, "de": 0, "stackPointer": 53248 },
+      "biosResponses": [],
+      "expected": {
+        "returnRegisters": { "a": 255, "l": 255, "sp": 53248, "pc": 260 },
+        "biosCalls": []
+      }
+    },
+    {
+      "id": "select-user-one",
+      "evidence": [
+        {
+          "kind": "published-interface",
+          "source": "Digital Research CP/M Operating System Manual, July 1982",
+          "section": "5.2, function 32"
+        }
+      ],
+      "call": { "function": 32, "de": 1, "stackPointer": 53248 },
+      "biosResponses": [],
+      "expected": {
+        "returnRegisters": { "a": 0, "l": 0, "sp": 53248, "pc": 260 },
+        "biosCalls": []
+      }
+    },
+    {
+      "id": "user-one-search-first",
+      "evidence": [
+        {
+          "kind": "published-interface",
+          "source": "Digital Research CP/M Operating System Manual, July 1982",
+          "section": "5.2, functions 17 and 32"
+        }
+      ],
+      "call": { "function": 17, "de": 512, "stackPointer": 53248 },
+      "initialMemory": [
+        {
+          "address": 512,
+          "length": 36,
+          "fill": 0,
+          "patches": [
+            {
+              "offset": 1,
+              "bytes": [63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63]
+            }
+          ]
+        }
+      ],
+      "biosResponses": [],
+      "expected": {
+        "returnRegisters": { "a": 1, "l": 1, "sp": 53248, "pc": 260 },
+        "memory": [
+          {
+            "address": 768,
+            "length": 128,
+            "fill": 229,
+            "patches": [
+              {
+                "offset": 0,
+                "bytes": [
+                  0, 70, 79, 79, 32, 32, 32, 32, 32, 84, 88, 84, 0, 0, 0, 1, 2,
+                  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 66, 65, 82,
+                  32, 32, 32, 32, 32, 84, 88, 84, 0, 0, 0, 1, 3, 0, 0, 0, 0, 0,
+                  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 70, 73, 90, 90, 32, 32, 32,
+                  32, 67, 79, 77, 0, 0, 0, 1, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                  0, 0, 0, 0, 0
+                ]
+              }
+            ]
+          }
+        ],
+        "biosCallCount": 7,
+        "biosTraceSha256": "3fcbf2a44fc7b71b5e1b58f2c3450d93217e73f7f755e153dbe4709807b66440"
+      }
+    },
+    {
+      "id": "user-one-search-exhausted",
+      "evidence": [
+        {
+          "kind": "published-interface",
+          "source": "Digital Research CP/M Operating System Manual, July 1982",
+          "section": "5.2, function 18 search continuation"
+        }
+      ],
+      "call": { "function": 18, "de": 0, "stackPointer": 53248 },
+      "biosResponses": [],
+      "expected": {
+        "returnRegisters": { "a": 255, "l": 255, "sp": 53248, "pc": 260 },
+        "biosCalls": []
+      }
+    }
+  ]
+}

@@ -70,11 +70,22 @@ A semantic BIOS disk double publishes a documented DPH/DPB and models
 selection, positioning, sector translation, DMA, 128-byte reads, and writes.
 Stateful fixtures prove disk/user/vector state, file open and read, directory
 search, create/write/close, attributes, rename, delete, random access, file
-size, random-record conversion, and zero-filled extension. They compare public
-BIOS call traces, FCB and DMA results, allocation bits, exact directory and data
-records, and disk-write counts. The fixtures are data under
-`test/bdos/fixtures/`, not facts extracted from legacy source symbols. All pass
-against the hashed oracle.
+size, random-record conversion, and zero-filled extension. Adversarial cases
+add wildcard searches across users, the record-127 extent boundary, absent
+drive selection, full directory and allocation maps, read-only file and disk
+rejection, and injected BIOS read/write failures. Failure cases check the exact
+diagnostic bytes, console acknowledgement, page-zero warm-boot transfer, and
+absence of rejected disk mutations. They compare public BIOS call traces, FCB
+and DMA results, allocation bits, exact directory and data records, and
+disk-write counts. The 21 direct fixtures and 13 stateful fixtures are data
+under `test/bdos/fixtures/`, not facts extracted from legacy source symbols.
+All pass against the hashed oracle.
+
+The failure probes exposed a test-harness defect before replacement work
+started: a fatal BDOS error jumps through the public warm-boot vector at
+`$0000`. The harness now installs that vector explicitly and requires the
+resulting BIOS transfer. Previously, zero-filled page-zero memory could execute
+as NOPs and disguise this path as an ordinary return.
 
 The existing WASM proof now reads
 `test/bdos/scenarios/ccp-file-roundtrip.json` and feeds each fresh-process CCP
@@ -89,8 +100,9 @@ also assert the persisted disk digest.
 
 ## Next proof
 
-Add adversarial fixtures around the now-complete basic function matrix:
-wildcards, user isolation, extent boundaries, absent drives, read-only files
-and disks, full directory and allocation maps, and injected BIOS read/write
-failure. These must prove rejection atomicity before replacement code is
-written.
+Implement the original Atom-compatible BDOS entry, dispatcher, private stack,
+and functions 0 through 12. Run every console fixture against both the frozen
+oracle and the replacement, then cold-boot the retained CCP and run a
+console-only COM program through the same headless serial and ANSI scenario
+boundary. This is Milestone 2; no file or disk service needs to be implemented
+to reach its exit.

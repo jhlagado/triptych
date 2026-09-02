@@ -7,6 +7,7 @@ import {
   type BdosDirectCallResult,
   type BdosDirectCallSequenceFixture,
   type BdosObservedRegisters,
+  bdosBiosConsoleOutput,
   bdosBiosTraceSha256,
   materializeBdosBytePattern,
   materializeBdosMemoryPatch,
@@ -88,12 +89,46 @@ function expectFixtureResult(
     });
   }
   if (fixture.expected.biosCallCount !== undefined) {
-    expect(result.biosCalls).toHaveLength(fixture.expected.biosCallCount);
+    expect(result.biosCalls, `${fixture.id} BIOS calls`).toHaveLength(
+      fixture.expected.biosCallCount,
+    );
   }
   if (fixture.expected.biosTraceSha256 !== undefined) {
-    expect(bdosBiosTraceSha256(result.biosCalls)).toBe(
-      fixture.expected.biosTraceSha256,
-    );
+    expect(
+      bdosBiosTraceSha256(result.biosCalls),
+      `${fixture.id} BIOS trace`,
+    ).toBe(fixture.expected.biosTraceSha256);
+  }
+  if (
+    fixture.expected.biosConsoleOutputAscii !== undefined ||
+    fixture.expected.biosConsoleOutputBytes !== undefined
+  ) {
+    expect(
+      (fixture.expected.biosConsoleOutputAscii === undefined) !==
+        (fixture.expected.biosConsoleOutputBytes === undefined),
+      "fixture must define exactly one BIOS console-output representation",
+    ).toBe(true);
+    for (const character of fixture.expected.biosConsoleOutputAscii ?? "") {
+      expect(
+        character.codePointAt(0),
+        `${fixture.id} BIOS console ASCII must be 7-bit`,
+      ).toBeLessThanOrEqual(0x7f);
+    }
+    for (const byte of fixture.expected.biosConsoleOutputBytes ?? []) {
+      expect(
+        Number.isInteger(byte) && byte >= 0 && byte <= 0xff,
+        `${fixture.id} BIOS console byte must be an integer from 0 through 255`,
+      ).toBe(true);
+    }
+    const expectedOutput =
+      fixture.expected.biosConsoleOutputBytes === undefined
+        ? Uint8Array.from(
+            Buffer.from(fixture.expected.biosConsoleOutputAscii ?? "", "ascii"),
+          )
+        : Uint8Array.from(fixture.expected.biosConsoleOutputBytes);
+    expect([...bdosBiosConsoleOutput(result.biosCalls)]).toEqual([
+      ...expectedOutput,
+    ]);
   }
   if (fixture.expected.biosDiskState !== undefined) {
     expect(result.biosDisk).toBeDefined();

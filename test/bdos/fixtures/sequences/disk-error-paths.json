@@ -1,0 +1,310 @@
+{
+  "schema": "triptych-bdos-direct-sequence-v1",
+  "id": "disk-error-paths",
+  "description": "Inject BIOS read and write failures without publishing an unsuccessful DMA read or disk write",
+  "biosDisk": {
+    "drives": [
+      {
+        "number": 0,
+        "dphAddress": 64512,
+        "directoryBufferAddress": 64640,
+        "dpbAddress": 64528,
+        "checkVectorAddress": 64768,
+        "allocationVectorAddress": 64800,
+        "firstSector": 1,
+        "defaultRecordByte": 229,
+        "dpb": {
+          "sectorsPerTrack": 26,
+          "blockShift": 3,
+          "blockMask": 7,
+          "extentMask": 0,
+          "maximumBlock": 242,
+          "maximumDirectoryEntry": 63,
+          "directoryAllocation0": 192,
+          "directoryAllocation1": 0,
+          "checkVectorBytes": 16,
+          "reservedTracks": 2
+        },
+        "records": [
+          {
+            "record": 52,
+            "fill": 229,
+            "patches": [
+              {
+                "offset": 0,
+                "bytes": [
+                  0, 72, 69, 76, 76, 79, 32, 32, 32, 84, 88, 84, 0, 0, 0, 1, 2,
+                  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+                ]
+              }
+            ]
+          },
+          { "record": 68, "fill": 65 }
+        ]
+      }
+    ]
+  },
+  "steps": [
+    {
+      "id": "reset-for-read-failure",
+      "evidence": [
+        {
+          "kind": "published-interface",
+          "source": "Digital Research CP/M Operating System Manual, July 1982",
+          "section": "5.2, function 13; 6.10 DPH and DPB"
+        }
+      ],
+      "call": { "function": 13, "de": 0, "stackPointer": 53248 },
+      "biosResponses": [],
+      "expected": {
+        "returnRegisters": { "a": 0, "l": 0, "sp": 53248, "pc": 260 },
+        "memory": [{ "address": 64800, "bytes": [224, 0] }],
+        "biosCallCount": 99,
+        "biosTraceSha256": "05c7a536d3c51532c4e8d9827c001038fed1e98b45b2fedfbaff7d2254c6670a",
+        "biosDiskWriteCount": 0
+      }
+    },
+    {
+      "id": "set-read-dma",
+      "evidence": [
+        {
+          "kind": "published-interface",
+          "source": "Digital Research CP/M Operating System Manual, July 1982",
+          "section": "5.2, function 26"
+        }
+      ],
+      "call": { "function": 26, "de": 768, "stackPointer": 53248 },
+      "initialMemory": [{ "address": 768, "length": 128, "fill": 66 }],
+      "biosResponses": [],
+      "expected": {
+        "returnRegisters": { "a": 0, "l": 0, "sp": 53248, "pc": 260 },
+        "biosCalls": [
+          { "entry": 12, "name": "set-dma", "registers": { "b": 3, "c": 0 } }
+        ],
+        "biosDiskState": { "dma": 768 },
+        "biosDiskWriteCount": 0
+      }
+    },
+    {
+      "id": "open-for-read-failure",
+      "evidence": [
+        {
+          "kind": "published-interface",
+          "source": "Digital Research CP/M Operating System Manual, July 1982",
+          "section": "5.2, function 15"
+        }
+      ],
+      "call": { "function": 15, "de": 512, "stackPointer": 53248 },
+      "initialMemory": [
+        {
+          "address": 512,
+          "length": 36,
+          "fill": 0,
+          "patches": [
+            {
+              "offset": 1,
+              "bytes": [72, 69, 76, 76, 79, 32, 32, 32, 84, 88, 84]
+            }
+          ]
+        }
+      ],
+      "biosResponses": [],
+      "expected": {
+        "returnRegisters": { "a": 0, "l": 0, "sp": 53248, "pc": 260 },
+        "memory": [
+          {
+            "address": 512,
+            "length": 36,
+            "fill": 0,
+            "patches": [
+              {
+                "offset": 1,
+                "bytes": [72, 69, 76, 76, 79, 32, 32, 32, 84, 88, 84]
+              },
+              { "offset": 14, "bytes": [128, 1, 2] }
+            ]
+          }
+        ],
+        "biosCallCount": 7,
+        "biosTraceSha256": "3fcbf2a44fc7b71b5e1b58f2c3450d93217e73f7f755e153dbe4709807b66440",
+        "biosDiskWriteCount": 0
+      }
+    },
+    {
+      "id": "fail-physical-read",
+      "evidence": [
+        {
+          "kind": "published-interface",
+          "source": "Digital Research CP/M Operating System Manual, July 1982",
+          "section": "5.2, function 20; 6.9 READ nonzero error result"
+        },
+        {
+          "kind": "black-box-compatibility",
+          "source": "Frozen Triptych transitional BDOS SHA-256 258fe1b659a979fa9adab000fd2ee27b165349179f6b5f5b8b5266ea3385ac22",
+          "section": "Injected first BIOS READ failure, console acknowledgement, and observable FCB/DMA state"
+        }
+      ],
+      "call": { "function": 20, "de": 512, "stackPointer": 53248 },
+      "biosResponses": [
+        { "entry": 13, "occurrence": 0, "return": { "a": 1 } },
+        { "entry": 2, "occurrence": "all", "return": { "a": 0 } },
+        { "entry": 3, "occurrence": 0, "return": { "a": 13 } }
+      ],
+      "expected": {
+        "returnRegisters": { "a": 0, "l": 0, "sp": 53248, "pc": 260 },
+        "memory": [
+          {
+            "address": 512,
+            "length": 36,
+            "fill": 0,
+            "patches": [
+              {
+                "offset": 1,
+                "bytes": [72, 69, 76, 76, 79, 32, 32, 32, 84, 88, 84]
+              },
+              { "offset": 14, "bytes": [128, 1, 2] },
+              { "offset": 32, "bytes": [1] }
+            ]
+          },
+          { "address": 768, "length": 128, "fill": 66 }
+        ],
+        "biosCallCount": 59,
+        "biosTraceSha256": "8963999da7ecc80c9446fe4d54fe3c4a95f1469000253bbdf1d6b325dad186bb",
+        "biosConsoleOutputAscii": "\r\nBdos Err On A: Bad Sector",
+        "biosDiskWriteCount": 0,
+        "biosDiskRecords": [
+          { "drive": 0, "record": 68, "length": 128, "fill": 65 }
+        ]
+      }
+    },
+    {
+      "id": "reset-for-write-failure",
+      "evidence": [
+        {
+          "kind": "published-interface",
+          "source": "Digital Research CP/M Operating System Manual, July 1982",
+          "section": "5.2, function 13"
+        }
+      ],
+      "call": { "function": 13, "de": 0, "stackPointer": 53248 },
+      "biosResponses": [],
+      "expected": {
+        "returnRegisters": { "a": 0, "l": 0, "sp": 53248, "pc": 260 },
+        "biosCallCount": 99,
+        "biosTraceSha256": "05c7a536d3c51532c4e8d9827c001038fed1e98b45b2fedfbaff7d2254c6670a",
+        "biosDiskWriteCount": 0
+      }
+    },
+    {
+      "id": "set-write-dma",
+      "evidence": [
+        {
+          "kind": "published-interface",
+          "source": "Digital Research CP/M Operating System Manual, July 1982",
+          "section": "5.2, function 26"
+        }
+      ],
+      "call": { "function": 26, "de": 768, "stackPointer": 53248 },
+      "initialMemory": [{ "address": 768, "length": 128, "fill": 67 }],
+      "biosResponses": [],
+      "expected": {
+        "returnRegisters": { "a": 0, "l": 0, "sp": 53248, "pc": 260 },
+        "biosCalls": [
+          { "entry": 12, "name": "set-dma", "registers": { "b": 3, "c": 0 } }
+        ],
+        "biosDiskWriteCount": 0
+      }
+    },
+    {
+      "id": "open-for-write-failure",
+      "evidence": [
+        {
+          "kind": "published-interface",
+          "source": "Digital Research CP/M Operating System Manual, July 1982",
+          "section": "5.2, function 15"
+        }
+      ],
+      "call": { "function": 15, "de": 512, "stackPointer": 53248 },
+      "initialMemory": [
+        {
+          "address": 512,
+          "length": 36,
+          "fill": 0,
+          "patches": [
+            {
+              "offset": 1,
+              "bytes": [72, 69, 76, 76, 79, 32, 32, 32, 84, 88, 84]
+            }
+          ]
+        }
+      ],
+      "biosResponses": [],
+      "expected": {
+        "returnRegisters": { "a": 0, "l": 0, "sp": 53248, "pc": 260 },
+        "memory": [
+          {
+            "address": 512,
+            "length": 36,
+            "fill": 0,
+            "patches": [
+              {
+                "offset": 1,
+                "bytes": [72, 69, 76, 76, 79, 32, 32, 32, 84, 88, 84]
+              },
+              { "offset": 14, "bytes": [128, 1, 2] }
+            ]
+          }
+        ],
+        "biosCallCount": 7,
+        "biosTraceSha256": "3fcbf2a44fc7b71b5e1b58f2c3450d93217e73f7f755e153dbe4709807b66440",
+        "biosDiskWriteCount": 0
+      }
+    },
+    {
+      "id": "fail-physical-write",
+      "evidence": [
+        {
+          "kind": "published-interface",
+          "source": "Digital Research CP/M Operating System Manual, July 1982",
+          "section": "5.2, function 21; 6.9 WRITE nonzero error result"
+        },
+        {
+          "kind": "black-box-compatibility",
+          "source": "Frozen Triptych transitional BDOS SHA-256 258fe1b659a979fa9adab000fd2ee27b165349179f6b5f5b8b5266ea3385ac22",
+          "section": "Injected first BIOS WRITE failure, console acknowledgement, and observable FCB/disk state"
+        }
+      ],
+      "call": { "function": 21, "de": 512, "stackPointer": 53248 },
+      "biosResponses": [
+        { "entry": 14, "occurrence": 0, "return": { "a": 1 } },
+        { "entry": 2, "occurrence": "all", "return": { "a": 0 } },
+        { "entry": 3, "occurrence": 0, "return": { "a": 13 } }
+      ],
+      "expected": {
+        "returnRegisters": { "a": 0, "l": 0, "sp": 53248, "pc": 260 },
+        "memory": [
+          {
+            "address": 512,
+            "length": 36,
+            "fill": 0,
+            "patches": [
+              {
+                "offset": 1,
+                "bytes": [72, 69, 76, 76, 79, 32, 32, 32, 84, 88, 84]
+              },
+              { "offset": 15, "bytes": [1, 2] },
+              { "offset": 32, "bytes": [1] }
+            ]
+          }
+        ],
+        "biosCallCount": 59,
+        "biosTraceSha256": "f52e6798a907394acb6bdaf972295f9a775bb760c22a8efd26aa1375d6dba607",
+        "biosConsoleOutputAscii": "\r\nBdos Err On A: Bad Sector",
+        "biosDiskWriteCount": 0,
+        "biosDiskRecords": [
+          { "drive": 0, "record": 68, "length": 128, "fill": 65 }
+        ]
+      }
+    }
+  ]
+}

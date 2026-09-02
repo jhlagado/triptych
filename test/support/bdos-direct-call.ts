@@ -8,6 +8,7 @@ import {
 } from "./bdos-bios-double.js";
 
 const MEMORY_BYTES = 0x10000;
+const WARM_BOOT_VECTOR = 0x0000;
 const CALLER_ADDRESS = 0x0100;
 const BDOS_VECTOR = 0x0005;
 const BDOS_BASE = 0xec00;
@@ -54,7 +55,7 @@ export interface BdosDirectCallFixture {
   biosDisk?: BdosBiosDiskFixture;
   biosResponses: Array<{
     entry: number;
-    occurrence: number;
+    occurrence: number | "all";
     action?: "return" | "stop";
     return?: {
       a?: number;
@@ -74,6 +75,8 @@ export interface BdosDirectCallFixture {
     }>;
     biosCallCount?: number;
     biosTraceSha256?: string;
+    biosConsoleOutputAscii?: string;
+    biosConsoleOutputBytes?: number[];
     biosDiskState?: Partial<
       Pick<BdosBiosDiskSnapshot, "selectedDrive" | "track" | "sector" | "dma">
     >;
@@ -141,6 +144,12 @@ export function bdosBiosTraceSha256(calls: BdosBiosCall[]): string {
     )
     .join("\n");
   return createHash("sha256").update(`${canonical}\n`, "utf8").digest("hex");
+}
+
+export function bdosBiosConsoleOutput(calls: BdosBiosCall[]): Uint8Array {
+  return Uint8Array.from(
+    calls.filter((call) => call.entry === 4).map((call) => call.registers.c),
+  );
 }
 
 export interface BdosDirectCallResult {
@@ -251,10 +260,7 @@ function applyBiosReturn(
     ReturnType<typeof createDebug80TestHarness>["captureCpuState"]
   >,
 ): void {
-  const response = fixture.biosResponses.find(
-    (candidate) =>
-      candidate.entry === entry && candidate.occurrence === occurrence,
-  );
+  const response = biosResponseFor(fixture, entry, occurrence);
   const returned = response?.return;
   if (returned?.a !== undefined) state.a = returned.a & 0xff;
   if (returned?.bc !== undefined) {
@@ -265,6 +271,23 @@ function applyBiosReturn(
     state.h = (returned.hl >>> 8) & 0xff;
     state.l = returned.hl & 0xff;
   }
+}
+
+function biosResponseFor(
+  fixture: BdosDirectCallFixture,
+  entry: number,
+  occurrence: number,
+): BdosDirectCallFixture["biosResponses"][number] | undefined {
+  return (
+    fixture.biosResponses.find(
+      (candidate) =>
+        candidate.entry === entry && candidate.occurrence === occurrence,
+    ) ??
+    fixture.biosResponses.find(
+      (candidate) =>
+        candidate.entry === entry && candidate.occurrence === "all",
+    )
+  );
 }
 
 function createBdosDirectRunner(
@@ -283,6 +306,10 @@ function createBdosDirectRunner(
   const memory = runtime.hardware.memory;
   memory.fill(0);
   memory.set(bdos, BDOS_BASE);
+  memory.set(
+    [0xc3, (BIOS_BASE + 3) & 0xff, (BIOS_BASE + 3) >>> 8],
+    WARM_BOOT_VECTOR,
+  );
   memory.set([0xc3, BDOS_ENTRY & 0xff, BDOS_ENTRY >>> 8], BDOS_VECTOR);
   memory.set([0xcd, BDOS_VECTOR, 0x00, 0x76], CALLER_ADDRESS);
 
@@ -342,10 +369,7 @@ function createBdosDirectRunner(
           occurrence,
           registers: observedRegisters(state),
         });
-        const response = fixture.biosResponses.find(
-          (candidate) =>
-            candidate.entry === entry && candidate.occurrence === occurrence,
-        );
+        const response = biosResponseFor(fixture, entry, occurrence);
         occurrences[entry] = occurrence + 1;
         if (response?.action === "stop") {
           stop = "bios-transfer";
@@ -366,7 +390,9 @@ function createBdosDirectRunner(
     }
     for (const response of fixture.biosResponses) {
       const calls = occurrences[response.entry] ?? 0;
-      if (calls <= response.occurrence) {
+      const wasCalled =
+        response.occurrence === "all" ? calls > 0 : calls > response.occurrence;
+      if (!wasCalled) {
         throw new Error(
           `${fixture.id} did not make scripted BIOS call ${response.entry} occurrence ${response.occurrence}`,
         );

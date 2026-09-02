@@ -1,0 +1,176 @@
+{
+  "schema": "triptych-bdos-direct-sequence-v1",
+  "id": "read-only-disk",
+  "description": "Reject a sequential write after BDOS function 28 write-protects the current disk, then transfer through the page-zero warm-boot vector",
+  "biosDisk": {
+    "drives": [
+      {
+        "number": 0,
+        "dphAddress": 64512,
+        "directoryBufferAddress": 64640,
+        "dpbAddress": 64528,
+        "checkVectorAddress": 64768,
+        "allocationVectorAddress": 64800,
+        "firstSector": 1,
+        "defaultRecordByte": 229,
+        "dpb": {
+          "sectorsPerTrack": 26,
+          "blockShift": 3,
+          "blockMask": 7,
+          "extentMask": 0,
+          "maximumBlock": 242,
+          "maximumDirectoryEntry": 63,
+          "directoryAllocation0": 192,
+          "directoryAllocation1": 0,
+          "checkVectorBytes": 16,
+          "reservedTracks": 2
+        },
+        "records": [
+          {
+            "record": 52,
+            "fill": 229,
+            "patches": [
+              {
+                "offset": 0,
+                "bytes": [
+                  0, 72, 69, 76, 76, 79, 32, 32, 32, 84, 88, 84, 0, 0, 0, 1, 2,
+                  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+                ]
+              }
+            ]
+          },
+          { "record": 68, "fill": 65 }
+        ]
+      }
+    ]
+  },
+  "steps": [
+    {
+      "id": "reset-disk-system",
+      "evidence": [
+        {
+          "kind": "published-interface",
+          "source": "Digital Research CP/M Operating System Manual, July 1982",
+          "section": "5.2, function 13; 6.10 DPH and DPB"
+        }
+      ],
+      "call": { "function": 13, "de": 0, "stackPointer": 53248 },
+      "biosResponses": [],
+      "expected": {
+        "returnRegisters": { "a": 0, "l": 0, "sp": 53248, "pc": 260 },
+        "memory": [{ "address": 64800, "bytes": [224, 0] }],
+        "biosCallCount": 99,
+        "biosTraceSha256": "05c7a536d3c51532c4e8d9827c001038fed1e98b45b2fedfbaff7d2254c6670a",
+        "biosDiskWriteCount": 0
+      }
+    },
+    {
+      "id": "open-file",
+      "evidence": [
+        {
+          "kind": "published-interface",
+          "source": "Digital Research CP/M Operating System Manual, July 1982",
+          "section": "5.2, function 15"
+        }
+      ],
+      "call": { "function": 15, "de": 512, "stackPointer": 53248 },
+      "initialMemory": [
+        {
+          "address": 512,
+          "length": 36,
+          "fill": 0,
+          "patches": [
+            {
+              "offset": 1,
+              "bytes": [72, 69, 76, 76, 79, 32, 32, 32, 84, 88, 84]
+            }
+          ]
+        }
+      ],
+      "biosResponses": [],
+      "expected": {
+        "returnRegisters": { "a": 0, "l": 0, "sp": 53248, "pc": 260 },
+        "memory": [
+          {
+            "address": 512,
+            "length": 36,
+            "fill": 0,
+            "patches": [
+              {
+                "offset": 1,
+                "bytes": [72, 69, 76, 76, 79, 32, 32, 32, 84, 88, 84]
+              },
+              { "offset": 14, "bytes": [128, 1, 2] }
+            ]
+          }
+        ],
+        "biosCallCount": 7,
+        "biosTraceSha256": "5a8efea378d2eeef7d07aa4f56f6f2f61dea312d25894c40a351edb82ea9d7d4",
+        "biosDiskWriteCount": 0
+      }
+    },
+    {
+      "id": "protect-current-disk",
+      "evidence": [
+        {
+          "kind": "published-interface",
+          "source": "Digital Research CP/M Operating System Manual, July 1982",
+          "section": "5.2, function 28"
+        }
+      ],
+      "call": { "function": 28, "de": 0, "stackPointer": 53248 },
+      "biosResponses": [],
+      "expected": {
+        "returnRegisters": { "a": 0, "l": 0, "sp": 53248, "pc": 260 },
+        "biosCalls": [],
+        "biosDiskWriteCount": 0
+      }
+    },
+    {
+      "id": "reject-write",
+      "evidence": [
+        {
+          "kind": "published-interface",
+          "source": "Digital Research CP/M Operating System Manual, July 1982",
+          "section": "5.2, functions 21 and 28"
+        },
+        {
+          "kind": "black-box-compatibility",
+          "source": "Frozen Triptych transitional BDOS SHA-256 258fe1b659a979fa9adab000fd2ee27b165349179f6b5f5b8b5266ea3385ac22",
+          "section": "Read-only diagnostic, console acknowledgement, and warm-boot transfer"
+        }
+      ],
+      "call": { "function": 21, "de": 512, "stackPointer": 53248 },
+      "biosResponses": [
+        { "entry": 2, "occurrence": "all", "return": { "a": 0 } },
+        { "entry": 3, "occurrence": 0, "return": { "a": 13 } },
+        { "entry": 1, "occurrence": 0, "action": "stop" }
+      ],
+      "expected": {
+        "stop": "bios-transfer",
+        "biosTransferEntry": 1,
+        "memory": [
+          {
+            "address": 512,
+            "length": 36,
+            "fill": 0,
+            "patches": [
+              {
+                "offset": 1,
+                "bytes": [72, 69, 76, 76, 79, 32, 32, 32, 84, 88, 84]
+              },
+              { "offset": 14, "bytes": [128, 1, 2] }
+            ]
+          }
+        ],
+        "biosCallCount": 42,
+        "biosTraceSha256": "8c592700fab7e53037b70b9f9ceb3b25442fe3d9b555141816831b68ac4dedc3",
+        "biosConsoleOutputAscii": "\r\nBdos Err On A: R/O",
+        "biosDiskWriteCount": 0,
+        "biosDiskRecords": [
+          { "drive": 0, "record": 68, "length": 128, "fill": 65 }
+        ]
+      }
+    }
+  ]
+}

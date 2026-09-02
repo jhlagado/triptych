@@ -128,7 +128,7 @@ Exit: the repository rejects a silently changed oracle or system layout and
 clearly separates third-party compatibility material from future Triptych
 source.
 
-### Milestone 1 — build the differential contract harness (active)
+### Milestone 1 — build the differential contract harness (complete)
 
 Work:
 
