@@ -121,6 +121,21 @@ Serial status bit 0 means receive data is available. Bit 1 means transmit is
 ready. Version 0.1 always reports transmit ready. All other bits are zero. Guest
 software implements echo and line editing.
 
+The wire boundary remains an unstructured byte stream. Interactive host UIs
+provide an 80-column by 24-row ANSI terminal profile so the same full-screen
+software works in the browser, a native macOS/Linux terminal, and an external
+terminal connected to the eventual ESP32 USB serial port. The required output
+subset is printable 7-bit ASCII, `BEL`, `BS`, `HT`, `LF`, `CR`, automatic wrap,
+scrolling, `CSI A/B/C/D`, `CSI H/f`, `CSI J/K` modes 0, 1, and 2, and `CSI m`
+attributes 0, 1, 4, and 7. Positions are one-based and clamped to the screen;
+unsupported escape sequences are consumed without displaying their bytes.
+
+Interactive input sends bytes without local echo. Return sends `CR`, Backspace
+sends `BS`, Delete sends `DEL`, and the arrow keys send `ESC [ A`, `ESC [ B`,
+`ESC [ C`, and `ESC [ D`. A headless host may expose the raw byte queues without
+implementing a screen. This terminal profile changes no serial port, status
+bit, transport, or CPU-core behavior.
+
 ### System control
 
 | Port                   | Read                                          | Write                       |

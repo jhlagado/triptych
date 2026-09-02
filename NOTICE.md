@@ -10,3 +10,9 @@ tests use `@jhlagado/debug80-runtime` and `@jhlagado/azm` as development tools;
 those packages remain separately maintained dependencies. CP/M and CP/Mish
 artifacts require their own provenance and licence records before they are
 vendored or distributed here.
+
+The optional native working-disk proof accepts Atom's external
+`atom-cpm22.com` artifact and example source only after matching their pinned
+SHA-256 digests. Atom is GPL-3.0-only and remains outside this repository; the
+proof reports its repository, licence, and artifact digest rather than
+silently copying it into Triptych.

@@ -1,0 +1,14 @@
+[workspace]
+members = [
+  "crates/triptych-cpm-image",
+  "crates/triptych-cpu-core",
+  "crates/triptych-cpu-selftest",
+  "crates/triptych-host-native",
+  "crates/triptych-host-wasm",
+]
+resolver = "2"
+
+[workspace.package]
+edition = "2021"
+license = "GPL-3.0-or-later"
+rust-version = "1.85"

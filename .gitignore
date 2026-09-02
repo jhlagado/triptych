@@ -1,5 +1,7 @@
 dist/
 node_modules/
+target/
+firmware/cpu/.embuild/
+firmware/cpu/sdkconfig
 *.log
 .DS_Store
-

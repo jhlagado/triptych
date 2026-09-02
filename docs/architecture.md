@@ -36,8 +36,34 @@ reliably.
 
 ## Implementation state
 
-The repository currently contains executable TypeScript reference models and
-Z80 boot sources. These prove address boundaries, atomic publication, routing,
-rendering, synthesis, storage, and reset behaviour. ESP-IDF firmware, PCB or
-carrier designs, pin assignments, and continuous hardware measurements remain
-future milestones.
+The repository contains executable TypeScript reference models, Z80 boot
+sources, a portable Rust CPU machine, native and WebAssembly hosts, and a
+standalone Rust-over-ESP-IDF CPU firmware image. The ESP32 image links the same
+core and reports checked fixture digests through the default UART. This proves
+the build boundary only. PCB or carrier designs, pin assignments, boot results,
+and continuous hardware measurements remain future milestones.
+
+## Current CPU implementation direction
+
+Implementation is currently limited to the CPU module. Video and sound retain
+their independent specifications and reserved logical ports but are not part
+of the CPU schedule.
+
+The CPU machine has one portable Rust core with native macOS/Linux,
+browser/WebAssembly, and ESP32-S3 hosts. The core owns guest-visible execution,
+memory, ports, reset, and cycle accounting. Hosts own terminals, disk-image or
+microSD access, wall-clock pacing, and user interfaces. The existing TypeScript
+model remains a semantic oracle while the Rust implementation is proved; it is
+not a production dependency.
+
+The native `triptych-cpm` utility owns development-time CP/M directory and
+allocation policy. It creates 512-byte-sector-padded working images and moves
+named files between macOS and user 0 of the CP/M filesystem. It does not expose
+a second guest disk protocol, participate in CPU execution, or enter the
+portable core. The native host continues to see only complete 512-byte sectors.
+
+A small development-only C image will establish a direct ESP-IDF hardware
+baseline for the Waveshare ESP32-S3 board. It will not contain a second Z80
+machine. The detailed dependency order, toolchain gates, conformance fixtures,
+and physical bring-up procedure are in the
+[CPU development plan](plans/cpu-development.md).

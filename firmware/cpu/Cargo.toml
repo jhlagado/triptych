@@ -1,0 +1,28 @@
+[package]
+name = "triptych-cpu-firmware"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.85"
+license = "GPL-3.0-or-later"
+resolver = "2"
+
+[workspace]
+
+[[bin]]
+name = "triptych-cpu-firmware"
+harness = false
+
+[dependencies]
+esp-idf-sys = "=0.37.2"
+triptych-cpu-core = { path = "../../crates/triptych-cpu-core" }
+triptych-cpu-selftest = { path = "../../crates/triptych-cpu-selftest" }
+
+[build-dependencies]
+embuild = "=0.33.3"
+
+[profile.release]
+opt-level = "s"
+debug = 1
+panic = "abort"
+codegen-units = 1
+lto = "thin"

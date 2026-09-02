@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Triptych CPU — WebAssembly terminal</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <div>
+          <p class="eyebrow">Triptych CPU</p>
+          <h1>WebAssembly terminal</h1>
+        </div>
+        <p id="status" role="status" aria-live="polite">Loading WebAssembly…</p>
+      </header>
+
+      <section class="controls" aria-label="Machine controls">
+        <label class="file-control">
+          <span>Open CP/M disk image</span>
+          <input
+            id="disk-input"
+            type="file"
+            accept=".img,.dsk,application/octet-stream"
+          />
+        </label>
+        <button id="reset" type="button" disabled>Reset machine</button>
+        <button id="download" type="button" disabled>
+          Download working disk
+        </button>
+      </section>
+
+      <pre
+        id="terminal"
+        role="log"
+        aria-label="CP/M terminal"
+        aria-live="off"
+        tabindex="0"
+      ></pre>
+
+      <footer>
+        Click the terminal before typing. Return sends CR; paste converts line
+        endings for CP/M. Downloaded images contain flushed guest writes.
+      </footer>
+    </main>
+    <script type="module" src="app.js"></script>
+  </body>
+</html>

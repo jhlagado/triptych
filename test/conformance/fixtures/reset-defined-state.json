@@ -1,0 +1,73 @@
+{
+  "format": "triptych.cpu.conformance.fixture.v1",
+  "id": "reset-defined-state",
+  "description": "Dirty PC, interrupt mode, interrupt flip-flops, and HALT state are replaced by the documented reset state before the overlay HALT executes.",
+  "initial": {
+    "bootRom": {
+      "size": 256,
+      "fill": 0,
+      "patches": [
+        {
+          "address": 0,
+          "bytes": [118]
+        }
+      ]
+    },
+    "ram": {
+      "size": 65536,
+      "fill": 0,
+      "patches": []
+    },
+    "drives": [],
+    "serialInput": [],
+    "cpu": {
+      "pc": 4660,
+      "imode": 2,
+      "iff1": 1,
+      "iff2": 1,
+      "halted": true
+    }
+  },
+  "run": {
+    "maxSteps": 8,
+    "maxTStates": 64,
+    "interrupts": []
+  },
+  "observe": {
+    "cpu": ["halted", "iff1", "iff2", "imode", "pc"],
+    "ram": [
+      {
+        "address": 0,
+        "length": 1
+      }
+    ]
+  },
+  "expected": {
+    "result": {
+      "format": "triptych.cpu.conformance.result.v1",
+      "fixture": "reset-defined-state",
+      "stop": "halt",
+      "steps": 1,
+      "tStates": 4,
+      "cpu": {
+        "halted": true,
+        "iff1": 0,
+        "iff2": 0,
+        "imode": 0,
+        "pc": 1
+      },
+      "bootRomEnabled": true,
+      "ramSha256": "de2f256064a0af797747c2b97505dc0b9f3df0de4f489eac731c23ae9ca9cc31",
+      "ram": [
+        {
+          "address": 0,
+          "bytes": [0]
+        }
+      ],
+      "driveSha256": [],
+      "serialOutput": [],
+      "io": []
+    },
+    "digest": "084982b73bdceff91d3c24f86129ba38f49bdde69b2acd6c48cc9758d7fe32a6"
+  }
+}

@@ -1,0 +1,80 @@
+{
+  "format": "triptych.cpu.conformance.fixture.v1",
+  "id": "boot-overlay-serial",
+  "description": "Reset executes from the ROM overlay, writes HALT beneath it, emits A, disables the overlay, and executes the underlying byte.",
+  "initial": {
+    "bootRom": {
+      "size": 256,
+      "fill": 0,
+      "patches": [
+        {
+          "address": 0,
+          "bytes": [62, 118, 50, 13, 0, 62, 65, 211, 0, 62, 165, 211, 32]
+        }
+      ]
+    },
+    "ram": {
+      "size": 65536,
+      "fill": 0,
+      "patches": []
+    },
+    "drives": [],
+    "serialInput": [],
+    "cpu": {}
+  },
+  "run": {
+    "maxSteps": 32,
+    "maxTStates": 256,
+    "interrupts": []
+  },
+  "observe": {
+    "cpu": ["a", "halted", "iff1", "iff2", "imode", "pc", "r"],
+    "ram": [
+      {
+        "address": 13,
+        "length": 1
+      }
+    ]
+  },
+  "expected": {
+    "result": {
+      "format": "triptych.cpu.conformance.result.v1",
+      "fixture": "boot-overlay-serial",
+      "stop": "halt",
+      "steps": 7,
+      "tStates": 60,
+      "cpu": {
+        "a": 165,
+        "halted": true,
+        "iff1": 0,
+        "iff2": 0,
+        "imode": 0,
+        "pc": 14,
+        "r": 7
+      },
+      "bootRomEnabled": false,
+      "ramSha256": "3efdb92ef69bb157f372a3692535ec12d074283ac08adcdf73c7c53191661269",
+      "ram": [
+        {
+          "address": 13,
+          "bytes": [118]
+        }
+      ],
+      "driveSha256": [],
+      "serialOutput": [65],
+      "io": [
+        {
+          "direction": "write",
+          "port": 16640,
+          "value": 65
+        },
+        {
+          "direction": "write",
+          "port": 42272,
+          "value": 165
+        }
+      ]
+    },
+    "digest": "fb5aa1ebd8f9d66cc1fe2ebb27c6d3a599748f1c20a77068e019d983de379b9c"
+  }
+}

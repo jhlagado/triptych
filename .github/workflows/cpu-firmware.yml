@@ -1,0 +1,44 @@
+name: CPU firmware
+
+on:
+  push:
+    paths:
+      - ".github/workflows/cpu-firmware.yml"
+      - "crates/triptych-cpu-core/**"
+      - "crates/triptych-cpu-selftest/**"
+      - "firmware/cpu/**"
+      - "tools/build-cpu-firmware.mjs"
+      - "tools/cpu-firmware-toolchain.json"
+  pull_request:
+    paths:
+      - ".github/workflows/cpu-firmware.yml"
+      - "crates/triptych-cpu-core/**"
+      - "crates/triptych-cpu-selftest/**"
+      - "firmware/cpu/**"
+      - "tools/build-cpu-firmware.mjs"
+      - "tools/cpu-firmware-toolchain.json"
+  workflow_dispatch:
+
+jobs:
+  linux-esp32s3:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Install pinned Espressif toolchain
+        shell: bash
+        run: |
+          cargo install espup --locked --version 0.17.1
+          espup install \
+            --name triptych-esp \
+            --targets esp32s3 \
+            --toolchain-version 1.97.0.0 \
+            --crosstool-toolchain-version 15.2.0_20250920
+          cargo install ldproxy --locked --version 0.3.2
+          cargo install espflash --locked --version 4.5.0
+      - name: Build and inspect ESP32-S3 image
+        shell: bash
+        run: |
+          source "$HOME/export-esp.sh"
+          node --version
+          npm run build:cpu-firmware

@@ -1,0 +1,1466 @@
+{
+  "format": "triptych.cpu.conformance.fixture.v1",
+  "id": "cold-boot-disk-persistence",
+  "description": "Reset cold-loads record zero without block-repeat instructions, disables the overlay through a high-RAM stub, runs the loaded program, writes and flushes record one, emits BP, and halts.",
+  "initial": {
+    "bootRom": {
+      "size": 256,
+      "fill": 0,
+      "patches": [
+        {
+          "address": 0,
+          "bytes": [
+            243, 49, 254, 255, 175, 211, 17, 211, 18, 211, 19, 211, 20, 211, 21,
+            62, 1, 211, 16, 33, 0, 0, 6, 128, 219, 22, 119, 35, 16, 250, 33, 0,
+            255, 54, 62, 35, 54, 165, 35, 54, 211, 35, 54, 32, 35, 54, 195, 35,
+            54, 0, 35, 54, 0, 195, 0, 255
+          ]
+        }
+      ]
+    },
+    "ram": {
+      "size": 65536,
+      "fill": 0,
+      "patches": []
+    },
+    "drives": [
+      {
+        "size": 512,
+        "fill": 0,
+        "patches": [
+          {
+            "address": 0,
+            "bytes": [
+              62, 66, 211, 0, 175, 211, 17, 62, 1, 211, 18, 175, 211, 19, 211,
+              20, 211, 21, 62, 2, 211, 16, 6, 128, 62, 90, 211, 22, 16, 252, 62,
+              3, 211, 16, 62, 80, 211, 0, 118
+            ]
+          },
+          {
+            "address": 128,
+            "bytes": [
+              17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17
+            ]
+          }
+        ]
+      }
+    ],
+    "serialInput": [],
+    "cpu": {}
+  },
+  "run": {
+    "maxSteps": 1000,
+    "maxTStates": 20000,
+    "interrupts": []
+  },
+  "observe": {
+    "cpu": ["halted", "pc", "sp"],
+    "ram": [
+      {
+        "address": 0,
+        "length": 39
+      },
+      {
+        "address": 65280,
+        "length": 7
+      }
+    ]
+  },
+  "expected": {
+    "result": {
+      "format": "triptych.cpu.conformance.result.v1",
+      "fixture": "cold-boot-disk-persistence",
+      "stop": "halt",
+      "steps": 817,
+      "tStates": 8220,
+      "cpu": {
+        "halted": true,
+        "pc": 39,
+        "sp": 65534
+      },
+      "bootRomEnabled": false,
+      "ramSha256": "cb96212d9ebe35754dc34cfea4e83c9c6fe9747d2957ed05757ef8d5b405a767",
+      "ram": [
+        {
+          "address": 0,
+          "bytes": [
+            62, 66, 211, 0, 175, 211, 17, 62, 1, 211, 18, 175, 211, 19, 211, 20,
+            211, 21, 62, 2, 211, 16, 6, 128, 62, 90, 211, 22, 16, 252, 62, 3,
+            211, 16, 62, 80, 211, 0, 118
+          ]
+        },
+        {
+          "address": 65280,
+          "bytes": [62, 165, 211, 32, 195, 0, 0]
+        }
+      ],
+      "driveSha256": [
+        "65f84ffffac79df844fa3bab551fbffe0784993fad1a928adf86ccb1d4f65cbb"
+      ],
+      "serialOutput": [66, 80],
+      "io": [
+        {
+          "direction": "write",
+          "port": 17,
+          "value": 0
+        },
+        {
+          "direction": "write",
+          "port": 18,
+          "value": 0
+        },
+        {
+          "direction": "write",
+          "port": 19,
+          "value": 0
+        },
+        {
+          "direction": "write",
+          "port": 20,
+          "value": 0
+        },
+        {
+          "direction": "write",
+          "port": 21,
+          "value": 0
+        },
+        {
+          "direction": "write",
+          "port": 272,
+          "value": 1
+        },
+        {
+          "direction": "read",
+          "port": 278,
+          "value": 62
+        },
+        {
+          "direction": "read",
+          "port": 15894,
+          "value": 66
+        },
+        {
+          "direction": "read",
+          "port": 16918,
+          "value": 211
+        },
+        {
+          "direction": "read",
+          "port": 54038,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 175
+        },
+        {
+          "direction": "read",
+          "port": 44822,
+          "value": 211
+        },
+        {
+          "direction": "read",
+          "port": 54038,
+          "value": 17
+        },
+        {
+          "direction": "read",
+          "port": 4374,
+          "value": 62
+        },
+        {
+          "direction": "read",
+          "port": 15894,
+          "value": 1
+        },
+        {
+          "direction": "read",
+          "port": 278,
+          "value": 211
+        },
+        {
+          "direction": "read",
+          "port": 54038,
+          "value": 18
+        },
+        {
+          "direction": "read",
+          "port": 4630,
+          "value": 175
+        },
+        {
+          "direction": "read",
+          "port": 44822,
+          "value": 211
+        },
+        {
+          "direction": "read",
+          "port": 54038,
+          "value": 19
+        },
+        {
+          "direction": "read",
+          "port": 4886,
+          "value": 211
+        },
+        {
+          "direction": "read",
+          "port": 54038,
+          "value": 20
+        },
+        {
+          "direction": "read",
+          "port": 5142,
+          "value": 211
+        },
+        {
+          "direction": "read",
+          "port": 54038,
+          "value": 21
+        },
+        {
+          "direction": "read",
+          "port": 5398,
+          "value": 62
+        },
+        {
+          "direction": "read",
+          "port": 15894,
+          "value": 2
+        },
+        {
+          "direction": "read",
+          "port": 534,
+          "value": 211
+        },
+        {
+          "direction": "read",
+          "port": 54038,
+          "value": 16
+        },
+        {
+          "direction": "read",
+          "port": 4118,
+          "value": 6
+        },
+        {
+          "direction": "read",
+          "port": 1558,
+          "value": 128
+        },
+        {
+          "direction": "read",
+          "port": 32790,
+          "value": 62
+        },
+        {
+          "direction": "read",
+          "port": 15894,
+          "value": 90
+        },
+        {
+          "direction": "read",
+          "port": 23062,
+          "value": 211
+        },
+        {
+          "direction": "read",
+          "port": 54038,
+          "value": 22
+        },
+        {
+          "direction": "read",
+          "port": 5654,
+          "value": 16
+        },
+        {
+          "direction": "read",
+          "port": 4118,
+          "value": 252
+        },
+        {
+          "direction": "read",
+          "port": 64534,
+          "value": 62
+        },
+        {
+          "direction": "read",
+          "port": 15894,
+          "value": 3
+        },
+        {
+          "direction": "read",
+          "port": 790,
+          "value": 211
+        },
+        {
+          "direction": "read",
+          "port": 54038,
+          "value": 16
+        },
+        {
+          "direction": "read",
+          "port": 4118,
+          "value": 62
+        },
+        {
+          "direction": "read",
+          "port": 15894,
+          "value": 80
+        },
+        {
+          "direction": "read",
+          "port": 20502,
+          "value": 211
+        },
+        {
+          "direction": "read",
+          "port": 54038,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 118
+        },
+        {
+          "direction": "read",
+          "port": 30230,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "read",
+          "port": 22,
+          "value": 0
+        },
+        {
+          "direction": "write",
+          "port": 42272,
+          "value": 165
+        },
+        {
+          "direction": "write",
+          "port": 16896,
+          "value": 66
+        },
+        {
+          "direction": "write",
+          "port": 17,
+          "value": 0
+        },
+        {
+          "direction": "write",
+          "port": 274,
+          "value": 1
+        },
+        {
+          "direction": "write",
+          "port": 19,
+          "value": 0
+        },
+        {
+          "direction": "write",
+          "port": 20,
+          "value": 0
+        },
+        {
+          "direction": "write",
+          "port": 21,
+          "value": 0
+        },
+        {
+          "direction": "write",
+          "port": 528,
+          "value": 2
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 23062,
+          "value": 90
+        },
+        {
+          "direction": "write",
+          "port": 784,
+          "value": 3
+        },
+        {
+          "direction": "write",
+          "port": 20480,
+          "value": 80
+        }
+      ]
+    },
+    "digest": "bbb76ca6dc635bf75f0cd4dd688336220f7bc1056fc495a79ec96dfd77a660ea"
+  }
+}

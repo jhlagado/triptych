@@ -1,0 +1,11 @@
+[package]
+name = "triptych-cpu-selftest"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "Allocation-free embedded conformance runner for the Triptych CPU"
+
+[dependencies]
+sha2 = { version = "=0.10.9", default-features = false }
+triptych-cpu-core = { path = "../triptych-cpu-core", features = ["conformance"] }

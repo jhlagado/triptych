@@ -1,0 +1,75 @@
+{
+  "format": "triptych.cpu.conformance.fixture.v1",
+  "id": "flags-conditional-timing",
+  "description": "XOR establishes all primary flags; JR NZ is not taken, JR Z is taken, and the skipped load discriminates branch control and timing.",
+  "initial": {
+    "bootRom": {
+      "size": 256,
+      "fill": 0,
+      "patches": [
+        {
+          "address": 0,
+          "bytes": [175, 32, 2, 40, 2, 62, 255, 118]
+        }
+      ]
+    },
+    "ram": {
+      "size": 65536,
+      "fill": 0,
+      "patches": []
+    },
+    "drives": [],
+    "serialInput": [],
+    "cpu": {}
+  },
+  "run": {
+    "maxSteps": 16,
+    "maxTStates": 128,
+    "interrupts": []
+  },
+  "observe": {
+    "cpu": [
+      "a",
+      "f.c",
+      "f.h",
+      "f.n",
+      "f.p",
+      "f.s",
+      "f.x",
+      "f.y",
+      "f.z",
+      "halted",
+      "pc"
+    ],
+    "ram": []
+  },
+  "expected": {
+    "result": {
+      "format": "triptych.cpu.conformance.result.v1",
+      "fixture": "flags-conditional-timing",
+      "stop": "halt",
+      "steps": 4,
+      "tStates": 27,
+      "cpu": {
+        "a": 0,
+        "f.c": 0,
+        "f.h": 0,
+        "f.n": 0,
+        "f.p": 1,
+        "f.s": 0,
+        "f.x": 0,
+        "f.y": 0,
+        "f.z": 1,
+        "halted": true,
+        "pc": 8
+      },
+      "bootRomEnabled": true,
+      "ramSha256": "de2f256064a0af797747c2b97505dc0b9f3df0de4f489eac731c23ae9ca9cc31",
+      "ram": [],
+      "driveSha256": [],
+      "serialOutput": [],
+      "io": []
+    },
+    "digest": "a1913fd25c997569876efc289ee6d3f35a9499d4996cdc90ba2ba473256b901f"
+  }
+}

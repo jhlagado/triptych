@@ -1,0 +1,66 @@
+{
+  "format": "triptych.cpu.conformance.fixture.v1",
+  "id": "serial-read-order",
+  "description": "Two immediate IN operations retain their complete A-derived port addresses, observe status before data, and consume one queued console byte.",
+  "initial": {
+    "bootRom": {
+      "size": 256,
+      "fill": 0,
+      "patches": [
+        {
+          "address": 0,
+          "bytes": [62, 18, 219, 1, 219, 0, 118]
+        }
+      ]
+    },
+    "ram": {
+      "size": 65536,
+      "fill": 0,
+      "patches": []
+    },
+    "drives": [],
+    "serialInput": [66],
+    "cpu": {}
+  },
+  "run": {
+    "maxSteps": 16,
+    "maxTStates": 128,
+    "interrupts": []
+  },
+  "observe": {
+    "cpu": ["a", "halted", "pc"],
+    "ram": []
+  },
+  "expected": {
+    "result": {
+      "format": "triptych.cpu.conformance.result.v1",
+      "fixture": "serial-read-order",
+      "stop": "halt",
+      "steps": 4,
+      "tStates": 33,
+      "cpu": {
+        "a": 66,
+        "halted": true,
+        "pc": 7
+      },
+      "bootRomEnabled": true,
+      "ramSha256": "de2f256064a0af797747c2b97505dc0b9f3df0de4f489eac731c23ae9ca9cc31",
+      "ram": [],
+      "driveSha256": [],
+      "serialOutput": [],
+      "io": [
+        {
+          "direction": "read",
+          "port": 4609,
+          "value": 3
+        },
+        {
+          "direction": "read",
+          "port": 768,
+          "value": 66
+        }
+      ]
+    },
+    "digest": "6cd36ca18d49d6d057fa6197aa5060faeba49cb4c16e79c0efc2f074ccf97721"
+  }
+}

@@ -1,0 +1,79 @@
+{
+  "format": "triptych.cpu.conformance.fixture.v1",
+  "id": "interrupt-im1",
+  "description": "A maskable interrupt arriving after EI's following instruction enters IM 1, pushes the exact return PC to the program-selected stack, and reaches the ROM handler.",
+  "initial": {
+    "bootRom": {
+      "size": 256,
+      "fill": 0,
+      "patches": [
+        {
+          "address": 0,
+          "bytes": [49, 0, 144, 237, 86, 251, 0, 118]
+        },
+        {
+          "address": 56,
+          "bytes": [62, 90, 118]
+        }
+      ]
+    },
+    "ram": {
+      "size": 65536,
+      "fill": 0,
+      "patches": []
+    },
+    "drives": [],
+    "serialInput": [],
+    "cpu": {}
+  },
+  "run": {
+    "maxSteps": 16,
+    "maxTStates": 128,
+    "interrupts": [
+      {
+        "afterStep": 4,
+        "kind": "maskable",
+        "data": 255
+      }
+    ]
+  },
+  "observe": {
+    "cpu": ["a", "halted", "iff1", "iff2", "imode", "pc", "sp"],
+    "ram": [
+      {
+        "address": 36862,
+        "length": 2
+      }
+    ]
+  },
+  "expected": {
+    "result": {
+      "format": "triptych.cpu.conformance.result.v1",
+      "fixture": "interrupt-im1",
+      "stop": "halt",
+      "steps": 6,
+      "tStates": 50,
+      "cpu": {
+        "a": 90,
+        "halted": true,
+        "iff1": 0,
+        "iff2": 0,
+        "imode": 1,
+        "pc": 59,
+        "sp": 36862
+      },
+      "bootRomEnabled": true,
+      "ramSha256": "263ee63703197677fecbc6264edcb4ac13620aedb2872f284f1929c19d967757",
+      "ram": [
+        {
+          "address": 36862,
+          "bytes": [7, 0]
+        }
+      ],
+      "driveSha256": [],
+      "serialOutput": [],
+      "io": []
+    },
+    "digest": "1fcb895db442ece88363fbfbcb59e9294b22960c7b1e759bd9c5ebd56696686b"
+  }
+}

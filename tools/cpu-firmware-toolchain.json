@@ -1,0 +1,20 @@
+{
+  "format": 1,
+  "target": "xtensa-esp32s3-espidf",
+  "rustToolchainName": "triptych-esp",
+  "xtensaRustRelease": "1.97.0.0",
+  "rustc": "rustc 1.97.0-nightly (8ea53bcd7 2026-07-08) (1.97.0.0)",
+  "espup": "0.17.1",
+  "crosstoolNg": "15.2.0_20250920",
+  "espIdfManagedGcc": "14.2.0_20260121",
+  "ldproxy": "0.3.2",
+  "espflash": "4.5.0",
+  "espIdf": {
+    "release": "v5.5.5",
+    "commit": "b774170ff46c393eeb5e495ea37936038d3f4f4f"
+  },
+  "crates": {
+    "embuild": "0.33.3",
+    "esp-idf-sys": "0.37.2"
+  }
+}
