@@ -1,4 +1,8 @@
 :root {
+  --visual-viewport-height: 100dvh;
+  --visual-viewport-width: 100vw;
+  --visual-viewport-offset-top: 0px;
+  --visual-viewport-offset-left: 0px;
   color-scheme: dark;
   font-family: Inter, ui-sans-serif, system-ui, sans-serif;
   background: #111713;
@@ -12,6 +16,7 @@
 body {
   min-width: 320px;
   min-height: 100vh;
+  min-height: 100dvh;
   margin: 0;
   background:
     radial-gradient(
@@ -189,9 +194,9 @@ button:disabled {
 }
 
 #mobile-terminal-input {
-  position: absolute;
-  bottom: 0;
-  left: 0;
+  position: fixed;
+  top: calc(var(--visual-viewport-offset-top) + 1px);
+  left: calc(var(--visual-viewport-offset-left) + 1px);
   width: 1px;
   height: 1px;
   margin: 0;
@@ -199,6 +204,7 @@ button:disabled {
   border: 0;
   opacity: 0;
   font-size: 16px;
+  pointer-events: none;
   resize: none;
 }
 
@@ -228,7 +234,12 @@ footer {
   font-size: 0.85rem;
 }
 
-@media (max-width: 44rem) {
+@media (max-width: 44rem), (hover: none) and (pointer: coarse) {
+  main {
+    width: min(100% - 1rem, 72rem);
+    padding: 0.75rem 0;
+  }
+
   header {
     display: block;
   }
@@ -239,11 +250,71 @@ footer {
   }
 
   #terminal {
-    height: 34.4em;
+    height: min(34.4em, max(20rem, calc(100dvh - 18rem)));
   }
 
   .mobile-terminal-controls {
     display: flex;
+  }
+
+  body.terminal-keyboard-open {
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  body.terminal-keyboard-open main {
+    position: fixed;
+    z-index: 10;
+    top: var(--visual-viewport-offset-top);
+    left: var(--visual-viewport-offset-left);
+    display: grid;
+    width: var(--visual-viewport-width);
+    height: var(--visual-viewport-height);
+    margin: 0;
+    padding: max(0.35rem, env(safe-area-inset-top))
+      max(0.35rem, env(safe-area-inset-right))
+      max(0.35rem, env(safe-area-inset-bottom))
+      max(0.35rem, env(safe-area-inset-left));
+    grid-template-rows: minmax(0, 1fr) auto;
+    gap: 0.35rem;
+    overflow: hidden;
+    background: #111713;
+  }
+
+  body.terminal-keyboard-open header,
+  body.terminal-keyboard-open .controls,
+  body.terminal-keyboard-open footer {
+    display: none;
+  }
+
+  body.terminal-keyboard-open .terminal-shell {
+    min-width: 0;
+    min-height: 0;
+  }
+
+  body.terminal-keyboard-open #terminal {
+    height: 100%;
+    min-height: 0;
+    padding: 0.45rem;
+    border-radius: 0.4rem;
+    font-size: clamp(0.72rem, 2.8vw, 0.82rem);
+    line-height: 1.22;
+    overscroll-behavior: contain;
+  }
+
+  body.terminal-keyboard-open .mobile-terminal-controls {
+    display: grid;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.3rem;
+  }
+
+  body.terminal-keyboard-open .mobile-terminal-controls button {
+    min-width: 0;
+    min-height: 2.6rem;
+    padding: 0 0.35rem;
   }
 }
 

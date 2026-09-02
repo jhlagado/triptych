@@ -30,6 +30,28 @@ let diskName = "triptych-cpm22.img";
 let runGeneration = 0;
 let controlPending = false;
 
+// The layout viewport is inconsistent across mobile browsers once the software
+// keyboard opens. VisualViewport is the space the user can actually see.
+function syncVisualViewport() {
+  const viewport = window.visualViewport;
+  const height = viewport?.height ?? window.innerHeight;
+  const width = viewport?.width ?? window.innerWidth;
+  const offsetTop = viewport?.offsetTop ?? 0;
+  const offsetLeft = viewport?.offsetLeft ?? 0;
+  const style = document.documentElement.style;
+  style.setProperty("--visual-viewport-height", `${height}px`);
+  style.setProperty("--visual-viewport-width", `${width}px`);
+  style.setProperty("--visual-viewport-offset-top", `${offsetTop}px`);
+  style.setProperty("--visual-viewport-offset-left", `${offsetLeft}px`);
+}
+
+function setKeyboardOpen(open) {
+  document.body.classList.toggle("terminal-keyboard-open", open);
+  showKeyboardButton.textContent = open ? "Done" : "Keyboard";
+  showKeyboardButton.setAttribute("aria-pressed", String(open));
+  syncVisualViewport();
+}
+
 function stopMachine(error) {
   runGeneration += 1;
   machine = undefined;
@@ -54,7 +76,13 @@ function enqueueInput(bytes) {
 }
 
 function focusMobileInput() {
+  setKeyboardOpen(true);
   mobileInput.focus({ preventScroll: true });
+}
+
+function dismissMobileInput() {
+  mobileInput.blur();
+  terminalElement.focus({ preventScroll: true });
 }
 
 function setControlPending(pending) {
@@ -148,7 +176,22 @@ terminalElement.addEventListener("pointerup", (event) => {
   }
 });
 
-showKeyboardButton.addEventListener("click", focusMobileInput);
+showKeyboardButton.addEventListener("click", () => {
+  if (document.body.classList.contains("terminal-keyboard-open")) {
+    dismissMobileInput();
+  } else {
+    focusMobileInput();
+  }
+});
+
+mobileInput.addEventListener("focus", () => setKeyboardOpen(true));
+mobileInput.addEventListener("blur", () => setKeyboardOpen(false));
+
+document
+  .querySelector(".mobile-terminal-controls")
+  .addEventListener("pointerdown", (event) => {
+    event.preventDefault();
+  });
 
 controlKeyButton.addEventListener("click", () => {
   setControlPending(!controlPending);
@@ -194,6 +237,11 @@ mobileInput.addEventListener("input", (event) => {
   enqueueInput(textInputToBytes(text, { control: controlPending }));
   setControlPending(false);
 });
+
+window.addEventListener("resize", syncVisualViewport);
+window.visualViewport?.addEventListener("resize", syncVisualViewport);
+window.visualViewport?.addEventListener("scroll", syncVisualViewport);
+syncVisualViewport();
 
 diskInput.addEventListener("change", async () => {
   const [file] = diskInput.files;

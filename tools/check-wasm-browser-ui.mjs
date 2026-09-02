@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import { resolve } from "node:path";
 
 import {
   inputTypeToBytes,
@@ -26,6 +28,30 @@ function rowText(snapshot, row) {
 function cellIndex(row, column) {
   return row * TERMINAL_COLUMNS + column;
 }
+
+const webDirectory = resolve(
+  import.meta.dirname,
+  "..",
+  "crates",
+  "triptych-host-wasm",
+  "web",
+);
+const [applicationSource, indexSource, styleSource] = await Promise.all([
+  readFile(resolve(webDirectory, "app.js"), "utf8"),
+  readFile(resolve(webDirectory, "index.html"), "utf8"),
+  readFile(resolve(webDirectory, "style.css"), "utf8"),
+]);
+assert.ok(indexSource.includes("interactive-widget=resizes-content"));
+assert.ok(
+  applicationSource.includes("window.visualViewport?.addEventListener"),
+);
+assert.ok(
+  applicationSource.includes("mobileInput.focus({ preventScroll: true })"),
+);
+assert.ok(styleSource.includes("body.terminal-keyboard-open main"));
+assert.ok(
+  styleSource.includes("grid-template-columns: repeat(4, minmax(0, 1fr))"),
+);
 
 {
   const terminal = new TerminalBuffer();

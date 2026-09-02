@@ -2,7 +2,10 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content"
+    />
     <title>Triptych CPU — WebAssembly terminal</title>
     <link rel="stylesheet" href="style.css" />
   </head>
@@ -52,7 +55,9 @@
       </div>
 
       <div class="mobile-terminal-controls" aria-label="Terminal keys">
-        <button id="show-keyboard" type="button">Keyboard</button>
+        <button id="show-keyboard" type="button" aria-pressed="false">
+          Keyboard
+        </button>
         <button type="button" data-terminal-key="Escape">Esc</button>
         <button id="terminal-control-key" type="button" aria-pressed="false">
           Ctrl
