@@ -21,12 +21,10 @@ const fixtureDirectory = join(
   "fixtures",
 );
 const sourceDirectory = join(repositoryRoot, "roms", "cpu");
-const headlessScenarioDirectory = join(
-  repositoryRoot,
-  "test",
-  "bdos",
-  "scenarios",
-);
+const headlessScenarioDirectories = [
+  join(repositoryRoot, "test", "bdos", "scenarios"),
+  join(repositoryRoot, "test", "ccp", "scenarios"),
+];
 const require = createRequire(import.meta.url);
 const { TriptychCpu } = require(
   join(repositoryRoot, "dist", "wasm", "triptych_host_wasm.js"),
@@ -35,6 +33,7 @@ const { TriptychCpu } = require(
 const FIXTURE_FORMAT = "triptych.cpu.conformance.fixture.v1";
 const RESULT_FORMAT = "triptych.cpu.conformance.result.v1";
 const BACKING_SECTOR_BYTES = 512;
+const CCP_SYSTEM_OFFSET = 0x0000;
 const BDOS_SYSTEM_OFFSET = 0x0800;
 const BIOS_SYSTEM_OFFSET = 0x1600;
 
@@ -278,8 +277,9 @@ async function proveCpm() {
     process.env.TRIPTYCH_CPM22_IMAGE ??
       join(repositoryRoot, "third_party", "cpm22", "cpm22.img"),
   );
-  const [bootRom, bdos, bios, sourceDisk] = await Promise.all([
+  const [bootRom, ccp, bdos, bios, sourceDisk] = await Promise.all([
     assemble(join(sourceDirectory, "bootstrap.asm")),
+    assemble(join(sourceDirectory, "ccp", "ccp.asm")),
     assemble(join(sourceDirectory, "bdos", "bdos.asm")),
     assemble(join(sourceDirectory, "bios.asm")),
     readFile(resolve(cpmImagePath)),
@@ -287,15 +287,30 @@ async function proveCpm() {
   const configuredScenario = process.env.TRIPTYCH_CPM_SCENARIO;
   const scenarioPaths = configuredScenario
     ? [resolve(configuredScenario)]
-    : (await readdir(headlessScenarioDirectory))
-        .filter((name) => name.endsWith(".json"))
-        .sort()
-        .map((name) => join(headlessScenarioDirectory, name));
+    : (
+        await Promise.all(
+          headlessScenarioDirectories.map(async (directory) =>
+            (await readdir(directory))
+              .filter((name) => name.endsWith(".json"))
+              .map((name) => join(directory, name)),
+          ),
+        )
+      )
+        .flat()
+        .sort();
   const scenarios = [];
   for (const scenarioPath of scenarioPaths) {
     const scenario = JSON.parse(await readFile(scenarioPath, "utf8"));
     let disk = Uint8Array.from(sourceDisk);
     disk.set(bios, BIOS_SYSTEM_OFFSET);
+    if (scenario.systemCcp === "triptych") {
+      disk.set(ccp, CCP_SYSTEM_OFFSET);
+    } else {
+      assert.ok(
+        scenario.systemCcp === undefined || scenario.systemCcp === "oracle",
+        `${scenario.id} has an unsupported systemCcp`,
+      );
+    }
     if (scenario.systemBdos === "triptych") {
       disk.set(bdos, BDOS_SYSTEM_OFFSET);
     } else {
@@ -315,6 +330,36 @@ async function proveCpm() {
       disk = installCpm22File(disk, {
         name: initialFile.name,
         bytes: cpmText(source, initialFile.path),
+      });
+    }
+    const initialPrograms = [];
+    for (const program of scenario.initialPrograms ?? []) {
+      assert.equal(
+        program.kind,
+        "assemble-atom",
+        `${scenario.id} initial program kind`,
+      );
+      const sourcePath = repositoryPath(program.path);
+      const binary = await assemble(sourcePath);
+      const digest = sha256(binary);
+      assert.equal(
+        binary.length,
+        program.bytes,
+        `${scenario.id} ${program.name} bytes`,
+      );
+      assert.equal(
+        digest,
+        program.sha256,
+        `${scenario.id} ${program.name} SHA-256`,
+      );
+      disk = installCpm22File(disk, {
+        name: program.name,
+        bytes: binary,
+      });
+      initialPrograms.push({
+        name: program.name,
+        bytes: binary.length,
+        sha256: digest,
       });
     }
     const initialTools = [];
@@ -388,8 +433,10 @@ async function proveCpm() {
     }
     scenarios.push({
       id: result.id,
+      systemCcp: result.systemCcp,
       systemBdos: result.systemBdos,
       initialDriveSha256: result.initialDriveSha256,
+      ...(initialPrograms.length === 0 ? {} : { initialPrograms }),
       ...(initialTools.length === 0 ? {} : { initialTools }),
       sessions: result.sessions,
       ...(finalFiles.length === 0 ? {} : { finalFiles }),

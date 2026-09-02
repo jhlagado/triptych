@@ -73,6 +73,19 @@ boot ROM, BDOS, and BIOS, and installs the resident components in a temporary
 copy of the disk. CP/M disk writes last for the session and are discarded when
 the launcher exits with Ctrl-C; the supplied image is never modified.
 
+The in-progress Triptych CCP can be previewed on the native host without
+replacing the retained production CCP or modifying the source disk:
+
+```sh
+npm run run:ccp-native
+```
+
+The preview currently proves prompt and command parsing, bounded transient
+loading and return, page-zero command-tail/default-FCB publication, `DIR`, and
+`TYPE`. Its complete acceptance state is tracked by the
+[Atom CCP roadmap](docs/plans/atom-ccp-roadmap.md) and
+[CCP contract](docs/specifications/ccp-v0.1.md).
+
 For continuing development, create a persistent native-host working disk and
 address its contents by CP/M filename:
 
@@ -168,6 +181,9 @@ gates. The [Atom BDOS roadmap](docs/plans/atom-bdos-roadmap.md) and
 [BDOS contract](docs/specifications/bdos-v0.1.md) define the independent,
 interface-driven replacement of the transitional BDOS while retaining the
 existing CCP and Triptych BIOS. The
+[Atom CCP roadmap](docs/plans/atom-ccp-roadmap.md) and
+[CCP contract](docs/specifications/ccp-v0.1.md) define the next independently
+implemented resident replacement. The
 [CPU conformance contract](docs/specifications/cpu-conformance-v1.md)
 and [Stage 1 report](docs/reports/cpu-stage1-conformance.md) retain the first
 cross-language fixtures and the Rust Z80-engine decision. The

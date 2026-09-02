@@ -30,13 +30,14 @@ Carrying only the exported image between sessions proves process-independent
 disk persistence. RAM, CPU registers, queued input, console output, and
 terminal state do not survive a session boundary.
 
-The optional scenario-level `systemBdos` field selects the resident BDOS
-installed before the first session. Omission or `oracle` retains the frozen
-transitional binary; `triptych` assembles and installs the current
-`roms/cpu/bdos/bdos.asm`. This selection is part of test setup, not a service
-visible to the guest. Each scenario still pins the digest of the resulting
-complete starting image, so changing either implementation cannot silently
-reuse stale expectations.
+The optional scenario-level `systemCcp` and `systemBdos` fields independently
+select the resident implementations installed before the first session.
+Omission or `oracle` retains that frozen transitional component; `triptych`
+assembles and installs `roms/cpu/ccp/ccp.asm` or
+`roms/cpu/bdos/bdos.asm`. These selections are test setup, not services visible
+to the guest. Each scenario still pins the digest of the resulting complete
+starting image, so changing either implementation cannot silently reuse stale
+expectations.
 
 ## Fixture shape
 
@@ -71,6 +72,13 @@ the CP/M file, repository-relative source path, and `cpm-text` encoding. Text
 preparation validates ASCII, converts line endings to CRLF, and uses `$1A` for
 record padding. The repository file and original transitional disk remain
 unchanged.
+
+An optional `initialPrograms` array installs a test-only transient assembled
+from repository-owned Atom-compatible source. Each entry has kind
+`assemble-atom`, a CP/M destination name, a repository-relative source path,
+and the exact expected byte length and SHA-256 of the assembled program. This
+is intended for public-boundary probes, not for embedding host implementations
+of CCP behavior in fixtures.
 
 An optional `initialTools` array may derive a narrowly configured guest tool
 from a provenance-pinned binary already on that private disk. The currently
@@ -148,8 +156,9 @@ The fixture may describe keystrokes and expected observations, but it must not
 contain guest application logic. This keeps the same scenario portable across
 the WASM host, the native host, and eventually an ESP32 test adapter.
 
-The executable examples under `test/bdos/scenarios/` cover a persistent CCP
-file round trip and a staged ANSI editor launch/quit. Run every scenario with:
+The executable examples under `test/bdos/scenarios/` and
+`test/ccp/scenarios/` cover persistent file workflows, a staged ANSI editor,
+and resident-component compatibility probes. Run every scenario with:
 
 ```sh
 npm run proof:cpm-headless

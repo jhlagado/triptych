@@ -1,0 +1,58 @@
+{
+  "schema": "triptych-cpm-headless-scenario-v1",
+  "id": "ccp-oracle-transient-smoke",
+  "description": "Freeze blank-line, drive-selection, missing-command, transient-load, persistence, and warm-return behavior",
+  "systemCcp": "oracle",
+  "systemBdos": "triptych",
+  "expectedInitialDriveSha256": "6f4413d04af07746a37b4abc9a67fdb81537a67b4d89b2df8d46d25bbb76681f",
+  "expectedFinalFiles": [
+    {
+      "name": "RESULT.TXT",
+      "bytes": 128,
+      "sha256": "82c956e1df9917a965b49b85106feadf27381082ccc03d9fa3e5fc651f5cded3"
+    }
+  ],
+  "sessions": [
+    {
+      "id": "commands",
+      "interactions": [
+        {
+          "id": "boot",
+          "inputAscii": "",
+          "stopAfterAscii": "\r\nA>"
+        },
+        {
+          "id": "blank",
+          "inputAscii": "\r",
+          "stopAfterAscii": "\r\nA>"
+        },
+        {
+          "id": "drive",
+          "inputAscii": "a:\r",
+          "stopAfterAscii": "\r\nA>"
+        },
+        {
+          "id": "missing",
+          "inputAscii": "nope\r",
+          "stopAfterAscii": "NOPE?\r\n\r\nA>"
+        },
+        {
+          "id": "smoke",
+          "inputAscii": "smoke\r",
+          "stopAfterAscii": "Wrote RESULT.TXT\r\n\r\nA>"
+        }
+      ],
+      "expectedTranscript": "\r\nA>\r\r\nA>a:\r\r\nA>nope\r\r\nNOPE?\r\n\r\nA>smoke\r\r\nWrote RESULT.TXT\r\n\r\nA>",
+      "expectedDriveSha256": "aaddcf08c326a49a9cb11c9f2ead9906098214d343199e57a09d92cf5be2a4a2",
+      "expectedTerminal": {
+        "text": "\nA>\nA>a:\nA>nope\nNOPE?\n\nA>smoke\nWrote RESULT.TXT\n\nA>",
+        "cursorRow": 9,
+        "cursorColumn": 2,
+        "currentAttributes": 0,
+        "wrapPending": false,
+        "bellCount": 0,
+        "screenSha256": "b8edbd9eabcd949a20e55806df8e2f013c54859958941a0402e5d7215d0306f6"
+      }
+    }
+  ]
+}

@@ -17,10 +17,14 @@ const hostExecutable = join(
     : "triptych-host-native",
 );
 const cpmImagePath = process.env.TRIPTYCH_CPM22_IMAGE;
+const systemCcp = process.env.TRIPTYCH_CPM_CCP ?? "oracle";
 if (!cpmImagePath) {
   throw new Error(
     "TRIPTYCH_CPM22_IMAGE must name a provenance-reviewed CP/M 2.2 disk image",
   );
+}
+if (systemCcp !== "oracle" && systemCcp !== "triptych") {
+  throw new Error("TRIPTYCH_CPM_CCP must be oracle or triptych");
 }
 
 function runHost(bootRomPath, diskPath, input, stopAfter) {
@@ -52,6 +56,7 @@ try {
     repositoryRoot,
     sourceImagePath: cpmImagePath,
     outputDirectory: temporary,
+    systemCcp,
   });
   const { bootRomPath, diskPath } = prepared;
 
@@ -79,6 +84,7 @@ try {
       {
         status: "passed",
         guest: "Triptych CP/M 2.2 on the native Rust host",
+        systemCcp,
         processes: 2,
         program: "SMOKE.COM",
         persistentFile: "RESULT.TXT",

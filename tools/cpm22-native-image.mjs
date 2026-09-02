@@ -7,6 +7,7 @@ import { compile, defaultFormatWriters } from "@jhlagado/azm/compile";
 const BDOS_SYSTEM_OFFSET = 0x0800;
 const BIOS_SYSTEM_OFFSET = 0x1600;
 const BOOT_ROM_BYTES = 0x100;
+const CCP_BYTES = 0x0800;
 const BDOS_BYTES = 0x0e00;
 const BIOS_BYTES = 0x400;
 const BACKING_SECTOR_BYTES = 512;
@@ -61,8 +62,9 @@ export async function prepareNativeCpm22Image({
   repositoryRoot,
   sourceImagePath,
   outputDirectory,
+  systemCcp = "oracle",
 }) {
-  const [{ bootRom, bdos, bios }, sourceDisk] = await Promise.all([
+  const [{ bootRom, ccp, bdos, bios }, sourceDisk] = await Promise.all([
     assembleTriptychCpuFirmware(repositoryRoot),
     readFile(resolve(sourceImagePath)),
   ]);
@@ -74,6 +76,11 @@ export async function prepareNativeCpm22Image({
   }
 
   const workingDisk = Uint8Array.from(sourceDisk);
+  if (systemCcp === "triptych") {
+    workingDisk.set(ccp, 0);
+  } else if (systemCcp !== "oracle") {
+    throw new Error(`unsupported system CCP ${systemCcp}`);
+  }
   workingDisk.set(bdos, BDOS_SYSTEM_OFFSET);
   workingDisk.set(bios, BIOS_SYSTEM_OFFSET);
   const paddedDisk = padForBackingSectors(workingDisk);
@@ -143,8 +150,9 @@ export async function prepareNativeCpm22WorkingImage({
 
 export async function assembleTriptychCpuFirmware(repositoryRoot) {
   const sourceDirectory = join(repositoryRoot, "roms", "cpu");
-  const [bootRom, bdos, bios] = await Promise.all([
+  const [bootRom, ccp, bdos, bios] = await Promise.all([
     assemble(join(sourceDirectory, "bootstrap.asm")),
+    assemble(join(sourceDirectory, "ccp", "ccp.asm")),
     assemble(join(sourceDirectory, "bdos", "bdos.asm")),
     assemble(join(sourceDirectory, "bios.asm")),
   ]);
@@ -156,8 +164,11 @@ export async function assembleTriptychCpuFirmware(repositoryRoot) {
   if (bios.length !== BIOS_BYTES) {
     throw new Error(`BIOS is ${bios.length} bytes; expected ${BIOS_BYTES}`);
   }
+  if (ccp.length !== CCP_BYTES) {
+    throw new Error(`CCP is ${ccp.length} bytes; expected ${CCP_BYTES}`);
+  }
   if (bdos.length !== BDOS_BYTES) {
     throw new Error(`BDOS is ${bdos.length} bytes; expected ${BDOS_BYTES}`);
   }
-  return { bootRom, bdos, bios };
+  return { bootRom, ccp, bdos, bios };
 }

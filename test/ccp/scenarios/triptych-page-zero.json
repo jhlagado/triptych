@@ -1,0 +1,44 @@
+{
+  "schema": "triptych-cpm-headless-scenario-v1",
+  "id": "triptych-ccp-page-zero",
+  "description": "Require the Triptych CCP vertical slice to match the frozen public page-zero and transient-return behavior",
+  "systemCcp": "triptych",
+  "systemBdos": "triptych",
+  "initialPrograms": [
+    {
+      "kind": "assemble-atom",
+      "name": "CCPPROBE.COM",
+      "path": "test/ccp/programs/pagezero.asm",
+      "bytes": 230,
+      "sha256": "5b2aa38b306f72bec01e226dba731f010ed0c1ee2c74a1041f922ca29888c561"
+    }
+  ],
+  "expectedInitialDriveSha256": "5c50a2b20207031a81e15713393323d5c0f8e8d6b21d2497c4ba8fe6d7c576ca",
+  "sessions": [
+    {
+      "id": "page-zero-and-return",
+      "interactions": [
+        {
+          "id": "boot",
+          "inputAscii": "",
+          "stopAfterAscii": "\r\nA>"
+        },
+        {
+          "id": "probe",
+          "inputAscii": "ccpprobe b:foo*.bar baz.qux\r",
+          "stopAfterAscii": "RETURN\r\n\r\nA>"
+        }
+      ],
+      "expectedTranscript": "\r\nA>ccpprobe b:foo*.bar baz.qux\r\r\nDRIVE=00\r\nTAIL=13: B:FOO*.BAR BAZ.QUX\r\nTERM=00\r\nFCB1=02|FOO?????|BAR\r\nFCB2=00|BAZ     |QUX\r\nRETURN\r\n\r\nA>",
+      "expectedTerminal": {
+        "text": "\nA>ccpprobe b:foo*.bar baz.qux\nDRIVE=00\nTAIL=13: B:FOO*.BAR BAZ.QUX\nTERM=00\nFCB1=02|FOO?????|BAR\nFCB2=00|BAZ     |QUX\nRETURN\n\nA>",
+        "cursorRow": 9,
+        "cursorColumn": 2,
+        "currentAttributes": 0,
+        "wrapPending": false,
+        "bellCount": 0,
+        "screenSha256": "13cd3453fa0d46db30969da7b5fa7dbe7a634ee61d84f416d8d99925a5ba1033"
+      }
+    }
+  ]
+}

@@ -1,0 +1,107 @@
+{
+  "schema": "triptych-ccp-feature-matrix-v1",
+  "publicationReady": false,
+  "oracle": {
+    "path": "third_party/cpm22/cpm22.img",
+    "offset": 0,
+    "bytes": 2048,
+    "sha256": "67fda0f138c3654a2fb15ae49acb2e663c848774779fa9822eda0f6d3a9b8da3"
+  },
+  "target": {
+    "path": "roms/cpu/ccp/ccp.asm",
+    "loadAddress": 58368,
+    "bytes": 2048,
+    "sha256": "618ecfb78b81e8c65f9699d124450daae76efa4b283f25b823f8c35fcaf6c7f7"
+  },
+  "features": [
+    {
+      "id": "boot-prompt",
+      "status": "proved",
+      "evidence": [
+        "test/ccp/scenarios/oracle-page-zero.json",
+        "test/ccp/scenarios/triptych-page-zero.json"
+      ]
+    },
+    {
+      "id": "case-and-command-tail",
+      "status": "proved",
+      "evidence": [
+        "test/ccp/scenarios/oracle-page-zero.json",
+        "test/ccp/scenarios/triptych-page-zero.json"
+      ]
+    },
+    {
+      "id": "default-fcbs",
+      "status": "proved",
+      "evidence": [
+        "test/ccp/scenarios/oracle-page-zero.json",
+        "test/ccp/scenarios/triptych-page-zero.json"
+      ]
+    },
+    {
+      "id": "transient-load-and-return",
+      "status": "proved",
+      "evidence": [
+        "test/ccp/scenarios/oracle-page-zero.json",
+        "test/ccp/scenarios/triptych-page-zero.json"
+      ]
+    },
+    {
+      "id": "blank-and-invalid-command",
+      "status": "proved",
+      "evidence": [
+        "test/ccp/scenarios/oracle-transient-smoke.json",
+        "test/ccp/scenarios/triptych-transient-smoke.json"
+      ]
+    },
+    {
+      "id": "drive-selection",
+      "status": "partial",
+      "evidence": [
+        "test/ccp/scenarios/oracle-transient-smoke.json",
+        "test/ccp/scenarios/triptych-transient-smoke.json"
+      ]
+    },
+    {
+      "id": "transient-load-errors-and-limit",
+      "status": "planned",
+      "evidence": []
+    },
+    {
+      "id": "dir",
+      "status": "proved",
+      "evidence": [
+        "test/bdos/scenarios/triptych-bdos-dir-type.json",
+        "test/ccp/scenarios/triptych-dir-type.json"
+      ]
+    },
+    {
+      "id": "type",
+      "status": "proved",
+      "evidence": [
+        "test/bdos/scenarios/triptych-bdos-dir-type.json",
+        "test/ccp/scenarios/triptych-dir-type.json"
+      ]
+    },
+    { "id": "era", "status": "planned", "evidence": [] },
+    { "id": "ren", "status": "planned", "evidence": [] },
+    { "id": "save", "status": "planned", "evidence": [] },
+    { "id": "user", "status": "planned", "evidence": [] },
+    { "id": "parser-boundaries-and-fuzz", "status": "planned", "evidence": [] },
+    {
+      "id": "failure-atomicity-and-recovery",
+      "status": "planned",
+      "evidence": []
+    },
+    { "id": "resident-stack-and-size", "status": "planned", "evidence": [] },
+    { "id": "bundled-applications", "status": "planned", "evidence": [] },
+    { "id": "self-assembly", "status": "planned", "evidence": [] },
+    {
+      "id": "native-wasm-equivalence",
+      "status": "partial",
+      "evidence": ["docs/reports/atom-ccp-first-slice.md"]
+    },
+    { "id": "published-system", "status": "planned", "evidence": [] },
+    { "id": "esp32-hardware", "status": "planned", "evidence": [] }
+  ]
+}

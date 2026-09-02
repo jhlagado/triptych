@@ -126,6 +126,12 @@ function validateScenario(scenario) {
   assert.equal(scenario.schema, CPM_HEADLESS_SCENARIO_SCHEMA);
   assert.equal(typeof scenario.id, "string");
   assert.ok(
+    scenario.systemCcp === undefined ||
+      scenario.systemCcp === "oracle" ||
+      scenario.systemCcp === "triptych",
+    `${scenario.id} systemCcp must be oracle or triptych`,
+  );
+  assert.ok(
     scenario.systemBdos === undefined ||
       scenario.systemBdos === "oracle" ||
       scenario.systemBdos === "triptych",
@@ -263,6 +269,7 @@ export function runCpmHeadlessScenario({
 
   return {
     id: scenario.id,
+    systemCcp: scenario.systemCcp ?? "oracle",
     systemBdos: scenario.systemBdos ?? "oracle",
     initialDriveSha256,
     sessions: results,

@@ -21,6 +21,15 @@ const hostExecutable = join(
 );
 const sourceImagePath = process.env.TRIPTYCH_CPM22_IMAGE;
 const workingImagePath = process.env.TRIPTYCH_CPM22_WORK_DISK;
+const systemCcp = process.env.TRIPTYCH_CPM_CCP ?? "oracle";
+if (systemCcp !== "oracle" && systemCcp !== "triptych") {
+  throw new Error("TRIPTYCH_CPM_CCP must be oracle or triptych");
+}
+if (systemCcp === "triptych" && workingImagePath !== undefined) {
+  throw new Error(
+    "the development Triptych CCP preview requires a disposable TRIPTYCH_CPM22_IMAGE, not a persistent working disk",
+  );
+}
 if (!sourceImagePath && !workingImagePath) {
   throw new Error(
     "set TRIPTYCH_CPM22_WORK_DISK to a persistent working image or TRIPTYCH_CPM22_IMAGE to a provenance-reviewed disposable source image",
@@ -71,9 +80,13 @@ try {
         repositoryRoot,
         sourceImagePath,
         outputDirectory: temporary,
+        systemCcp,
       });
   console.log("Triptych native CP/M 2.2 terminal");
   console.log(`Rust host: ${hostExecutable}`);
+  console.log(
+    `CCP: ${systemCcp === "triptych" ? "Triptych development preview" : "retained compatibility oracle"}`,
+  );
   if (persistent) {
     console.log(`Working disk: ${resolve(workingImagePath)}`);
     console.log(`Pre-launch SHA-256: ${prepared.sourceImageSha256}`);

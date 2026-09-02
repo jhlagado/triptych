@@ -1,0 +1,58 @@
+{
+  "schema": "triptych-cpm-headless-scenario-v1",
+  "id": "triptych-ccp-transient-smoke",
+  "description": "Require the Triptych CCP to match blank-line, drive-selection, missing-command, transient-load, persistence, and warm-return behavior",
+  "systemCcp": "triptych",
+  "systemBdos": "triptych",
+  "expectedInitialDriveSha256": "05a4e60c636fae511c75613c92b5d78798f6b596afa9a351da53faf474a20636",
+  "expectedFinalFiles": [
+    {
+      "name": "RESULT.TXT",
+      "bytes": 128,
+      "sha256": "82c956e1df9917a965b49b85106feadf27381082ccc03d9fa3e5fc651f5cded3"
+    }
+  ],
+  "sessions": [
+    {
+      "id": "commands",
+      "interactions": [
+        {
+          "id": "boot",
+          "inputAscii": "",
+          "stopAfterAscii": "\r\nA>"
+        },
+        {
+          "id": "blank",
+          "inputAscii": "\r",
+          "stopAfterAscii": "\r\nA>"
+        },
+        {
+          "id": "drive",
+          "inputAscii": "a:\r",
+          "stopAfterAscii": "\r\nA>"
+        },
+        {
+          "id": "missing",
+          "inputAscii": "nope\r",
+          "stopAfterAscii": "NOPE?\r\n\r\nA>"
+        },
+        {
+          "id": "smoke",
+          "inputAscii": "smoke\r",
+          "stopAfterAscii": "Wrote RESULT.TXT\r\n\r\nA>"
+        }
+      ],
+      "expectedTranscript": "\r\nA>\r\r\nA>a:\r\r\nA>nope\r\r\nNOPE?\r\n\r\nA>smoke\r\r\nWrote RESULT.TXT\r\n\r\nA>",
+      "expectedDriveSha256": "0939b9a77dae2cfdf67d687281f1ffc7ea058d9a1671f3d0cd4b06595ef3eda4",
+      "expectedTerminal": {
+        "text": "\nA>\nA>a:\nA>nope\nNOPE?\n\nA>smoke\nWrote RESULT.TXT\n\nA>",
+        "cursorRow": 9,
+        "cursorColumn": 2,
+        "currentAttributes": 0,
+        "wrapPending": false,
+        "bellCount": 0,
+        "screenSha256": "b8edbd9eabcd949a20e55806df8e2f013c54859958941a0402e5d7215d0306f6"
+      }
+    }
+  ]
+}
