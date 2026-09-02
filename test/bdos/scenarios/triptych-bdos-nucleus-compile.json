@@ -1,0 +1,61 @@
+{
+  "schema": "triptych-cpm-headless-scenario-v1",
+  "id": "triptych-bdos-nucleus-compile",
+  "description": "Compile INPUT.NU with the real NUC.COM through the Triptych BDOS, then execute the persisted INPUT.COM in a fresh machine",
+  "systemBdos": "triptych",
+  "expectedInitialDriveSha256": "e80cf64d71b84a4d9af5ce8791dc4bf9ba3729d043cff1c961266f91530ff6e3",
+  "sessions": [
+    {
+      "id": "compile-input",
+      "interactions": [
+        {
+          "id": "boot",
+          "inputAscii": "",
+          "stopAfterAscii": "\r\nA>"
+        },
+        {
+          "id": "run-nucleus",
+          "inputAscii": "NUC INPUT.NU\r",
+          "stopAfterAscii": "\r\nA>"
+        }
+      ],
+      "expectedTranscript": "\r\nA>NUC INPUT.NU\r\r\n\r\nA>",
+      "expectedDriveSha256": "d6fe7be6406a003511677727a0f82fb79cfbd966fca2428b6bb8f9cf32680dab",
+      "expectedTerminal": {
+        "text": "\nA>NUC INPUT.NU\n\nA>",
+        "cursorRow": 3,
+        "cursorColumn": 2,
+        "currentAttributes": 0,
+        "wrapPending": false,
+        "bellCount": 0,
+        "screenSha256": "3332a8d83daafa3f45a27a663b204ca03b8d7cf3a637d14abbdadc031c5d1e7f"
+      }
+    },
+    {
+      "id": "run-generated-program",
+      "interactions": [
+        {
+          "id": "boot",
+          "inputAscii": "",
+          "stopAfterAscii": "\r\nA>"
+        },
+        {
+          "id": "run-input",
+          "inputAscii": "INPUT\r",
+          "stopAfterAscii": "OK\r\nA>"
+        }
+      ],
+      "expectedTranscript": "\r\nA>INPUT\r\r\nOK\r\nA>",
+      "expectedDriveSha256": "d6fe7be6406a003511677727a0f82fb79cfbd966fca2428b6bb8f9cf32680dab",
+      "expectedTerminal": {
+        "text": "\nA>INPUT\nOK\nA>",
+        "cursorRow": 3,
+        "cursorColumn": 2,
+        "currentAttributes": 0,
+        "wrapPending": false,
+        "bellCount": 0,
+        "screenSha256": "6509c7063a77ce4fb1f94dd709de213ac91c7413cd33fd640e0a1deee21059ac"
+      }
+    }
+  ]
+}

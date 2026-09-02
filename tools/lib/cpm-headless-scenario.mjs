@@ -152,6 +152,10 @@ export function runCpmHeadlessScenario({
   maximumSlices = 400,
 }) {
   validateScenario(scenario);
+  assert.ok(
+    Number.isInteger(maximumSlices) && maximumSlices > 0,
+    `${scenario.id} maximumSlices must be a positive integer`,
+  );
   let persisted = Uint8Array.from(initialDrive);
   const initialDriveSha256 = sha256(persisted);
   assert.equal(

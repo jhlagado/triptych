@@ -1,6 +1,17 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
+import { readFile } from "node:fs/promises";
+import { resolve } from "node:path";
 
+import { retargetCpm22Atom } from "./lib/cpm22-atom-target.mjs";
+import { installCpm22File, readCpm22File } from "./lib/cpm22-disk.mjs";
 import { runCpmHeadlessScenario } from "./lib/cpm-headless-scenario.mjs";
+
+const repositoryRoot = resolve(import.meta.dirname, "..");
+
+function sha256(bytes) {
+  return createHash("sha256").update(bytes).digest("hex");
+}
 
 const firstTranscript = "\x1b[2J\x1b[HHELLO\x1b[7m!\x1b[0m";
 const secondTranscript = "X".repeat(80);
@@ -122,5 +133,40 @@ assert.throws(
       },
     }),
   /wrong-initial-drive initial drive image/,
+);
+
+const baseDisk = new Uint8Array(
+  await readFile(resolve(repositoryRoot, "third_party", "cpm22", "cpm22.img")),
+);
+const largeFile = Uint8Array.from(
+  { length: 129 * 128 - 7 },
+  (_, index) => (index * 29 + 7) & 0xff,
+);
+const installed = installCpm22File(baseDisk, {
+  name: "CHECK.DAT",
+  bytes: largeFile,
+  padByte: 0x1a,
+});
+const readLarge = readCpm22File(installed, "CHECK.DAT");
+assert.equal(readLarge.length, 129 * 128);
+assert.deepEqual(readLarge.slice(0, largeFile.length), largeFile);
+assert.ok(readLarge.slice(largeFile.length).every((byte) => byte === 0x1a));
+const replacement = Uint8Array.of(1, 2, 3);
+const replaced = installCpm22File(installed, {
+  name: "CHECK.DAT",
+  bytes: replacement,
+});
+assert.deepEqual(readCpm22File(replaced, "CHECK.DAT").slice(0, 3), replacement);
+assert.equal(readCpm22File(replaced, "CHECK.DAT").length, 128);
+
+const atom = readCpm22File(baseDisk, "ATOM.COM");
+const residentAtom = retargetCpm22Atom(atom, {
+  start: 0xec00,
+  capacity: 0x0e00,
+});
+assert.equal(residentAtom.length, 15_029);
+assert.equal(
+  sha256(residentAtom),
+  "072d43cb9be3a21daaa923399d7423dbeeeb699895d572b5aea4a112ce420cca",
 );
 console.log("Headless CP/M scenario runner checks passed");

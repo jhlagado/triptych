@@ -3,11 +3,13 @@ import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { mkdtemp, readFile, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 
 import { compile, defaultFormatWriters } from "@jhlagado/azm/compile";
+import { retargetCpm22Atom } from "./lib/cpm22-atom-target.mjs";
+import { installCpm22File, readCpm22File } from "./lib/cpm22-disk.mjs";
 import { runCpmHeadlessScenario } from "./lib/cpm-headless-scenario.mjs";
 
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));
@@ -240,6 +242,36 @@ function padForBackingSectors(image) {
   return padded;
 }
 
+function repositoryPath(path) {
+  assert.equal(typeof path, "string", "initial file path must be text");
+  const absolute = resolve(repositoryRoot, path);
+  const local = relative(repositoryRoot, absolute);
+  assert.ok(
+    local !== "" &&
+      local !== ".." &&
+      !local.startsWith(`..${sep}`) &&
+      !isAbsolute(local),
+    `initial file path escapes the repository: ${path}`,
+  );
+  return absolute;
+}
+
+function cpmText(bytes, path) {
+  const text = Buffer.from(bytes).toString("utf8");
+  assert.equal(
+    Buffer.from(text, "utf8").compare(Buffer.from(bytes)),
+    0,
+    `${path} is not valid UTF-8`,
+  );
+  assert.ok(
+    [...text].every((character) => character.codePointAt(0) <= 0x7f),
+    `${path} contains non-ASCII text`,
+  );
+  return Uint8Array.from(
+    Buffer.from(text.replace(/\r\n/g, "\n").replace(/\n/g, "\r\n"), "ascii"),
+  );
+}
+
 async function proveCpm() {
   const cpmImagePath = resolve(
     process.env.TRIPTYCH_CPM22_IMAGE ??
@@ -261,7 +293,7 @@ async function proveCpm() {
   const scenarios = [];
   for (const scenarioPath of scenarioPaths) {
     const scenario = JSON.parse(await readFile(scenarioPath, "utf8"));
-    const disk = Uint8Array.from(sourceDisk);
+    let disk = Uint8Array.from(sourceDisk);
     disk.set(bios, BIOS_SYSTEM_OFFSET);
     if (scenario.systemBdos === "triptych") {
       disk.set(bdos, BDOS_SYSTEM_OFFSET);
@@ -271,9 +303,46 @@ async function proveCpm() {
         `${scenario.id} has an unsupported systemBdos`,
       );
     }
+    for (const initialFile of scenario.initialFiles ?? []) {
+      const sourcePath = repositoryPath(initialFile.path);
+      const source = await readFile(sourcePath);
+      assert.equal(
+        initialFile.encoding,
+        "cpm-text",
+        `${scenario.id} initial file encoding`,
+      );
+      disk = installCpm22File(disk, {
+        name: initialFile.name,
+        bytes: cpmText(source, initialFile.path),
+      });
+    }
+    const initialTools = [];
+    for (const tool of scenario.initialTools ?? []) {
+      assert.equal(
+        tool.kind,
+        "retarget-cpm22-atom",
+        `${scenario.id} initial tool kind`,
+      );
+      const derived = retargetCpm22Atom(readCpm22File(disk, tool.source), {
+        start: tool.targetStart,
+        capacity: tool.targetCapacity,
+      });
+      const digest = sha256(derived);
+      assert.equal(digest, tool.sha256, `${scenario.id} ${tool.name} SHA-256`);
+      disk = installCpm22File(disk, {
+        name: tool.name,
+        bytes: derived,
+      });
+      initialTools.push({
+        name: tool.name,
+        bytes: derived.length,
+        sha256: digest,
+      });
+    }
     const result = runCpmHeadlessScenario({
       scenario,
       initialDrive: padForBackingSectors(disk),
+      maximumSlices: scenario.maximumSlices ?? 400,
       createMachine(drive) {
         const machine = new TriptychCpu(bootRom);
         machine.install_drive(0, drive, true);
@@ -296,11 +365,33 @@ async function proveCpm() {
         };
       },
     });
+    const finalFiles = [];
+    for (const expected of scenario.expectedFinalFiles ?? []) {
+      const file = readCpm22File(result.finalDrive, expected.name);
+      assert.equal(
+        file.length,
+        expected.bytes,
+        `${scenario.id} ${expected.name} bytes`,
+      );
+      const digest = sha256(file);
+      assert.equal(
+        digest,
+        expected.sha256,
+        `${scenario.id} ${expected.name} SHA-256`,
+      );
+      finalFiles.push({
+        name: expected.name,
+        bytes: file.length,
+        sha256: digest,
+      });
+    }
     scenarios.push({
       id: result.id,
       systemBdos: result.systemBdos,
       initialDriveSha256: result.initialDriveSha256,
+      ...(initialTools.length === 0 ? {} : { initialTools }),
       sessions: result.sessions,
+      ...(finalFiles.length === 0 ? {} : { finalFiles }),
     });
   }
   return { scenarios };

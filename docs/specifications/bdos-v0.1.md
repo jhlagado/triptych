@@ -90,14 +90,14 @@ The initial replacement implements the complete CP/M 2.2 range.
 |  20 | Read sequential             | `DE` FCB                            | status code                     |
 |  21 | Write sequential            | `DE` FCB                            | status code                     |
 |  22 | Make file                   | `DE` FCB                            | directory code or `$FF`         |
-|  23 | Rename file                 | `DE` rename FCB                     | directory code or `$FF`         |
+|  23 | Rename file                 | `DE` rename FCB                     | zero or `$FF`                   |
 |  24 | Return login vector         | none                                | drive bit vector                |
 |  25 | Return current disk         | none                                | drive number                    |
 |  26 | Set DMA address             | `DE` address                        | none                            |
 |  27 | Get allocation address      | none                                | allocation-vector address       |
 |  28 | Write-protect disk          | none                                | none                            |
 |  29 | Get read-only vector        | none                                | drive bit vector                |
-|  30 | Set file attributes         | `DE` FCB                            | directory code or `$FF`         |
+|  30 | Set file attributes         | `DE` FCB                            | zero or `$FF`                   |
 |  31 | Get disk-parameter address  | none                                | DPB address                     |
 |  32 | Set/get user code           | `E=$FF` gets; `E=0..15` sets        | current user code               |
 |  33 | Read random                 | `DE` FCB                            | status code                     |
@@ -162,6 +162,9 @@ A failed or rejected operation must leave unrelated directory entries,
 allocation bits, FCB fields, and data records unchanged. The Triptych BIOS
 currently flushes each successful CP/M sector write to the host disk boundary;
 BDOS must not assume a host filesystem or a stronger hidden durability path.
+Rename and set-file-attributes apply to every directory extent belonging to
+the selected file, not only the extent named by the caller's current FCB
+position.
 
 ## Required proofs
 
@@ -201,9 +204,13 @@ or assembly helpers belong in `tools/`; direct and whole-system proofs belong
 in `test/`.
 
 The final acceptance path assembles the source with the standalone Atom tool
-and, separately, with `ATOM.COM` inside the guest. AZM may temporarily provide
-a development adapter or cross-check, but the production source and firmware
-must not depend on Debug80.
+and, separately, with the same native Atom core inside the guest. The bundled
+`ATOM.COM` profile targets ordinary programs beginning at `$0100`, so the
+headless proof derives a private `$EC00..$F9FF` profile by changing only its
+provenance-checked target-configuration words. It does not alter the Atom core
+or enter the distributable disk. AZM may temporarily provide a development
+adapter or cross-check, but the production source and firmware must not depend
+on Debug80.
 
 ## Reference
 

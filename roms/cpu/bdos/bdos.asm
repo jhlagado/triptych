@@ -366,13 +366,8 @@ FNSEL:
 ; the directory-owned FCB fields. Bit 7 of S2 marks the FCB unmodified, which
 ; lets close avoid a disk write until a later mutation service changes it.
 FNOPEN:
-        LD      HL,(PARAM)
-        LD      (SRCHFCB),HL
         LD      A,1
-        LD      (OPENMOD),A
-        CALL    NEWSRCH
-        CALL    FINDENT
-        JP      RETA
+        JR      SETSRCH
 
 FNCLSE:
         CALL    CLOSEFCB
@@ -414,9 +409,11 @@ FINDEXCT:
         JP      FINDENT
 
 FNSRCHF:
+        XOR     A
+
+SETSRCH:
         LD      HL,(PARAM)
         LD      (SRCHFCB),HL
-        XOR     A
         LD      (OPENMOD),A
         CALL    NEWSRCH
         CALL    FINDENT
@@ -566,44 +563,52 @@ FNWRITE:
 
 FNATTR:
         CALL    CHKRO
-        CALL    FINDEXCT
-        CP      $FF
-        JP      Z,RETA
         LD      HL,(PARAM)
         INC     HL
-        JR      NEWNAME
+        JR      MUTALL
 
 FNRENAME:
         CALL    CHKRO
-        CALL    FINDEXCT
-        CP      $FF
-        JP      Z,RETA
         LD      HL,(PARAM)
         LD      DE,17
         ADD     HL,DE
 
-NEWNAME:
+; Rename and set-attributes apply to every extent belonging to the file. Keep
+; the replacement field outside the directory buffer because FINDENT replaces
+; that buffer whenever the scan crosses a physical directory record.
+MUTALL:
+        LD      (COPYPTR),HL
+        LD      HL,(PARAM)
+        LD      (SRCHFCB),HL
+        LD      A,2
+        LD      (OPENMOD),A
+        XOR     A
+        LD      (WRTYPE),A
+        CALL    NEWSRCH
+
+MUTLOOP:
+        CALL    FINDENT
+        CP      $FF
+        JP      Z,DELDONE
+        LD      HL,(COPYPTR)
         LD      DE,(MATCHPTR)
         INC     DE
         LD      BC,11
         LDIR
         CALL    WRITEDIR
-        LD      A,(RETCODE)
-        JP      RETA
+        LD      A,1
+        LD      (WRTYPE),A
+        JR      MUTLOOP
 
 WRITESEQ:
-        LD      HL,(PARAM)
-        LD      DE,32
-        ADD     HL,DE
+        CALL    FCBCR
         LD      A,(HL)
         CP      128
         JR      C,WRITEPOS
         CALL    ADVEXT
         OR      A
         RET     NZ
-        LD      HL,(PARAM)
-        LD      DE,32
-        ADD     HL,DE
+        CALL    FCBCR
         LD      A,(HL)
 
 WRITEPOS:
@@ -631,9 +636,7 @@ WRITEBLK:
         CALL    BIOWRS
         OR      A
         JR      NZ,WRITEBAD
-        LD      HL,(PARAM)
-        LD      DE,32
-        ADD     HL,DE
+        CALL    FCBCR
         LD      A,(HL)
         CP      128
         CALL    Z,ADVEXT
@@ -660,17 +663,13 @@ ADVEXT:
         JR      Z,WRITEEND
 
 EXTCLEAR:
-        LD      HL,(PARAM)
-        LD      DE,32
-        ADD     HL,DE
+        CALL    FCBCR
         XOR     A
         LD      (HL),A
         RET
 
 ADVWRITE:
-        LD      HL,(PARAM)
-        LD      DE,32
-        ADD     HL,DE
+        CALL    FCBCR
         INC     (HL)
         LD      A,(HL)
         LD      B,A
@@ -694,18 +693,14 @@ FNREADSQ:
         JP      RETA
 
 READSEQ:
-        LD      HL,(PARAM)
-        LD      DE,32
-        ADD     HL,DE
+        CALL    FCBCR
         LD      A,(HL)
         CP      128
         JR      C,READCHK
         CALL    NEXTEXT
         OR      A
         JP      NZ,READ_EOF
-        LD      HL,(PARAM)
-        LD      DE,32
-        ADD     HL,DE
+        CALL    FCBCR
         XOR     A
         LD      (HL),A
 
@@ -725,9 +720,7 @@ READCHK:
         OR      E
         JP      Z,READ_EOF
         CALL    POSREC
-        LD      HL,(PARAM)
-        LD      DE,32
-        ADD     HL,DE
+        CALL    FCBCR
         INC     (HL)
         CALL    BIORDS
         OR      A
@@ -760,16 +753,8 @@ RANDWRT:
 
 RANDDONE:
         PUSH    AF
-        LD      HL,(PARAM)
-        LD      DE,32
-        ADD     HL,DE
-        LD      A,(ZEROFIL)
-        OR      A
-        LD      A,(SAVEDCR)
-        JR      Z,RANDSAVE
+        CALL    FCBCR
         LD      A,(SEQREC)
-
-RANDSAVE:
         LD      (HL),A
         POP     AF
 
@@ -777,11 +762,8 @@ RANDRET:
         JP      RETA
 
 RANDPREP:
-        LD      HL,(PARAM)
-        LD      DE,32
-        ADD     HL,DE
+        CALL    FCBCR
         LD      A,(HL)
-        LD      (SAVEDCR),A
         INC     HL
         LD      C,(HL)
         INC     HL
@@ -859,9 +841,7 @@ RANDOPEN:
         JR      Z,RANDMISS
 
 RANDPOS:
-        LD      HL,(PARAM)
-        LD      DE,32
-        ADD     HL,DE
+        CALL    FCBCR
         LD      A,(SEQREC)
         LD      (HL),A
         XOR     A
@@ -884,6 +864,13 @@ FCBLOCK:
         RET     Z
         INC     HL
         LD      D,(HL)
+        RET
+
+; Return the FCB sequential-record field in HL.
+FCBCR:
+        LD      HL,(PARAM)
+        LD      DE,32
+        ADD     HL,DE
         RET
 
 ; Return the allocation-map cell for SEQREC in HL.
@@ -913,13 +900,6 @@ BLOCKIDX:
         LD      A,C
         JR      Z,BLOCKBYT
         ADD     A,A
-        LD      E,A
-        LD      D,0
-        LD      HL,(PARAM)
-        LD      BC,16
-        ADD     HL,BC
-        ADD     HL,DE
-        RET
 
 BLOCKBYT:
         LD      E,A
@@ -1257,9 +1237,7 @@ SIZEDONE:
 FNSETRR:
         LD      HL,(PARAM)
         CALL    RECBASE
-        LD      HL,(PARAM)
-        LD      DE,32
-        ADD     HL,DE
+        CALL    FCBCR
         LD      E,(HL)
         LD      D,0
         LD      HL,(CAND0)
@@ -1414,14 +1392,10 @@ OPENHIT:
         CP      1
         JR      NZ,NOCOPY
         LD      HL,(MATCHPTR)
-        LD      DE,12
-        ADD     HL,DE
+        INC     HL
         LD      DE,(SRCHFCB)
-        EX      DE,HL
-        LD      BC,12
-        ADD     HL,BC
-        EX      DE,HL
-        LD      BC,20
+        INC     DE
+        LD      BC,31
         LDIR
         LD      HL,(SRCHFCB)
         LD      DE,14
@@ -1555,21 +1529,7 @@ WRITEDIR:
         LD      B,H
         LD      C,L
         CALL    BIOSEC
-        LD      HL,(DIRPTR)
-        LD      B,H
-        LD      C,L
-        CALL    BIODMA
-        LD      C,1
-        CALL    BIOWRS
-        PUSH    AF
-        LD      HL,(CURDMA)
-        LD      B,H
-        LD      C,L
-        CALL    BIODMA
-        POP     AF
-        OR      A
-        CALL    NZ,BADSECT
-        RET
+        ; Fall through to the common directory-buffer write suffix.
 
 ; The delete loop writes immediately after READDIR, so the BIOS remains on the
 ; matching directory record and only the DMA needs changing.
@@ -2126,6 +2086,7 @@ DIRUSED: DW     0
 SRCHIDX: DW     0
 SRCHFCB: DW     0
 MATCHPTR: DW    0
+COPYPTR: DW     0
 OPENMOD: DB     0
 RETCODE: DB     0
 SEQREC: DB      0
@@ -2137,7 +2098,6 @@ FSIZE2: DB      0
 CAND0:  DB      0
 CAND1:  DB      0
 CAND2:  DB      0
-SAVEDCR: DB     0
 TARGEX: DB      0
 TARGS2: DB      0
 WRTYPE: DB      0

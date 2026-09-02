@@ -199,13 +199,15 @@ Work:
 Exit: create, replace, rename, delete, and multi-extent file scenarios produce
 the expected directory and data bytes without corrupting neighboring files.
 
-### Milestone 5 — random access and complete function set (active)
+### Milestone 5 — random access and complete function set (complete)
 
-Current checkpoint: all public function numbers 0 through 40 are dispatched;
-random read/write, file size, sequential-to-random conversion, and zero-filled
-random write pass the complete reviewed random-access sequence. Functions 38
-and 39 return deterministic zero. Randomized filesystem state-machine coverage
-remains.
+All public function numbers 0 through 40 are dispatched. Random read/write,
+file size, sequential-to-random conversion, and zero-filled random write pass
+the complete reviewed random-access sequence. Functions 38 and 39 return
+deterministic zero. Three seeded filesystem state machines generate creates,
+sequential and random I/O, closes, size queries, attributes, renames, deletes,
+searches, and block reuse; each transition checks its independent model and
+the frozen oracle's public state and persisted disk records.
 
 Work:
 
@@ -217,13 +219,23 @@ Work:
 Exit: all calls 0 through 40 satisfy the direct contract suite and randomized
 filesystem state-machine tests.
 
-### Milestone 6 — system and self-host proof
+### Milestone 6 — system and self-host proof (complete)
+
+The retained CCP, `DIR`, `TYPE`, `SMOKE.COM`, `EDIT.COM`, `ATOM.COM`, and
+`NUC.COM` run under the replacement through the headless ANSI model. `SMOKE`
+proves a file round trip across fresh machines. `ATOM.COM` assembles
+`HELLO.COM`, and `NUC.COM` compiles `INPUT.NU`; both generated programs run in
+fresh WASM machines. A provenance-checked high-origin profile of the same Atom
+core assembles `BDOS.ASM` inside CP/M and produces the exact independently
+assembled 3,584-byte resident image.
 
 Work:
 
 - cold-boot the existing CCP with the new BDOS and Triptych BIOS;
 - run the repository's current COM suite and ANSI editor workflow;
 - replay CCP and application scenarios through the headless terminal model;
+- require each bundled CCP or COM application to qualify through the shared
+  headless scenario contract;
 - assemble a nontrivial program inside the guest with `ATOM.COM`;
 - compile and execute a Nucleus program; and
 - retain native and WASM transcripts and disk hashes.
@@ -232,7 +244,7 @@ Exit: the new BDOS passes the same two-process persistence and browser proofs
 as the transitional system, and its own source can be assembled through the
 documented Atom path.
 
-### Milestone 7 — fit, replace, and publish
+### Milestone 7 — fit, replace, and publish (active)
 
 Work:
 
@@ -256,12 +268,11 @@ must not retroactively weaken the BDOS compatibility tests.
 
 ## Immediate next work
 
-The next checkpoint records the exact deployed browser image digest and adds a
-randomized filesystem state machine. In parallel, the resident code needs
-another measured compression pass: the complete function set currently leaves
-only a narrow margin before the private stack. The remaining system work is a
-successful Nucleus compile-and-run scenario and assembling the BDOS's own
-source through the documented in-guest Atom path.
+The next checkpoint is the final clean-checkout publication gate: preserve the
+current 117-byte resident margin, run all direct, randomized, native, WASM, and
+self-assembly proofs, rebuild the browser disk, publish it through GitHub
+Pages, and record the deployed hashes. After that, Milestone 8 can specify the
+separate CCP replacement without reopening the BDOS contract.
 
 ## References
 

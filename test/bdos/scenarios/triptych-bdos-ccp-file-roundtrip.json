@@ -1,0 +1,61 @@
+{
+  "schema": "triptych-cpm-headless-scenario-v1",
+  "id": "triptych-bdos-ccp-file-roundtrip",
+  "description": "Run SMOKE.COM through the Triptych BDOS, then display its persisted file through CCP TYPE in a fresh machine",
+  "systemBdos": "triptych",
+  "expectedInitialDriveSha256": "e80cf64d71b84a4d9af5ce8791dc4bf9ba3729d043cff1c961266f91530ff6e3",
+  "sessions": [
+    {
+      "id": "create-with-smoke",
+      "interactions": [
+        {
+          "id": "boot",
+          "inputAscii": "",
+          "stopAfterAscii": "\r\nA>"
+        },
+        {
+          "id": "run-smoke",
+          "inputAscii": "SMOKE\r",
+          "stopAfterAscii": "Wrote RESULT.TXT\r\n\r\nA>"
+        }
+      ],
+      "expectedTranscript": "\r\nA>SMOKE\r\r\nWrote RESULT.TXT\r\n\r\nA>",
+      "expectedDriveSha256": "6d1b3576cdc63dee2da11b884da7eb7d5d4290c690c73e36cd541818fbb702cc",
+      "expectedTerminal": {
+        "text": "\nA>SMOKE\nWrote RESULT.TXT\n\nA>",
+        "cursorRow": 4,
+        "cursorColumn": 2,
+        "currentAttributes": 0,
+        "wrapPending": false,
+        "bellCount": 0,
+        "screenSha256": "5392f0741528eec112e980c1b4c18595989520a2e3741f85a4b5c6aa32d27485"
+      }
+    },
+    {
+      "id": "read-with-ccp-type",
+      "interactions": [
+        {
+          "id": "boot",
+          "inputAscii": "",
+          "stopAfterAscii": "\r\nA>"
+        },
+        {
+          "id": "type-result",
+          "inputAscii": "TYPE RESULT.TXT\r",
+          "stopAfterAscii": "CP/M file services are working\r\n\r\nA>"
+        }
+      ],
+      "expectedTranscript": "\r\nA>TYPE RESULT.TXT\r\r\nCP/M file services are working\r\n\r\nA>",
+      "expectedDriveSha256": "6d1b3576cdc63dee2da11b884da7eb7d5d4290c690c73e36cd541818fbb702cc",
+      "expectedTerminal": {
+        "text": "\nA>TYPE RESULT.TXT\nCP/M file services are working\n\nA>",
+        "cursorRow": 4,
+        "cursorColumn": 2,
+        "currentAttributes": 0,
+        "wrapPending": false,
+        "bellCount": 0,
+        "screenSha256": "36a2e99942bea58dbdc834996e60cdf1bd10fd049e0daabf4f690ce2b3b987a2"
+      }
+    }
+  ]
+}

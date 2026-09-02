@@ -59,6 +59,31 @@ control keys, escape sequences, and non-ASCII programs. A completion suffix is
 only a deterministic stopping condition; the complete transcript must still
 match.
 
+The optional positive `maximumSlices` raises the per-interaction instruction
+slice bound for deliberately large compiler inputs. It is still a timeout,
+not a performance expectation; ordinary scenarios retain the default bound.
+
+### Private fixture preparation
+
+An optional `initialFiles` array installs repository-owned inputs into the
+scenario's private disk before its initial digest is checked. Each entry names
+the CP/M file, repository-relative source path, and `cpm-text` encoding. Text
+preparation validates ASCII, converts line endings to CRLF, and uses `$1A` for
+record padding. The repository file and original transitional disk remain
+unchanged.
+
+An optional `initialTools` array may derive a narrowly configured guest tool
+from a provenance-pinned binary already on that private disk. The currently
+defined `retarget-cpm22-atom` operation changes Atom's target start, capacity,
+and their derived output-adapter words while leaving its assembler core
+unchanged. The fixture pins the derived tool's name and SHA-256. This exists so
+resident firmware can be assembled at its real address; the ordinary bundled
+`ATOM.COM` remains the `$0100` application profile.
+
+An optional `expectedFinalFiles` array names record-padded CP/M files by exact
+byte length and SHA-256. This is stronger and more readable than relying only
+on a complete disk digest when a compiler or assembler is under test.
+
 An interactive application can replace the session-level input and completion
 fields with a non-empty `interactions` array. Each interaction has its own
 input and completion pair. The runner waits for one completion boundary before
@@ -101,6 +126,27 @@ A scenario passes only when the raw transcript, terminal state, and any
 declared disk digest all pass. Timeouts and unexpected extra output fail. These
 are host-model proofs; they do not measure physical serial reliability,
 ESP32-S3 scheduling, or SD-card timing.
+
+## Bundled application qualification
+
+Every CCP or `.COM` application retained in the distributable system image
+must have a headless scenario before it is treated as qualified. The scenario
+must run the real guest binary through the CPU and serial boundaries; a host
+reimplementation of the command or application is not a substitute.
+
+- A line-oriented command must prove its exact serial transcript and any disk
+  change it makes.
+- A full-screen ANSI application must use staged interactions and prove at
+  least one meaningful intermediate screen before its clean exit state.
+- A compiler or assembler must pin the resulting disk image, then run or
+  otherwise consume its generated artifact in a fresh-machine session. A
+  resident-image assembler may instead compare the complete generated file
+  byte-for-byte with an independently assembled image when executing that file
+  as a transient program would be invalid.
+
+The fixture may describe keystrokes and expected observations, but it must not
+contain guest application logic. This keeps the same scenario portable across
+the WASM host, the native host, and eventually an ESP32 test adapter.
 
 The executable examples under `test/bdos/scenarios/` cover a persistent CCP
 file round trip and a staged ANSI editor launch/quit. Run every scenario with:

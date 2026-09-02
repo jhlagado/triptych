@@ -105,7 +105,8 @@ function sequentialExtentWriteFixture(): BdosDirectCallSequenceFixture {
   return {
     schema: "triptych-bdos-direct-sequence-v1",
     id: "sequential-write-extent-rollover",
-    description: "Write and close 129 records across two CP/M extents",
+    description:
+      "Write and close 129 records across two CP/M extents, then rename every extent",
     biosDisk: disk,
     steps: [
       { ...call("reset", 13), call: { ...call("reset", 13).call, de: 0 } },
@@ -132,6 +133,26 @@ function sequentialExtentWriteFixture(): BdosDirectCallSequenceFixture {
       },
       ...Array.from({ length: 129 }, (_, index) => call(`write-${index}`, 21)),
       call("close", 16),
+      {
+        ...call("rename-all-extents", 23),
+        initialMemory: [
+          {
+            address: 512,
+            length: 36,
+            fill: 0,
+            patches: [
+              {
+                offset: 1,
+                bytes: [77, 85, 76, 84, 73, 32, 32, 32, 68, 65, 84],
+              },
+              {
+                offset: 17,
+                bytes: [82, 69, 78, 65, 77, 69, 68, 32, 68, 65, 84],
+              },
+            ],
+          },
+        ],
+      },
     ],
   };
 }
@@ -359,7 +380,7 @@ describe("CP/M 2.2 BDOS direct-call contract", () => {
     });
   });
 
-  it("matches the oracle across a 128-record sequential extent rollover", () => {
+  it("matches the oracle across rollover and a multi-extent rename", () => {
     const fixture = sequentialExtentWriteFixture();
     const oracle = runBdosDirectCallSequence(referenceBdos, fixture);
     const replacement = runBdosDirectCallSequence(replacementBdos, fixture);
