@@ -160,6 +160,12 @@ prompt, and a console-only COM program runs and returns.
 
 ### Milestone 3 — disk discovery and read path (active)
 
+Current checkpoint: functions 13, 14, 24 through 29, 31, 32, and 37 now
+pass the reviewed disk-state and absent-drive sequences. Login consumes the
+BIOS DPH and DPB, reconstructs the allocation vector by scanning the declared
+directory extent, and has also passed a deliberately non-IBM geometry fixture.
+Open, search, and sequential read remain before this milestone is complete.
+
 Work:
 
 - implement calls 13 through 20 and 24 through 32 as their dependencies

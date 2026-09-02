@@ -52,8 +52,14 @@ const sequenceFixtureDirectory = resolve(
 const sequenceFixtureNames = readdirSync(sequenceFixtureDirectory)
   .filter((name) => name.endsWith(".json"))
   .sort();
-const milestone2SequenceFixtureNames = sequenceFixtureNames.filter((name) =>
-  readSequenceFixture(name).steps.every((step) => step.call.function <= 12),
+const replacementSequenceFixtureNames = sequenceFixtureNames.filter((name) =>
+  [
+    "absent-drive.json",
+    "console-state-roundtrip.json",
+    "disk-geometry-discovery.json",
+    "disk-state-roundtrip.json",
+    "io-byte-roundtrip.json",
+  ].includes(name),
 );
 
 function readFixture(name: string): BdosDirectCallFixture {
@@ -236,7 +242,7 @@ describe("CP/M 2.2 BDOS direct-call contract", () => {
   );
 
   it.each(fixtureNames)(
-    "runs the %s fixture against the Triptych Milestone 2 replacement",
+    "runs the %s fixture against the current Triptych replacement",
     (fixtureName) => {
       const fixture = readFixture(fixtureName);
       const result = runBdosDirectCall(replacementBdos, fixture);
@@ -259,8 +265,8 @@ describe("CP/M 2.2 BDOS direct-call contract", () => {
     },
   );
 
-  it.each(milestone2SequenceFixtureNames)(
-    "runs the %s stateful fixture against the Triptych Milestone 2 replacement",
+  it.each(replacementSequenceFixtureNames)(
+    "runs the %s implemented stateful fixture against the Triptych replacement",
     (fixtureName) => {
       const fixture = readSequenceFixture(fixtureName);
       const result = runBdosDirectCallSequence(replacementBdos, fixture);
@@ -270,12 +276,12 @@ describe("CP/M 2.2 BDOS direct-call contract", () => {
     },
   );
 
-  it("keeps the Milestone 2 private stack inside its reserved 64 bytes", () => {
+  it("keeps the replacement private stack inside its reserved 64 bytes", () => {
     const results = [
       ...fixtureNames.map((name) =>
         runBdosDirectCall(replacementBdos, readFixture(name)),
       ),
-      ...milestone2SequenceFixtureNames.flatMap((name) =>
+      ...replacementSequenceFixtureNames.flatMap((name) =>
         runBdosDirectCallSequence(
           replacementBdos,
           readSequenceFixture(name),
@@ -285,7 +291,7 @@ describe("CP/M 2.2 BDOS direct-call contract", () => {
     const minimum = Math.min(
       ...results.map((result) => result.minimumResidentStackPointer ?? 0xffff),
     );
-    expect(minimum).toBeGreaterThanOrEqual(0xeeac);
-    expect(0xeeec - minimum).toBe(12);
+    expect(minimum).toBeGreaterThanOrEqual(0xf1ad);
+    expect(0xf1ed - minimum).toBe(14);
   });
 });

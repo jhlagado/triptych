@@ -1,0 +1,80 @@
+{
+  "schema": "triptych-bdos-direct-sequence-v1",
+  "id": "disk-geometry-discovery",
+  "description": "Discover a deliberately non-IBM disk geometry and reconstruct its allocation vector through public DPH/DPB data",
+  "biosDisk": {
+    "drives": [
+      {
+        "number": 0,
+        "dphAddress": 64512,
+        "directoryBufferAddress": 64640,
+        "dpbAddress": 64528,
+        "checkVectorAddress": 64768,
+        "allocationVectorAddress": 64800,
+        "firstSector": 1,
+        "defaultRecordByte": 229,
+        "dpb": {
+          "sectorsPerTrack": 8,
+          "blockShift": 3,
+          "blockMask": 7,
+          "extentMask": 0,
+          "maximumBlock": 31,
+          "maximumDirectoryEntry": 7,
+          "directoryAllocation0": 128,
+          "directoryAllocation1": 0,
+          "checkVectorBytes": 2,
+          "reservedTracks": 1
+        },
+        "records": [
+          {
+            "record": 8,
+            "fill": 229,
+            "patches": [
+              {
+                "offset": 0,
+                "bytes": [
+                  0, 80, 82, 79, 66, 69, 32, 32, 32, 68, 65, 84, 0, 0, 0, 1, 2,
+                  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "steps": [
+    {
+      "id": "reset-and-discover",
+      "evidence": [
+        {
+          "kind": "published-interface",
+          "source": "Digital Research CP/M Operating System Manual, July 1982",
+          "section": "5.2, function 13; 6.10 DPH and DPB"
+        }
+      ],
+      "call": { "function": 13, "de": 0, "stackPointer": 53248 },
+      "biosResponses": [],
+      "expected": {
+        "returnRegisters": {
+          "a": 0,
+          "b": 0,
+          "h": 0,
+          "l": 0,
+          "sp": 53248,
+          "pc": 260
+        },
+        "memory": [{ "address": 64800, "bytes": [160, 0, 0, 0] }],
+        "biosCallCount": 15,
+        "biosTraceSha256": "b6b03c2e814487a78d02aafe7cba64d1dc321f90a45f11cb50d64b32df663862",
+        "biosDiskState": {
+          "selectedDrive": 0,
+          "track": 1,
+          "sector": 2,
+          "dma": 128
+        },
+        "biosDiskWriteCount": 0
+      }
+    }
+  ]
+}

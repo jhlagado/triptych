@@ -1,16 +1,16 @@
 {
   "schema": "triptych-cpm-headless-scenario-v1",
   "id": "triptych-bdos-console-boot",
-  "description": "Cold-boot the retained CCP with the Triptych Milestone 2 BDOS and reproduce its initial prompt through the headless ANSI terminal model",
+  "description": "Cold-boot the retained CCP with the current Triptych BDOS and reproduce its initial prompt through the headless ANSI terminal model",
   "systemBdos": "triptych",
-  "expectedInitialDriveSha256": "b6c818104b173f4af8c12d0bed3a74971e23064da477cf0967dbb55311233ddf",
+  "expectedInitialDriveSha256": "35258fb3da544511639e2bbd99a98fb438bd8c89ce9552ac65485902216818e5",
   "sessions": [
     {
       "id": "cold-boot-prompt",
       "inputAscii": "",
       "stopAfterAscii": "\r\nA>",
       "expectedTranscript": "\r\nA>",
-      "expectedDriveSha256": "b6c818104b173f4af8c12d0bed3a74971e23064da477cf0967dbb55311233ddf",
+      "expectedDriveSha256": "35258fb3da544511639e2bbd99a98fb438bd8c89ce9552ac65485902216818e5",
       "expectedTerminal": {
         "text": "\nA>",
         "cursorRow": 1,
