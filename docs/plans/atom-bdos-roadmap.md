@@ -244,7 +244,7 @@ Exit: the new BDOS passes the same two-process persistence and browser proofs
 as the transitional system, and its own source can be assembled through the
 documented Atom path.
 
-### Milestone 7 — fit, replace, and publish (active)
+### Milestone 7 — fit, replace, and publish (complete)
 
 Work:
 
@@ -268,11 +268,9 @@ must not retroactively weaken the BDOS compatibility tests.
 
 ## Immediate next work
 
-The next checkpoint is the final clean-checkout publication gate: preserve the
-current 117-byte resident margin, run all direct, randomized, native, WASM, and
-self-assembly proofs, rebuild the browser disk, publish it through GitHub
-Pages, and record the deployed hashes. After that, Milestone 8 can specify the
-separate CCP replacement without reopening the BDOS contract.
+The BDOS roadmap is complete. The next project checkpoint is Milestone 8: plan
+the separate clean-room CCP replacement against the frozen BDOS contract and
+the shared headless scenario format, without reopening either boundary.
 
 ## References
 

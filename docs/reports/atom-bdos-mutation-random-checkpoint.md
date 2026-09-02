@@ -1,7 +1,7 @@
 # Atom BDOS mutation and random-access checkpoint
 
-Status: complete function surface, application, and self-assembly host-model
-checkpoint; publication verification remains active
+Status: complete function surface, application, self-assembly, and publication
+checkpoint
 
 Date: 2026-09-02
 
@@ -113,6 +113,17 @@ SHA-256
 These are host-model proofs. They do not measure ESP32-S3 serial, SD-card,
 scheduling, or power behavior.
 
+## Publication verification
+
+Commit `2d9c4bc` passed the GitHub Actions `WASM GitHub Pages` build and deploy
+jobs in run 33635359798. The workflow reran the repository gate, replayed every
+headless CP/M scenario, rebuilt the browser host, and published the artifact.
+Fetching `https://jhlagado.github.io/triptych/cpm22.img` after deployment
+returned 256,256 bytes with SHA-256
+`29d393ae1b83186ef5909a311d0d38d28418a785646382ae66f28e42a980a85e`,
+identical to the local browser build. The application is available at
+`https://jhlagado.github.io/triptych/`.
+
 ## Resident account
 
 Standalone Atom 0.2.0 and the development-only AZM 0.4.0 adapter produce the
@@ -136,9 +147,9 @@ workspace byte. Applying rename and attribute changes across all extents costs
 22 of the recovered bytes, leaving 117 bytes free without moving state outside
 the declared resident account.
 
-## Remaining work
+## Follow-up boundary
 
-The remaining acceptance step is to run the complete clean-checkout gate,
-rebuild and deploy the browser system disk, and record its live GitHub Pages
-digest. ESP32-S3 serial, SD-card, scheduling, and power measurements remain a
-separate hardware milestone.
+The BDOS milestone has no remaining acceptance work. A clean-room CCP rewrite
+can now be planned against the frozen BDOS and headless-application contracts.
+ESP32-S3 serial, SD-card, scheduling, and power measurements remain a separate
+hardware milestone.
