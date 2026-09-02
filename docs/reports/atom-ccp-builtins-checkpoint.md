@@ -57,3 +57,15 @@ selection remains available for development comparisons.
 Media failure cases, generated parser boundaries, and the worst-case stack
 proof remain before the matrix can record publication readiness. ESP32-S3
 measurements remain deferred until hardware is available.
+
+## Published browser proof
+
+GitHub Pages workflow run
+[`33655151446`](https://github.com/jhlagado/triptych/actions/runs/33655151446)
+completed successfully for commit `ccdc020`. The deployed browser is available
+at <https://jhlagado.github.io/triptych/>.
+
+An HTTP fetch after deployment returned status 200. The served `config.json`
+records `systemCcp` as `triptych`; the served `ccp.bin` and the first 2,048
+bytes of the served `cpm22.img` both have SHA-256
+`0e6100dd4c825f626d70262943b8e5698143dca1dd1d045f3825aaa5e79e486d`.

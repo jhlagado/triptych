@@ -179,7 +179,7 @@
     },
     {
       "id": "published-system",
-      "status": "partial",
+      "status": "proved",
       "evidence": ["docs/reports/atom-ccp-builtins-checkpoint.md"]
     },
     { "id": "esp32-hardware", "status": "planned", "evidence": [] }
