@@ -318,8 +318,10 @@ records completion of ATOM's normal build and verification migration, including
 
 The [final-byte checkpoint](../reports/atom-final-byte-and-nucleus-relocation.md)
 records the qualified ATOM correction and the Nucleus relocation migration.
-Current next task: finish Nucleus's relocation, source/manifest and generated
-image qualification, then verify the component revisions before advancing
+The published ATOM pin now passes Nucleus's fresh-install generated-image,
+relocation and 36-test compiler checks. Current next task: resolve the remaining
+Nucleus manifest-proof placement and timing failures, finish source/manifest
+qualification, then verify the component revisions before advancing
 downstream pins. S1 remains
 in progress until both standalone toolchain gates pass.
 The first user-visible milestone is the ATOM-built Triptych browser image;

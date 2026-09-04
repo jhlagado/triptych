@@ -72,13 +72,29 @@ type checking and the runtime-boundary check pass against that installation.
 The generated-image check also passes there: all compiler variants, runtime
 profiles, runner, resolver and CP/M embedded assets match their checked-in
 files exactly. Its log is `/tmp/nucleus-pinned-generated-images-prepared.log`.
-Relocation and compiler checks remain in progress against the fresh install.
+The four-origin relocation proof also passes against the fresh install in
+240.874 seconds (`/tmp/nucleus-pinned-relocation.log`). All 36 compiler tests
+pass there in 227.89 seconds (`/tmp/nucleus-pinned-compiler-tests.log`).
 
 Nucleus's CI edit removes its historical Debug80/AZM checkout, build and link
 steps, and adds the source-adapter tests before the existing release gate.
 The workflow has been parsed locally but has not run on GitHub. Existing
 unpublished reconciliation changes and the separate compiler rewrite remain
 preserved.
+
+## Remaining manifest failures
+
+The broader manifest run reported 16 failures among 24 proofs. The aggregate
+proof rejected a forward `CP end-start` operand that the source adapter had
+not converted to a symbolic equate. A new real-ATOM regression failed before
+the correction; all 15 adapter tests now pass, and the aggregate proof passes
+with its existing execution and memory assertions. This extension leaves the
+prepared source of the nine checked compiler/provider entry points unchanged.
+
+The structured-control proof still fails on descending or overlapping IMAGE
+records at `loop-z80-runtime.asm:8`. That placement issue and the other
+manifest failures remain work. The paired result is in
+`/tmp/nucleus-cp-forward-proofs.log`; no all-green Nucleus release is claimed.
 
 ## Next gate
 
@@ -94,3 +110,7 @@ mobile-device or ESP32 qualification is claimed here. Triptych's guarded
 The complete guarded Triptych check also passed after the published-pin
 checkpoint update. Its log is `/tmp/triptych-nucleus-published-pin-check.log`.
 Triptych's own dependency pin was not changed for that run.
+
+After recording the fresh-install compiler result and the manifest failure,
+the complete guarded check passed again. The current checkpoint log is
+`/tmp/triptych-nucleus-manifest-checkpoint.log`.
