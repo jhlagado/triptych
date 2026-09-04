@@ -1,8 +1,8 @@
 ; Triptych-owned CP/M 2.2 Console Command Processor.
 ;
 ; This is an independent implementation against the public CP/M interfaces
-; and Triptych's black-box CCP fixtures. It intentionally uses the common
-; Atom/AZM subset and owns no state outside $E400..$EBFF while resident.
+; and Triptych's black-box CCP fixtures. ATOM is its assembler, and it owns no
+; state outside $E400..$EBFF while resident.
 
         ORG     $E400
 
@@ -741,6 +741,10 @@ FCBZERO:
         CP      ':'
         JR      NZ,FCBNAME
         LD      A,(HL)
+        CP      'A'
+        JR      C,FCBDRBAD
+        CP      'Q'
+        JR      NC,FCBDRBAD
         SUB     'A'-1
         LD      (DE),A
         INC     HL
@@ -767,6 +771,10 @@ FCBDOT:
         POP     HL
         LD      B,3
         JP      PARFLD
+
+FCBDRBAD:
+        SCF
+        RET
 
 PARFLD:
         LD      A,(HL)

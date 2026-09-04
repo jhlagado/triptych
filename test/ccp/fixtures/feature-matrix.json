@@ -12,7 +12,7 @@
     "path": "roms/cpu/ccp/ccp.asm",
     "loadAddress": 58368,
     "bytes": 2048,
-    "sha256": "55aff78b1317e16c9be270822bf3d1f2f0be88bd836fe7ee2deca91bcae6fd80"
+    "sha256": "79a5e20604d49ad3aeb7d00847139ac6245e5f265b8f4515f5b9b33bda366df2"
   },
   "features": [
     {
@@ -142,7 +142,8 @@
         "test/ccp/scenarios/triptych-builtin-errors.json",
         "test/ccp/scenarios/triptych-save-overflow.json",
         "test/ccp/scenarios/triptych-extra-operands.json",
-        "test/ccp/scenarios/triptych-filename-boundaries.json"
+        "test/ccp/scenarios/triptych-filename-boundaries.json",
+        "test/ccp/scenarios/triptych-drive-prefix-boundaries.json"
       ]
     },
     {
@@ -154,7 +155,8 @@
         "test/ccp/scenarios/triptych-builtin-errors.json",
         "test/ccp/scenarios/triptych-save-overflow.json",
         "test/ccp/scenarios/triptych-extra-operands.json",
-        "test/ccp/scenarios/triptych-filename-boundaries.json"
+        "test/ccp/scenarios/triptych-filename-boundaries.json",
+        "test/ccp/scenarios/triptych-drive-prefix-boundaries.json"
       ]
     },
     {

@@ -157,7 +157,9 @@ generated parser boundaries and malformed-command recovery remain open. The
 [extra-operand checkpoint](../reports/ccp-extra-operands.md) records the
 failing-before `DIR` and `TYPE` cases and their end-of-command checks. The
 [filename-boundary checkpoint](../reports/ccp-filename-boundaries.md) records
-the failing-before truncation cases and the shared FCB overflow signal.
+the failing-before truncation cases and the shared FCB overflow signal. The
+[drive-prefix checkpoint](../reports/ccp-drive-prefix-boundaries.md) records
+the failing-before `Q:` case and the enforced `A:` through `P:` range.
 
 Define replacement and partial-write behavior explicitly. Current SAVE deletes
 an existing target before creating its replacement; blanket transactional-save

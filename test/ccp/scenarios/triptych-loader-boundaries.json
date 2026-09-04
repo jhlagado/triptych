@@ -14,7 +14,7 @@
       "patches": [{ "offset": 0, "bytes": [195, 0, 0] }]
     }
   ],
-  "expectedInitialDriveSha256": "44dabf8eaee4f6518b7da44661dc94931dd377aa175b56a62807d903e37b1a2d",
+  "expectedInitialDriveSha256": "94810c1d0294b26236c3946b033d3fce5f06eeb508501918c120ea2a664cf062",
   "expectedFinalFiles": [
     {
       "name": "RESULT.TXT",

@@ -1,0 +1,41 @@
+{
+  "schema": "triptych-cpm-headless-scenario-v1",
+  "id": "triptych-ccp-drive-prefix-boundaries",
+  "description": "Reject drive prefixes outside the CP/M A-through-P range before access and recover",
+  "systemCcp": "triptych",
+  "systemBdos": "triptych",
+  "expectedInitialDriveSha256": "93f48e46e2f2e3f24b9e2f97bcdf8d43b2d5f1b0985137ddbc7f945d9e504b69",
+  "sessions": [
+    {
+      "id": "invalid-drive-prefix-and-recovery",
+      "interactions": [
+        { "id": "boot", "inputAscii": "", "stopAfterAscii": "\r\nA>" },
+        {
+          "id": "drive-before-a",
+          "inputAscii": "dir @:readme.txt\r",
+          "stopAfterAscii": "\r\nA>"
+        },
+        {
+          "id": "drive-after-p",
+          "inputAscii": "dir q:readme.txt\r",
+          "stopAfterAscii": "\r\nA>"
+        },
+        {
+          "id": "first-valid-drive-after-errors",
+          "inputAscii": "dir a:readme.txt\r",
+          "stopAfterAscii": "\r\nA>"
+        }
+      ],
+      "expectedTranscript": "\r\nA>dir @:readme.txt\r\r\n@:README.TXT?\r\n\r\nA>dir q:readme.txt\r\r\nQ:README.TXT?\r\n\r\nA>dir a:readme.txt\r\r\nA: README   TXT\r\nA>",
+      "expectedDriveSha256": "93f48e46e2f2e3f24b9e2f97bcdf8d43b2d5f1b0985137ddbc7f945d9e504b69",
+      "expectedTerminal": {
+        "text": "\nA>dir @:readme.txt\n@:README.TXT?\n\nA>dir q:readme.txt\nQ:README.TXT?\n\nA>dir a:readme.txt\nA: README   TXT\nA>",
+        "cursorRow": 9,
+        "cursorColumn": 2,
+        "currentAttributes": 0,
+        "wrapPending": false,
+        "bellCount": 0
+      }
+    }
+  ]
+}
