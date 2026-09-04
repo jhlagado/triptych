@@ -1,0 +1,286 @@
+# WASM-first software stability roadmap
+
+Date: 2026-09-05. Status: active goal; S0 complete, S1 next. This is the
+current cross-project execution plan. Component
+contracts remain authoritative; earlier reports retain their dated results.
+
+## Stable release target
+
+The release must support one repeatable development session: boot Triptych in
+the browser, create or change a file in Edit, save it, assemble with ATOM or
+compile with NUC, run the resulting program, close the session, and reopen the
+saved work. The same guest programs must run on the macOS host and in Linux CI.
+An exported disk must work in a fresh host without a Debug80 checkout.
+
+Completion requires reproducible source-to-artifact builds, explicit component
+versions, passing compatibility tests, recoverable browser storage, and a
+verified Pages deployment. It does not require an ESP32 board. Compatibility
+claims apply to the published feature matrix and application corpus, not every
+CP/M program ever written. Full IDE development, new languages, video, sound,
+Windows-specific support and a replacement Z80 emulator are outside this goal.
+
+## Component ownership
+
+| Component             | Source authority                                                   | Role and boundary                                                                                                                    |
+| --------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
+| ATOM                  | Standalone `atom` repository                                       | Assembler, native guest binaries and public host API. Required assembler for normal builds and tests.                                |
+| Nucleus / `NUC.COM`   | Standalone `nucleus` repository                                    | Language, compiler, runtime and platform adapters. Uses ATOM; preserves Node and other target support independently of Triptych.     |
+| Edit / `EDIT.COM`     | Currently Debug80 CP/M sources; planned standalone Edit repository | Editor core plus explicit terminal, filesystem and target-memory adapters. Triptych consumes a built application.                    |
+| CCP                   | Triptych `roms/cpu/ccp/`                                           | Original resident command processor; loads programs and implements CP/M built-ins.                                                   |
+| BDOS                  | Triptych `roms/cpu/bdos/`                                          | Original CP/M-compatible operating-system services. Qualified against interface tests.                                               |
+| BIOS and bootstrap    | Triptych `roms/cpu/`                                               | Machine-specific console, disk, boot and warm-start implementation. Remain with the machine.                                         |
+| CP/M distribution     | Triptych image tooling                                             | Versioned composition of resident components, applications and sample files. Historical binaries are separately identified fixtures. |
+| Rust CPU core         | Triptych `crates/triptych-cpu-core/`                               | Portable guest execution and machine state. No browser, native filesystem or editor policy.                                          |
+| WASM and macOS/Linux  | Triptych host crates                                               | Browser or terminal input, scheduling and host storage around the same Rust machine.                                                 |
+| ESP32-S3              | Triptych `firmware/cpu/`                                           | Future physical console/storage adapters and CPU firmware; existing build evidence is not physical qualification.                    |
+| Debug80 Runtime       | Standalone `debug80-runtime` repository                            | TypeScript Z80 engine and headless Node support. Development-only adapter in Triptych.                                               |
+| Z80 Tool Services     | Standalone `z80-tool-services` repository                          | Shared language-neutral host/native service contracts and tests. No machine or editor ownership.                                     |
+| Debug80               | Standalone `debug80` repository                                    | Optional IDE/debugger consuming released tools and runtime. No Triptych production dependency.                                       |
+| Development workspace | Local `z80-workspace` launcher                                     | Optional pinned multi-repository checkout/build orchestration; never the authority for component source.                             |
+
+CP/M is the guest operating environment. WASM and macOS are hosts for the
+Triptych machine. ATOM, NUC and Edit are applications with their own lifetimes.
+This distinction permits another Z80 platform to use those applications
+without adopting the Triptych machine or Debug80 IDE.
+
+```text
+ATOM ──builds──> Nucleus, Edit, Triptych resident software
+                     │         │
+                     └────┬────┘
+                          v
+                 versioned CP/M disk
+                          │
+                   Triptych Rust core
+                    /      |       \
+                WASM    macOS/Linux  ESP32 later
+
+Debug80 ──consumes──> ATOM, Nucleus, Runtime, Tool Services
+Node CLI/tests ─────> standalone Runtime and tool APIs
+```
+
+## Verified starting point
+
+The repository inventory is retained in the
+[baseline report](../reports/software-stability-baseline.md). Its revisions
+describe the starting state, not a release lockfile.
+
+- Triptych already boots its own CCP, BDOS and BIOS. Rewriting them again is
+  unnecessary. CCP has all six built-ins, but parser boundaries, mutation
+  recovery and worst-case resident stack proofs remain incomplete.
+- BDOS has recorded direct-call coverage for functions 0–40 and filesystem
+  failure tests. Those results must survive the assembler migration.
+- The Rust native and WASM hosts and the headless scenario format already
+  exist. Pages publication also exists; the deployed artifact was not freshly
+  fetched during this inventory.
+- The browser currently has an in-memory working disk with whole-image
+  download. Reload-safe browser storage is unfinished. Mobile viewport tests
+  partly inspect source strings; they do not prove a physical phone keyboard.
+- Nucleus reconciliation has ATOM-generated images and focused passing tests
+  in an unpublished worktree. Remaining proof helpers still use AZM. Atom's
+  own release scripts also retain AZM calls.
+- Triptych's current image helper still assembles resident software with AZM.
+  Its ordinary proof paths share this dependency. The migration must precede
+  executing those paths under the user's ATOM-only policy.
+- Edit source and extensive editor tests remain in Debug80. Triptych's
+  bundled executable is not a reproducible build of a separately released Edit.
+
+## Execution order and acceptance gates
+
+Stages are accepted individually with a report, exact revisions and commands.
+The default order is S0 through S7. Browser storage work in S5 can proceed
+against existing fixtures while toolchain work continues, but final acceptance
+must use the rebuilt distribution from S4. No milestone is complete merely
+because its implementation compiles.
+
+### S0 — baseline and release rules
+
+Status: complete; the [checkpoint report](../reports/software-stability-baseline.md#s0-implementation-checkpoint)
+records passing readiness tests and the guarded full-check failure.
+
+Record source owners, current revisions, dirty worktrees, unpublished work and
+dependency directions. Preserve the Nucleus reconciliation and the separate
+compiler-rewrite work. Correct repository guidance that still permits AZM in
+production. Separate CCP software publication readiness from ESP32 physical
+qualification without marking incomplete software rows proved.
+
+Exit: one current roadmap, a reproducible inventory, explicit ATOM guidance,
+and tested readiness rules that permit a software release before board tests.
+
+### S1 — ATOM-only toolchain and Nucleus reconciliation
+
+1. Finish Nucleus's remaining source-assembly proof and runtime-harness
+   migration. Preserve newer standalone language/runtime features and the
+   recovered Atom conversion. Use its existing public host API and prebuilt
+   images; do not introduce assembly at installed application runtime.
+2. Convert Atom's bootstrap, native-object harness and CP/M build scripts to
+   its self-hosted assembler. Record the bootstrap seed's provenance and
+   digest, then prove repeat-generation equality. A declared bootstrap seed
+   is preferable to an undeclared AZM dependency.
+3. Convert Triptych bootstrap/BIOS syntax and shared proof/image assembly to
+   the pinned public ATOM API. Preserve resident slots, entry points, emitted
+   bytes and symbol contracts, accounting for every intentional difference.
+4. Remove AZM from these ordinary build, test, measurement and CI paths.
+   Historical executable comparisons remain isolated and explicit. Completed
+   assembler comparisons must not remain permanent build prerequisites.
+5. Verify packed packages and clean installation before publishing reconciled
+   revisions and advancing downstream pins. Never advance a consumer to an
+   uncommitted worktree or silently overwrite newer Nucleus work.
+
+Exit: ATOM, Nucleus and Triptych normal builds and relevant proof suites run
+with AZM unavailable. Compiler images regenerate deterministically; the
+language, relocation, import and host tests pass. Triptych's full check and
+headless execution pass with the ATOM-built resident software.
+
+### S2 — CCP completion and operating-system qualification
+
+Finish the existing CCP matrix rather than adding a richer shell. Cover long
+and malformed commands, decimal overflow, wildcard/filename limits, extra
+operands, full/read-only/faulted disks and a valid command after every failure.
+The source inspection identified `SAVE 1280 X.COM` as an overflow candidate;
+reproduce it in an executable test before changing the parser.
+
+Define replacement and partial-write behavior explicitly. Current SAVE deletes
+an existing target before creating its replacement; blanket transactional-save
+claims would be incorrect. Tests must check the documented outcome, preserve
+unrelated files and prove command recovery. Prove worst-case CCP stack and
+resident-size bounds with canaries and paths exercising failure handling.
+
+Rerun BDOS's direct-call, extent, directory-failure and randomized filesystem
+tests. Retain original implementation through published interfaces and
+black-box observations; historical CCP/BDOS source is not implementation input.
+Keep BIOS with Triptych. Drive A, fixed disk geometry and the existing console
+profile remain the supported baseline; multi-drive and physical SD recovery
+are separate changes.
+
+Exit: every required CCP software row is proved; BDOS and BIOS regression gates
+pass; incompatibilities and deliberate limits are listed. Hardware status
+remains independent and unqualified.
+
+### S3 — independently maintained Edit
+
+Inventory and extract the exact editor-owned source and proof history from
+Debug80. Preserve its buffer, navigation, search/replace, ANSI screen and
+temporary/backup-file save tests. Replace the proof script's AZM sidecar with
+ATOM before treating the build as the released editor.
+
+Keep the current CP/M target first. Document buffer ownership, console bytes,
+file operations and memory placement before making those interfaces
+configurable. Existing fixed addresses and 80×24 geometry are constraints,
+not evidence of portability. Add an adapter seam where it is needed for a
+second platform; do not create a general IDE framework in this stage.
+
+Triptych and Debug80 then consume the same versioned editor artifact. Remove
+the old source copy only after extraction, tests and consumer migration are
+verified. A local standalone repository can be prepared first; a new public
+remote requires an explicit destination and visibility decision.
+
+Exit: Edit builds and tests outside Debug80 with ATOM. Its current editing and
+save-error behavior is preserved. A full edit/save/search/replace session runs
+against Triptych's current BDOS, not only the historical fixture.
+
+### S4 — reproducible system and application distribution
+
+Replace reliance on inherited demo application binaries with a declared
+distribution manifest. Pin source revisions and build inputs for CCP, BDOS,
+BIOS, ATOM.COM, NUC.COM and EDIT.COM; record binary digests, memory limits and
+licences. Keep reviewed historical fixtures separately identified.
+
+Build a deterministic disk from those artifacts and versioned sample sources.
+Verify directory/allocation consistency, filenames, text EOF conventions and
+available space. Keep `NUC.COM` as the short user command. Distinguish a release
+disk from a user's writable disk; upgrade and reset actions must not erase
+working files without explicit selection and a recoverable backup.
+
+Exit: two clean builds with the same manifest produce the same distribution;
+each executable is traceable to source. A clean checkout needs no unpublished
+sibling directory, Debug80 monorepo source or AZM installation.
+
+### S5 — usable and recoverable WASM development sessions
+
+Specify a browser-owned persistent disk store, separate from the Rust machine.
+Use committed disk snapshots and explicit save status: a guest BDOS save and a
+completed browser-storage transaction are distinct events. Test reload,
+session replacement, denied/quota-exhausted storage, interrupted persistence
+and recovery after a machine error. Retain whole-disk import/export and prove
+an actual download/reimport workflow. Individual-file browser tooling and
+multiple working-disk management can follow after this baseline.
+
+Verify the unified terminal tap and Keyboard-button focus behavior. Keep the 80×24 guest
+contract while documenting narrow-screen scrolling/scaling and cursor
+visibility. Test viewport changes, orientation, paste, control keys and editor
+status-row access. Replace source-string-only layout assertions with browser
+interaction tests. Bound input/output backlog and test long-running sessions.
+
+Exit: desktop browser automation proves edit → save → compile → run → reload
+→ reopen, including a failed save and recovery. Narrow-viewport automated tests
+pass. Physical Android/iOS keyboard behavior gets a separate evidence row; if
+devices are unavailable, mobile support remains explicitly provisional rather
+than being declared universally qualified.
+
+### S6 — macOS/Linux parity and Debug80 consumption
+
+Run the same guest workflows through headless WASM and the native host. Compare
+raw console bytes, terminal snapshots and exported file/disk contents at
+defined checkpoints. Prove native terminal setup/restoration through PTY
+tests. Investigate software flow control intercepting Ctrl-S/Ctrl-Q, and
+document guest Ctrl-C versus host-exit behavior before changing it.
+
+Update Debug80's standalone dependency pins after their release gates pass.
+Move remaining editor-owned code out through S3, keep Glimmer out of the
+shipping subset, and make ATOM the normal assembly path. Preserve only
+explicit historical AZM compatibility fixtures; do not route active Nucleus,
+Edit or Triptych work through them. Verify the extension package contents and
+fresh installation, not merely TypeScript compilation.
+
+Resume the optional workspace launcher with immutable revisions and no AZM
+support checkout on its default path. Keep the TypeScript runtime for Node
+CLI/tests and Rust for Triptych hosts. Their existing conformance boundary is
+sufficient; a universal Rust/Node runtime replacement is deferred.
+
+Exit: macOS reference sessions and Linux CI pass; Debug80 can consume the
+standalone releases without owning their source. Triptych builds and runs
+independently. No default path depends on local links or a historical AZM build.
+
+### S7 — CI, publication and stable release
+
+Run non-publishing checks on pull requests and promote only verified artifacts
+to Pages. The release gate includes `npm run check`, actual
+`npm run proof:cpm-headless` execution, real-browser workflow tests, native
+persistence/PTY tests and the clean-build proof. Root `check` validates
+scenario definitions but does not itself execute the entire headless suite.
+
+Publish the exact tested artifact with its manifest. Fetch the hosted assets,
+check digests/revision, boot to the prompt and perform an application smoke
+session. Retain a previous release for rollback. Document startup, backup,
+restore, supported commands, known limits and one short acceptance session.
+
+Exit: all S0–S6 gates have linked evidence and the fetched Pages build passes.
+There are no known work-loss or core-workflow failures in the supported
+profile. Record the stable component revisions and remaining limitations;
+only then mark this software goal complete.
+
+## Subsequent ESP32 milestone
+
+When the boards are available, identify their exact module/flash/PSRAM and USB
+configuration, flash the CPU conformance firmware, and retain physical results.
+Then qualify a breadboard microSD connection using scratch media, implement
+the physical sector-store and console adapters, and replay the same guest
+workflow. Measure sustained execution, reset behavior and durability on the
+board. Do not infer SD power-loss safety from host filesystem tests.
+
+The existing [CPU development plan](cpu-development.md) supplies the detailed
+hardware gates. GPIO, connector and timing choices remain experimental until
+measured. VDP and sound implementation require a later roadmap.
+
+## Progress discipline
+
+Every checkpoint records changed repositories, revisions, tests actually run,
+unresolved failures and the next concrete task in `docs/reports/`. Component
+contracts belong in their owning repositories; cross-module machine contracts
+remain in `docs/specifications/`. This plan coordinates releases, not source
+ownership. Existing reports must not be rewritten to imply new measurements.
+
+Current next task: migrate the remaining Nucleus development assembly helpers
+to ATOM in the reconciliation worktree, followed by its source-assembly proofs.
+The first user-visible milestone is the ATOM-built Triptych browser image;
+the main usability milestone is S5's persistent edit/build/run session.

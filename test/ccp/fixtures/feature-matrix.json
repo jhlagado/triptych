@@ -1,6 +1,7 @@
 {
-  "schema": "triptych-ccp-feature-matrix-v1",
+  "schema": "triptych-ccp-feature-matrix-v2",
   "publicationReady": false,
+  "hardwareQualified": false,
   "oracle": {
     "path": "third_party/cpm22/cpm22.img",
     "offset": 0,

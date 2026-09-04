@@ -2,7 +2,7 @@
 
 Status: active plan
 
-Date: 2026-09-03
+Date: 2026-09-03. Release-gate update: 2026-09-05.
 
 ## Outcome
 
@@ -29,8 +29,12 @@ Tests select `systemCcp: oracle` or `systemCcp: triptych` without exposing that
 choice to guest software. Production native and WASM image builders install the
 Triptych CCP after the six built-ins, bundled applications, and self-assembly
 pass. The retained CCP remains available through an explicit oracle selection
-in development tests. The matrix keeps `publicationReady` false until the
-deeper failure, parser, and resident-stack rows pass.
+in development tests. The v2 matrix keeps `publicationReady` false until all
+software rows pass, including deeper failure, parser, and resident-stack
+proofs. `hardwareQualified` is a separate declaration that also requires the
+physical ESP32 row to pass. Both are currently false. The
+[software stability roadmap](software-stability-roadmap.md) coordinates the
+ATOM toolchain, applications and host release work.
 
 ## Roadmap
 
@@ -102,8 +106,8 @@ subsequent valid command.
 - assemble the CCP with standalone Atom and then inside CP/M; and
 - run equivalent native and WASM headless scenarios.
 
-Exit: all matrix rows are `proved`; no byte or dependency lies outside the
-declared boundary.
+Exit: all software matrix rows are `proved`; no byte or dependency lies outside
+the declared boundary. Physical ESP32 qualification remains separate.
 
 ### Milestone 7 — publication and hardware follow-up (active)
 
@@ -117,7 +121,9 @@ remain explicitly pending until the board arrives.
 
 ## Immediate next checkpoint
 
-Publish and verify the browser build containing the Triptych CCP. Then finish
-the Milestone 4 failure matrix for read-only media, directory-full, disk-full,
-and partial-write cases, followed by generated parser boundaries and the
-worst-case stack proof.
+The browser build containing the Triptych CCP has a retained deployment proof
+in `../reports/atom-ccp-builtins-checkpoint.md`. Next, complete the ATOM-only
+build migration and the Milestone 4 failure matrix for read-only media,
+directory-full, disk-full and partial-write cases, followed by generated parser
+boundaries and the worst-case stack proof. The master roadmap includes fresh
+deployment verification after those changes.

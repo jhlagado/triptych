@@ -13,6 +13,12 @@ cooperating ESP32-family modules:
 The name is provisional. It describes the three-part architecture without
 fixing the eventual product name in source identifiers or electrical designs.
 
+The current cross-project goal is the
+[WASM-first software stability roadmap](docs/plans/software-stability-roadmap.md):
+independent ATOM, Nucleus and Edit releases, qualified CP/M components, and a
+reproducible browser edit/build/run workflow with recoverable working disks.
+ESP32 physical qualification follows separately when hardware is available.
+
 ## Repository layout
 
 | Path                          | Contents                                                                    |

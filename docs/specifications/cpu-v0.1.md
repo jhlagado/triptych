@@ -217,13 +217,14 @@ overlay, and enters the BIOS cold-boot routine. Warm boot reloads the CCP and
 BDOS while retaining the resident BIOS. The BIOS alone converts CP/M track and
 sector requests into this profile's linear record numbers.
 
-The current CCP is a transitional compatibility component with provenance and
-grant recorded under `third_party/cpm22/`. The original Triptych BDOS is built
-from `roms/cpu/bdos/bdos.asm`; the retained third-party BDOS remains only as a
-black-box development oracle. The [Atom BDOS roadmap](../plans/atom-bdos-roadmap.md)
-and [BDOS v0.1 contract](bdos-v0.1.md) govern that replacement. The existing
-Triptych BIOS remains the hardware-dependent CP/M component. A later CCP
-replacement is separate work.
+The original Triptych CCP and BDOS are built from `roms/cpu/ccp/ccp.asm` and
+`roms/cpu/bdos/bdos.asm`. Retained third-party resident binaries are black-box
+development oracles with provenance and grant recorded under `third_party/cpm22/`.
+The [CCP v0.1 contract](ccp-v0.1.md) and [BDOS v0.1 contract](bdos-v0.1.md)
+govern these replacements. The [Atom CCP roadmap](../plans/atom-ccp-roadmap.md)
+records the remaining parser, failure-recovery and resident-stack qualification;
+deployment does not imply complete acceptance. Triptych BIOS remains the
+hardware-dependent CP/M component.
 
 ## Required version 0.1 proofs
 

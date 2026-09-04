@@ -20,8 +20,11 @@ Triptych owns:
 - tests and proof reports for those contracts.
 
 Do not add Triptych source, exports, ROMs, scripts, specifications, or UI entries
-to the Debug80 repository. Debug80 Runtime and AZM may be used as external
-development tools. Imports from those packages belong in `test/`, `tools/`, or
+to the Debug80 repository. ATOM is the required assembler for normal builds,
+tests and generated artifacts. AZM is historical and may be used only as an
+isolated, temporary comparison oracle during migration; never as a production
+assembler or fallback. Remove it from a path once comparison is complete.
+Debug80 Runtime may be used as an external development tool. Its imports belong in `test/`, `tools/`, or
 an explicitly named adapter; production code under `src/` and firmware under
 `firmware/` must not depend on Debug80.
 
@@ -104,15 +107,20 @@ distinguishes corruption from rejection.
 Use the adapter in `test/support/debug80-runtime.ts` for CPU tests. Do not import
 it from `src/`.
 
-The optional CP/M proof also uses `@jhlagado/azm` and Debug80's CP/M filesystem
-helpers. It requires an externally supplied image:
+Legacy CP/M build/proof helpers still contain AZM imports. Migrate them to ATOM
+before executing those normal paths; do not treat the old dependency as
+permission to use AZM. The retained CP/M image and grant are documented under
+`third_party/cpm22/`. An external image can also be selected:
 
 ```sh
 TRIPTYCH_CPM22_IMAGE=/path/to/cpm22.img npm run proof:cpm22
 ```
 
-Do not vendor that image without its complete component provenance and licence
-set.
+Do not add or replace a vendored image without its complete component
+provenance and licence set.
+
+Current cross-project work follows `docs/plans/software-stability-roadmap.md`.
+Keep software release gates separate from physical ESP32 qualification.
 
 ## Verification
 

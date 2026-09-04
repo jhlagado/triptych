@@ -4,6 +4,7 @@ import { access, readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
 import { assembleTriptychCpuFirmware } from "./cpm22-native-image.mjs";
+import { assertCcpReadiness } from "./lib/ccp-readiness.mjs";
 
 const repositoryRoot = resolve(import.meta.dirname, "..");
 const matrixPath = resolve(
@@ -16,7 +17,7 @@ function sha256(bytes) {
   return createHash("sha256").update(bytes).digest("hex");
 }
 
-assert.equal(matrix.schema, "triptych-ccp-feature-matrix-v1");
+assert.equal(matrix.schema, "triptych-ccp-feature-matrix-v2");
 assert.equal(typeof matrix.publicationReady, "boolean");
 
 const oracleImage = await readFile(resolve(repositoryRoot, matrix.oracle.path));
@@ -64,8 +65,11 @@ for (const required of [
   "ren",
   "save",
   "user",
+  "parser-boundaries-and-fuzz",
+  "failure-atomicity-and-recovery",
   "resident-stack-and-size",
   "bundled-applications",
+  "self-assembly",
   "native-wasm-equivalence",
   "published-system",
   "esp32-hardware",
@@ -73,12 +77,7 @@ for (const required of [
   assert.ok(featureIds.has(required), `missing CCP feature ${required}`);
 }
 
-if (matrix.publicationReady) {
-  assert.ok(
-    matrix.features.every((feature) => feature.status === "proved"),
-    "a publishable CCP cannot retain planned feature rows",
-  );
-}
+assertCcpReadiness(matrix);
 
 console.log(
   `CCP matrix checks passed (${matrix.features.filter((feature) => feature.status === "proved").length}/${matrix.features.length} features proved)`,
