@@ -182,7 +182,9 @@ remains independent and unqualified.
 Inventory and extract the exact editor-owned source and proof history from
 Debug80. Preserve its buffer, navigation, search/replace, ANSI screen and
 temporary/backup-file save tests. Replace the proof script's AZM sidecar with
-ATOM before treating the build as the released editor.
+ATOM before treating the build as the released editor. The
+[Edit extraction manifest](edit-extraction-manifest.md) records the current
+authority, history, portable proof boundary and consumer migration gates.
 
 Keep the current CP/M target first. Document buffer ownership, console bytes,
 file operations and memory placement before making those interfaces

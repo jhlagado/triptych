@@ -11,7 +11,9 @@ manifest or standalone OS repository has been published yet.
 
 ATOM, Nucleus and Edit are independently maintained development tools. They
 may have CP/M builds without being restricted to CP/M. ATOM and Nucleus already
-have standalone repositories; Edit extraction remains pending.
+have standalone repositories. The
+[Edit extraction manifest](edit-extraction-manifest.md) fixes the exact source,
+proof and adapter boundary before its standalone repository is created.
 
 The portable CP/M-compatible operating system will have a separate repository
 and release lifecycle. CCP and BDOS move together with their interface

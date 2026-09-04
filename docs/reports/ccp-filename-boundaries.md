@@ -37,6 +37,15 @@ extra-operand checkpoint. The 2,048-byte CCP slot, 346-byte state area and
 
 The assembled CCP SHA-256 is
 `55aff78b1317e16c9be270822bf3d1f2f0be88bd836fe7ee2deca91bcae6fd80`.
-This is a host-model proof, not an ESP32 measurement. Generated long-command
-coverage, wildcard-form boundaries, media failures and the worst-case stack
-sentinel remain open.
+GitHub Pages run
+[`33911797503`](https://github.com/jhlagado/triptych/actions/runs/33911797503)
+built and deployed Triptych revision
+`dd4fdfd2cc9f1f84457b0894bb9a1370ec3f5003`. A fresh download from
+`https://jhlagado.github.io/triptych/ccp.bin` has the same CCP SHA-256; the
+deployed `config.json` selects the Triptych CCP. The published disk image has
+SHA-256
+`0473f9f908fb5943f5c0078d55725a753a4fc7c2cfd5e115b0faa05124f04116`.
+
+This is a host-model and hosted-artifact proof, not an ESP32 measurement.
+Generated long-command coverage, wildcard-form boundaries, media failures and
+the worst-case stack sentinel remain open.
