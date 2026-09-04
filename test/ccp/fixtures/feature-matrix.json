@@ -1,6 +1,6 @@
 {
   "schema": "triptych-ccp-feature-matrix-v2",
-  "publicationReady": false,
+  "publicationReady": true,
   "hardwareQualified": false,
   "oracle": {
     "path": "third_party/cpm22/cpm22.img",
@@ -158,7 +158,7 @@
     },
     {
       "id": "failure-atomicity-and-recovery",
-      "status": "partial",
+      "status": "proved",
       "evidence": [
         "test/ccp/scenarios/triptych-loader-oversized.json",
         "test/ccp/scenarios/triptych-era-all-cancel.json",
@@ -166,7 +166,10 @@
         "test/ccp/scenarios/triptych-save-overflow.json",
         "test/ccp/scenarios/triptych-extra-operands.json",
         "test/ccp/scenarios/triptych-filename-boundaries.json",
-        "test/ccp/scenarios/triptych-drive-prefix-boundaries.json"
+        "test/ccp/scenarios/triptych-drive-prefix-boundaries.json",
+        "test/bdos/direct-call.test.ts",
+        "docs/reports/ccp-failure-recovery.md",
+        "tools/prove-ccp-failures.mjs"
       ]
     },
     {

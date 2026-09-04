@@ -133,7 +133,9 @@ missing files, an existing rename destination, absent drives, read-only files
 and disks, full directories, full disks, load overflow, and failed physical
 I/O. No rejected command may mutate unrelated disk, FCB, page-zero, or
 resident state. After a recoverable error, another command must work. BDOS
-fatal errors may transfer through warm boot and reload CCP.
+fatal errors may transfer through warm boot and reload CCP. In the Triptych
+profile, a physical sector-I/O failure consumes one acknowledgement and
+performs that warm-boot transfer.
 
 ## Completion gate
 

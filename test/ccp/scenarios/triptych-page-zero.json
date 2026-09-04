@@ -13,7 +13,7 @@
       "sha256": "5b2aa38b306f72bec01e226dba731f010ed0c1ee2c74a1041f922ca29888c561"
     }
   ],
-  "expectedInitialDriveSha256": "6e9dbaf1060ec88f244648d1cadcb0726f38c7db3afdc87fcc1e54358a2ddb12",
+  "expectedInitialDriveSha256": "409aef5d993615615f84c45e2b00223c7244184b1a42454d9f4aac74f1763d13",
   "sessions": [
     {
       "id": "page-zero-and-return",
@@ -39,7 +39,7 @@
         "bellCount": 0,
         "screenSha256": "13cd3453fa0d46db30969da7b5fa7dbe7a634ee61d84f416d8d99925a5ba1033"
       },
-      "expectedDriveSha256": "6e9dbaf1060ec88f244648d1cadcb0726f38c7db3afdc87fcc1e54358a2ddb12"
+      "expectedDriveSha256": "409aef5d993615615f84c45e2b00223c7244184b1a42454d9f4aac74f1763d13"
     }
   ]
 }

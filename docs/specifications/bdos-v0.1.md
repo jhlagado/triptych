@@ -166,6 +166,12 @@ Rename and set-file-attributes apply to every directory extent belonging to
 the selected file, not only the extent named by the caller's current FCB
 position.
 
+An absent or internally write-protected drive and any nonzero BIOS sector-I/O
+result are fatal disk errors in the Triptych profile. BDOS prints the reviewed
+diagnostic, consumes one acknowledgement byte, and transfers through the BIOS
+warm-boot entry rather than returning to the interrupted call. The machine
+reloads CCP and BDOS before accepting another command.
+
 ## Required proofs
 
 - every function 0 through 40 has a reviewed direct-call fixture;
@@ -208,9 +214,9 @@ and, separately, with the same native Atom core inside the guest. The bundled
 `ATOM.COM` profile targets ordinary programs beginning at `$0100`, so the
 headless proof derives a private `$EC00..$F9FF` profile by changing only its
 provenance-checked target-configuration words. It does not alter the Atom core
-or enter the distributable disk. AZM may temporarily provide a development
-adapter or cross-check, but the production source and firmware must not depend
-on Debug80.
+or enter the distributable disk. AZM is permitted only as a historical oracle;
+ordinary source, build, measurement and CI paths use ATOM and do not depend on
+Debug80.
 
 ## Reference
 

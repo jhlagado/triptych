@@ -4,7 +4,7 @@
   "description": "Compile INPUT.NU with the real NUC.COM through the Triptych CCP and BDOS, then execute the persisted INPUT.COM in a fresh machine",
   "systemCcp": "triptych",
   "systemBdos": "triptych",
-  "expectedInitialDriveSha256": "2ccef19db7e172fe720be5c544c3dadccb45a33890f5c97d6a340c3048fd048b",
+  "expectedInitialDriveSha256": "a153918c0a6804e3448e76e8d83360bdecab4ccfe445416038b63a68385c11cc",
   "sessions": [
     {
       "id": "compile-input",
@@ -21,7 +21,7 @@
         }
       ],
       "expectedTranscript": "\r\nA>NUC INPUT.NU\r\r\n\r\nA>",
-      "expectedDriveSha256": "36cb0a21deaa1d429ccb9a44fe02e068de1eae9b87a30036261f4727b9b37635",
+      "expectedDriveSha256": "b986461143ded53c4dbb00efb54c35d37475599cefabd7c4ca1077bfc4d31501",
       "expectedTerminal": {
         "text": "\nA>NUC INPUT.NU\n\nA>",
         "cursorRow": 3,
@@ -47,7 +47,7 @@
         }
       ],
       "expectedTranscript": "\r\nA>INPUT\r\r\nOK\r\nA>",
-      "expectedDriveSha256": "36cb0a21deaa1d429ccb9a44fe02e068de1eae9b87a30036261f4727b9b37635",
+      "expectedDriveSha256": "b986461143ded53c4dbb00efb54c35d37475599cefabd7c4ca1077bfc4d31501",
       "expectedTerminal": {
         "text": "\nA>INPUT\nOK\nA>",
         "cursorRow": 3,

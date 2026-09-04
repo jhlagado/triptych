@@ -19,7 +19,7 @@
       ]
     }
   ],
-  "expectedInitialDriveSha256": "68297d1f99a82aab6cd9b0f00db14f62d6600233817e51c68f354ba3411822f8",
+  "expectedInitialDriveSha256": "32175f0943c4e21122b3b4b97546ce5f07a866d719b162f44af0fdb74bef1201",
   "expectedFinalFiles": [
     {
       "name": "RESULT.TXT",
@@ -56,7 +56,7 @@
         "wrapPending": false,
         "bellCount": 0
       },
-      "expectedDriveSha256": "268fa25cb24dd76cb2384ff7f0719f652a0275622a5387d591a149dd37a93760"
+      "expectedDriveSha256": "a7c0f12cd4c29d64479ce96183bd6242a629da9501a26251775ce16662dff4c9"
     }
   ]
 }

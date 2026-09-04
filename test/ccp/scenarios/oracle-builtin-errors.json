@@ -4,7 +4,7 @@
   "description": "Freeze public diagnostics and recovery for USER, ERA, REN, and SAVE without inspecting the oracle implementation",
   "systemCcp": "oracle",
   "systemBdos": "triptych",
-  "expectedInitialDriveSha256": "6f4413d04af07746a37b4abc9a67fdb81537a67b4d89b2df8d46d25bbb76681f",
+  "expectedInitialDriveSha256": "80ad44feca933feff04556f6df6dda61be1960af5ff378463b0aa8e7576f9c69",
   "sessions": [
     {
       "id": "builtin-errors",
@@ -49,7 +49,7 @@
         "wrapPending": false,
         "bellCount": 0
       },
-      "expectedDriveSha256": "6f4413d04af07746a37b4abc9a67fdb81537a67b4d89b2df8d46d25bbb76681f"
+      "expectedDriveSha256": "80ad44feca933feff04556f6df6dda61be1960af5ff378463b0aa8e7576f9c69"
     }
   ]
 }

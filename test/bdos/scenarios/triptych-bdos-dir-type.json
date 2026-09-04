@@ -3,7 +3,7 @@
   "id": "triptych-bdos-dir-type",
   "description": "Use the retained CCP to list and read files through the Triptych BDOS, with staged terminal input and exact ANSI snapshots",
   "systemBdos": "triptych",
-  "expectedInitialDriveSha256": "6f4413d04af07746a37b4abc9a67fdb81537a67b4d89b2df8d46d25bbb76681f",
+  "expectedInitialDriveSha256": "80ad44feca933feff04556f6df6dda61be1960af5ff378463b0aa8e7576f9c69",
   "sessions": [
     {
       "id": "dir-and-type",
@@ -43,7 +43,7 @@
         }
       ],
       "expectedTranscript": "\r\nA>DIR\r\r\nA: README   TXT : SMOKE    COM : ATOM     COM : INPUT    ASM\r\nA: HELLO    ASM : LARGE    ASM : PART1    ASM : PART2    ASM\r\nA: BUILD    ASM : NUC      COM : INPUT    NU  : EDIT     COM\r\nA>TYPE README.TXT\r\r\nDebug80 CP/M 2.2 platform\r\n\r\nA>",
-      "expectedDriveSha256": "6f4413d04af07746a37b4abc9a67fdb81537a67b4d89b2df8d46d25bbb76681f",
+      "expectedDriveSha256": "80ad44feca933feff04556f6df6dda61be1960af5ff378463b0aa8e7576f9c69",
       "expectedTerminal": {
         "text": "\nA>DIR\nA: README   TXT : SMOKE    COM : ATOM     COM : INPUT    ASM\nA: HELLO    ASM : LARGE    ASM : PART1    ASM : PART2    ASM\nA: BUILD    ASM : NUC      COM : INPUT    NU  : EDIT     COM\nA>TYPE README.TXT\nDebug80 CP/M 2.2 platform\n\nA>",
         "cursorRow": 8,

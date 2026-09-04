@@ -4,7 +4,7 @@
   "description": "Edit and save a Nucleus program, compile and run it, then reopen the source and rerun the generated COM file in a fresh machine",
   "systemCcp": "triptych",
   "systemBdos": "triptych",
-  "expectedInitialDriveSha256": "2ccef19db7e172fe720be5c544c3dadccb45a33890f5c97d6a340c3048fd048b",
+  "expectedInitialDriveSha256": "a153918c0a6804e3448e76e8d83360bdecab4ccfe445416038b63a68385c11cc",
   "maximumSlices": 1000,
   "sessions": [
     {
@@ -53,7 +53,7 @@
       ],
       "expectedTranscriptSha256": "56fb4ddddb506b22b3b187c1e4692c68c053c8176ba9fc8e7273765ce337894f",
       "expectedTranscriptBytesLength": 1852,
-      "expectedDriveSha256": "daee003152aba118bba69526f1192a64f7fc461e0d28b8c1b9924718232b61fd",
+      "expectedDriveSha256": "ac15a7d0bf63cfafdf53e351b77c5603f0989bf06e046ad26ad8b755a16ee219",
       "expectedTerminal": {
         "text": "\nA>NUC INPUT.NU\n\nA>INPUT\nYK\nA>",
         "cursorRow": 5,
@@ -104,7 +104,7 @@
       ],
       "expectedTranscriptSha256": "23c893a619599074264e36997a526a8bdcd48e822e9998fac5b89dbdf6ef8b3b",
       "expectedTranscriptBytesLength": 401,
-      "expectedDriveSha256": "daee003152aba118bba69526f1192a64f7fc461e0d28b8c1b9924718232b61fd",
+      "expectedDriveSha256": "ac15a7d0bf63cfafdf53e351b77c5603f0989bf06e046ad26ad8b755a16ee219",
       "expectedTerminal": {
         "text": "\nA>INPUT\nYK\nA>",
         "cursorRow": 3,

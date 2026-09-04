@@ -166,7 +166,10 @@ the failing-before `Q:` case and the enforced `A:` through `P:` range.
 Define replacement and partial-write behavior explicitly. Current SAVE deletes
 an existing target before creating its replacement; blanket transactional-save
 claims would be incorrect. Tests must check the documented outcome, preserve
-unrelated files and prove command recovery. Prove worst-case CCP stack and
+unrelated files and prove command recovery. The
+[failure-recovery checkpoint](../reports/ccp-failure-recovery.md) fixes the
+read-only, full-directory, full-disk and failed-I/O outcomes, including the
+empty partial file left by a full-disk SAVE. Prove worst-case CCP stack and
 resident-size bounds with canaries and paths exercising failure handling. The
 [resident-stack checkpoint](../reports/ccp-resident-stack.md) fixes the stack
 shape, guards its lower boundary and records a ten-byte low-water result

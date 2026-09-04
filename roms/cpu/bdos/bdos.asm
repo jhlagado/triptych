@@ -1921,8 +1921,7 @@ RDFAIL:
 BADSECT:
         LD      HL,ERRBAD
         CALL    DISKERR
-        XOR     A
-        RET
+        JP      BIOWBT
 
 DISKERR:
         PUSH    HL

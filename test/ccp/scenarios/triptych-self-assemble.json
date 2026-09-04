@@ -22,7 +22,7 @@
       "sha256": "26cdac36f1cc94a62f8527d3e21125ae0f4de067196669275962196b9bcd2d4f"
     }
   ],
-  "expectedInitialDriveSha256": "9cc0e133b3b846ea2c5723917b6f251da616a31da53cea729d9f903ed44bdac6",
+  "expectedInitialDriveSha256": "ade859b17db03e4cc0f5e10c73be8d4ed89cd8fd9cb9572e4ef043570aa6d727",
   "sessions": [
     {
       "id": "assemble-ccp",
@@ -47,7 +47,7 @@
         "wrapPending": false,
         "bellCount": 0
       },
-      "expectedDriveSha256": "598ad80bafaf484a3a519e32d87bc3c11fbf2aa5f27a887aed1eb7d295de31e0"
+      "expectedDriveSha256": "80272f12c33696050fa02b5436adb9ce1183348c945ae74a760461683bffc81d"
     }
   ],
   "expectedFinalFiles": [

@@ -373,11 +373,29 @@ describe("CP/M 2.2 BDOS direct-call contract", () => {
   );
 
   it("runs physical read and write failure paths against the Triptych replacement", () => {
-    const fixture = readSequenceFixture("disk-error-paths.json");
+    const fixture = structuredClone(
+      readSequenceFixture("disk-error-paths.json"),
+    );
+    for (const step of fixture.steps.filter((candidate) =>
+      candidate.id.startsWith("fail-physical-"),
+    )) {
+      step.biosResponses.push({
+        entry: 1,
+        occurrence: 0,
+        action: "stop",
+      });
+    }
     const result = runBdosDirectCallSequence(replacementBdos, fixture);
-    fixture.steps.forEach((step, index) => {
-      expectFixtureResult(step, result.steps[index]!.result);
-    });
+    for (const id of ["fail-physical-read", "fail-physical-write"]) {
+      const failed = result.steps.find((step) => step.id === id)?.result;
+      expect(failed, id).toBeDefined();
+      expect(failed?.stop, id).toBe("bios-transfer");
+      expect(failed?.biosTransferEntry, id).toBe(1);
+      expect([...bdosBiosConsoleOutput(failed?.biosCalls ?? [])], id).toEqual([
+        ...Buffer.from("\r\nBdos Err On A: Bad Sector", "ascii"),
+      ]);
+      expect(failed?.biosDisk?.writes, id).toHaveLength(0);
+    }
   });
 
   it("matches the oracle across rollover and a multi-extent rename", () => {
