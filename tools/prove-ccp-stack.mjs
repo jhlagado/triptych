@@ -165,7 +165,7 @@ const cases = [
 const deepest = cases.reduce((left, right) =>
   left.minimumStackPointer <= right.minimumStackPointer ? left : right,
 );
-assert.equal(deepest.stackBytesUsed, 8, "measured CCP stack low-water mark");
+assert.equal(deepest.stackBytesUsed, 10, "measured CCP stack low-water mark");
 console.log(
   JSON.stringify(
     {

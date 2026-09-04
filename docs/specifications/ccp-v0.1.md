@@ -55,14 +55,20 @@ CCP reads one BDOS console-buffer line. The command language is 7-bit ASCII.
 Lowercase letters are converted to uppercase for recognition, file control
 blocks, and the command tail; console echo remains the bytes handled by BDOS.
 Leading and repeated spaces are accepted, and an empty line prints another
-prompt without a diagnostic.
+prompt without a diagnostic. The Triptych console profile accepts at most 127
+characters before the terminating carriage return.
 
 A drive-only command such as `A:` selects that drive and updates `$0004`.
 The six built-in command names are `DIR`, `ERA`, `REN`, `SAVE`, `TYPE`, and
 `USER`. Any other valid command word names a transient `.COM` program.
 Built-ins and transients accept a drive prefix where their CP/M syntax permits
-one. File names have eight name bytes and three type bytes. `?` matches one
-position and `*` expands to `?` through the remainder of that field.
+one. File references require a non-empty name of at most eight bytes and an
+optional type of at most three bytes. Inside either field, the CP/M 2.2
+characters `< > , ; : [ ] % | ( ) / \` are rejected; period and equals are
+grammar delimiters. `?` matches one position and `*` expands to `?` through the
+remainder of that field. `DIR` and `ERA` accept those ambiguous references;
+`TYPE`, `REN`, `SAVE`, and transient command names require an unambiguous
+reference and reject either wildcard.
 
 Malformed, missing, ambiguous, or extra operands must be rejected before a
 mutating BDOS call. The exact diagnostic transcript for each command family is

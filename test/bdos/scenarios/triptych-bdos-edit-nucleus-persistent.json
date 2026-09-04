@@ -4,13 +4,17 @@
   "description": "Edit and save a Nucleus program, compile and run it, then reopen the source and rerun the generated COM file in a fresh machine",
   "systemCcp": "triptych",
   "systemBdos": "triptych",
-  "expectedInitialDriveSha256": "b168df5ee70d391430aab991a288d2ee79b779ba26ee25a4728f8a9234c74b91",
+  "expectedInitialDriveSha256": "2ccef19db7e172fe720be5c544c3dadccb45a33890f5c97d6a340c3048fd048b",
   "maximumSlices": 1000,
   "sessions": [
     {
       "id": "edit-compile-run",
       "interactions": [
-        { "id": "boot", "inputAscii": "", "stopAfterAscii": "\r\nA>" },
+        {
+          "id": "boot",
+          "inputAscii": "",
+          "stopAfterAscii": "\r\nA>"
+        },
         {
           "id": "launch-editor",
           "inputAscii": "EDIT INPUT.NU\r",
@@ -26,18 +30,30 @@
           "inputBytes": [18, 39, 89, 39, 13],
           "stopAfterAscii": "\u001b[2;21H"
         },
-        { "id": "save", "inputBytes": [19], "stopAfterAscii": "\u001b[2;21H" },
-        { "id": "quit", "inputBytes": [17], "stopAfterAscii": "\r\nA>" },
+        {
+          "id": "save",
+          "inputBytes": [19],
+          "stopAfterAscii": "\u001b[2;21H"
+        },
+        {
+          "id": "quit",
+          "inputBytes": [17],
+          "stopAfterAscii": "\r\nA>"
+        },
         {
           "id": "compile",
           "inputAscii": "NUC INPUT.NU\r",
           "stopAfterAscii": "\r\nA>"
         },
-        { "id": "run", "inputAscii": "INPUT\r", "stopAfterAscii": "YK\r\nA>" }
+        {
+          "id": "run",
+          "inputAscii": "INPUT\r",
+          "stopAfterAscii": "YK\r\nA>"
+        }
       ],
       "expectedTranscriptSha256": "56fb4ddddb506b22b3b187c1e4692c68c053c8176ba9fc8e7273765ce337894f",
       "expectedTranscriptBytesLength": 1852,
-      "expectedDriveSha256": "7182738476addbc1b6b6cf9ee4a3dafa7da9ff88d4cf051e1a6f9163a3cb6151",
+      "expectedDriveSha256": "daee003152aba118bba69526f1192a64f7fc461e0d28b8c1b9924718232b61fd",
       "expectedTerminal": {
         "text": "\nA>NUC INPUT.NU\n\nA>INPUT\nYK\nA>",
         "cursorRow": 5,
@@ -51,7 +67,11 @@
     {
       "id": "reopen-persisted-source",
       "interactions": [
-        { "id": "boot", "inputAscii": "", "stopAfterAscii": "\r\nA>" },
+        {
+          "id": "boot",
+          "inputAscii": "",
+          "stopAfterAscii": "\r\nA>"
+        },
         {
           "id": "type-source",
           "inputAscii": "TYPE INPUT.NU\r",
@@ -71,7 +91,11 @@
             "screenSha256": "a85a1067555078d1ee67714cd977f51bec32578cf6abe9ab657d1c3d2821667d"
           }
         },
-        { "id": "quit-editor", "inputBytes": [17], "stopAfterAscii": "\r\nA>" },
+        {
+          "id": "quit-editor",
+          "inputBytes": [17],
+          "stopAfterAscii": "\r\nA>"
+        },
         {
           "id": "run-persisted-program",
           "inputAscii": "INPUT\r",
@@ -80,7 +104,7 @@
       ],
       "expectedTranscriptSha256": "23c893a619599074264e36997a526a8bdcd48e822e9998fac5b89dbdf6ef8b3b",
       "expectedTranscriptBytesLength": 401,
-      "expectedDriveSha256": "7182738476addbc1b6b6cf9ee4a3dafa7da9ff88d4cf051e1a6f9163a3cb6151",
+      "expectedDriveSha256": "daee003152aba118bba69526f1192a64f7fc461e0d28b8c1b9924718232b61fd",
       "expectedTerminal": {
         "text": "\nA>INPUT\nYK\nA>",
         "cursorRow": 3,

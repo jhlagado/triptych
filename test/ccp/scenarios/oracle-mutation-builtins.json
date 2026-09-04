@@ -16,7 +16,11 @@
     {
       "id": "rename-erase-save",
       "interactions": [
-        { "id": "boot", "inputAscii": "", "stopAfterAscii": "\r\nA>" },
+        {
+          "id": "boot",
+          "inputAscii": "",
+          "stopAfterAscii": "\r\nA>"
+        },
         {
           "id": "rename",
           "inputAscii": "ren foo.txt=readme.txt\r",
@@ -61,7 +65,8 @@
         "currentAttributes": 0,
         "wrapPending": false,
         "bellCount": 0
-      }
+      },
+      "expectedDriveSha256": "c3b273805ae030ab56a236d9cdbc9038c3f8878ac7fbc3bf62ea56716aa62bf0"
     }
   ]
 }

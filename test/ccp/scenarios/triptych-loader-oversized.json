@@ -11,10 +11,15 @@
       "encoding": "generated-bytes",
       "bytes": 58240,
       "fillByte": 0,
-      "patches": [{ "offset": 0, "bytes": [195, 0, 0] }]
+      "patches": [
+        {
+          "offset": 0,
+          "bytes": [195, 0, 0]
+        }
+      ]
     }
   ],
-  "expectedInitialDriveSha256": "fbfb7e3b2884e3cbe1bbfd8b5f13124bb88e471163c671cace74f6bf0efc8888",
+  "expectedInitialDriveSha256": "9931ef309155adaacfc53c9c817f49b968987c49bd2f8f1fb8663cb0ae46fdff",
   "sessions": [
     {
       "id": "oversized-and-recovery",
@@ -43,7 +48,8 @@
         "currentAttributes": 0,
         "wrapPending": false,
         "bellCount": 0
-      }
+      },
+      "expectedDriveSha256": "9931ef309155adaacfc53c9c817f49b968987c49bd2f8f1fb8663cb0ae46fdff"
     }
   ]
 }

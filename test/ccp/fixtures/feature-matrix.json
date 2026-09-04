@@ -12,7 +12,7 @@
     "path": "roms/cpu/ccp/ccp.asm",
     "loadAddress": 58368,
     "bytes": 2048,
-    "sha256": "361dc3a0f75cd175d255b3388f2729b158cdc7ab6169e3b0358499dc8b2d2447"
+    "sha256": "d5f90f3c7cac8ad902ab4224e9f09ba344a8d30bee63dc7622d7fd1db65b2476"
   },
   "features": [
     {
@@ -142,7 +142,7 @@
     },
     {
       "id": "parser-boundaries-and-fuzz",
-      "status": "partial",
+      "status": "proved",
       "evidence": [
         "test/ccp/scenarios/oracle-page-zero.json",
         "test/ccp/scenarios/triptych-page-zero.json",
@@ -151,7 +151,9 @@
         "test/ccp/scenarios/triptych-save-overflow.json",
         "test/ccp/scenarios/triptych-extra-operands.json",
         "test/ccp/scenarios/triptych-filename-boundaries.json",
-        "test/ccp/scenarios/triptych-drive-prefix-boundaries.json"
+        "test/ccp/scenarios/triptych-drive-prefix-boundaries.json",
+        "docs/reports/ccp-parser-qualification.md",
+        "tools/prove-ccp-parser.mjs"
       ]
     },
     {

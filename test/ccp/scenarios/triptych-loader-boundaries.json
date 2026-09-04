@@ -11,10 +11,15 @@
       "encoding": "generated-bytes",
       "bytes": 58112,
       "fillByte": 0,
-      "patches": [{ "offset": 0, "bytes": [195, 0, 0] }]
+      "patches": [
+        {
+          "offset": 0,
+          "bytes": [195, 0, 0]
+        }
+      ]
     }
   ],
-  "expectedInitialDriveSha256": "e4f76d909619c8078e5d40578a01b7a531d83bc08a710930d4d92485a3568c7c",
+  "expectedInitialDriveSha256": "68297d1f99a82aab6cd9b0f00db14f62d6600233817e51c68f354ba3411822f8",
   "expectedFinalFiles": [
     {
       "name": "RESULT.TXT",
@@ -50,7 +55,8 @@
         "currentAttributes": 0,
         "wrapPending": false,
         "bellCount": 0
-      }
+      },
+      "expectedDriveSha256": "268fa25cb24dd76cb2384ff7f0719f652a0275622a5387d591a149dd37a93760"
     }
   ]
 }

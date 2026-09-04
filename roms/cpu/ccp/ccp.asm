@@ -130,6 +130,9 @@ NOTDRIVE:
         LD      DE,USERKEY
         CALL    ISCMD
         JP      Z,CMDUSER
+        LD      DE,CMDFCB
+        CALL    UNAMBIG
+        JP      C,BADCMD
         LD      A,'C'
         LD      (CMDFCB+9),A
         LD      A,'O'
@@ -365,6 +368,8 @@ CMDTYPE:
         LD      DE,CMDFCB
         CALL    PARSEFCB
         JP      C,BADCMD
+        CALL    UNAMBIG
+        JP      C,BADCMD
         CALL    SKIPSP
         LD      A,(HL)
         OR      A
@@ -481,8 +486,12 @@ CMDREN:
         LD      A,(HL)
         OR      A
         JP      Z,BADCMD
+        CP      '='
+        JP      Z,BADCMD
         LD      DE,RENFCB
         CALL    PARSEFCB
+        JP      C,BADCMD
+        CALL    UNAMBIG
         JP      C,BADCMD
         LD      A,(HL)
         CP      '='
@@ -491,8 +500,14 @@ CMDREN:
         LD      A,(HL)
         OR      A
         JP      Z,BADCMD
+        CP      SPACE
+        JP      Z,BADCMD
+        CP      '='
+        JP      Z,BADCMD
         LD      DE,CMDFCB
         CALL    PARSEFCB
+        JP      C,BADCMD
+        CALL    UNAMBIG
         JP      C,BADCMD
         CALL    SKIPSP
         LD      A,(HL)
@@ -516,7 +531,7 @@ CMDREN:
         LD      C,23
         CALL    BDOS
         INC     A
-        JR      Z,ERANO
+        JP      Z,ERANO
         JP      MAINLOOP
 
 RENEXIST:
@@ -610,6 +625,8 @@ SAVENEND:
         JP      Z,BADCMD
         LD      DE,CMDFCB
         CALL    PARSEFCB
+        JP      C,BADCMD
+        CALL    UNAMBIG
         JP      C,BADCMD
         CALL    SKIPSP
         LD      A,(HL)
@@ -792,6 +809,8 @@ PARFLD:
         RET     Z
         CP      '*'
         JR      Z,PARSTAR
+        CALL    VALIDCHR
+        RET     C
         LD      (DE),A
         INC     DE
         INC     HL
@@ -821,6 +840,61 @@ PARLONG:
         JR      NZ,PARLONG
 
 PLEND:
+        SCF
+        RET
+
+; Commands that name exactly one file reject an empty name or either wildcard.
+; Preserve the parser's delimiter pointer in HL; FCBBASE identifies the FCB
+; because PARSEFCB advances DE while filling it.
+UNAMBIG:
+        PUSH    HL
+        PUSH    BC
+        LD      HL,(FCBBASE)
+        INC     HL
+        LD      A,(HL)
+        CP      SPACE
+        JR      Z,UNAMBAD
+        LD      B,11
+
+UNAMLOOP:
+        LD      A,(HL)
+        CP      '?'
+        JR      Z,UNAMBAD
+        INC     HL
+        DJNZ    UNAMLOOP
+        POP     BC
+        POP     HL
+        OR      A
+        RET
+
+UNAMBAD:
+        POP     BC
+        POP     HL
+        SCF
+        RET
+
+; CP/M 2.2 reserves these characters inside filename and filetype fields.
+; Dot and equals are handled as grammar delimiters, while question mark and
+; asterisk remain available to the ambiguous DIR and ERA forms.
+VALIDCHR:
+        PUSH    HL
+        PUSH    BC
+        LD      HL,BADCHARS
+        LD      B,13
+
+VLDLOOP:
+        CP      (HL)
+        JR      Z,VALIDBAD
+        INC     HL
+        DJNZ    VLDLOOP
+        POP     BC
+        POP     HL
+        OR      A
+        RET
+
+VALIDBAD:
+        POP     BC
+        POP     HL
         SCF
         RET
 
@@ -909,6 +983,8 @@ NOSPACE:
         DB      "NO SPACE",'$'
 ALLQUERY:
         DB      "ALL (Y/N)?",'$'
+BADCHARS:
+        DB      "<>,;:[]%|()/",92
 
 CMDFCB:
         DS      36,0

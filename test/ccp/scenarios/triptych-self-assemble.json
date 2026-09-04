@@ -22,12 +22,16 @@
       "sha256": "26cdac36f1cc94a62f8527d3e21125ae0f4de067196669275962196b9bcd2d4f"
     }
   ],
-  "expectedInitialDriveSha256": "7f76f089b2c62212c0d009bbf97f9bd3c4e77e861ccc9b5706c5069331c22dbb",
+  "expectedInitialDriveSha256": "9cc0e133b3b846ea2c5723917b6f251da616a31da53cea729d9f903ed44bdac6",
   "sessions": [
     {
       "id": "assemble-ccp",
       "interactions": [
-        { "id": "boot", "inputAscii": "", "stopAfterAscii": "\r\nA>" },
+        {
+          "id": "boot",
+          "inputAscii": "",
+          "stopAfterAscii": "\r\nA>"
+        },
         {
           "id": "run-atom",
           "inputAscii": "atccp ccp.asm ccp.bin\r",
@@ -42,14 +46,15 @@
         "currentAttributes": 0,
         "wrapPending": false,
         "bellCount": 0
-      }
+      },
+      "expectedDriveSha256": "598ad80bafaf484a3a519e32d87bc3c11fbf2aa5f27a887aed1eb7d295de31e0"
     }
   ],
   "expectedFinalFiles": [
     {
       "name": "CCP.BIN",
       "bytes": 2048,
-      "sha256": "361dc3a0f75cd175d255b3388f2729b158cdc7ab6169e3b0358499dc8b2d2447"
+      "sha256": "d5f90f3c7cac8ad902ab4224e9f09ba344a8d30bee63dc7622d7fd1db65b2476"
     }
   ]
 }

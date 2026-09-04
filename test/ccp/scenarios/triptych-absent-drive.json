@@ -4,7 +4,7 @@
   "description": "Require the Triptych CCP to match the fatal absent-drive diagnostic without an extra blank line",
   "systemCcp": "triptych",
   "systemBdos": "triptych",
-  "expectedInitialDriveSha256": "b168df5ee70d391430aab991a288d2ee79b779ba26ee25a4728f8a9234c74b91",
+  "expectedInitialDriveSha256": "2ccef19db7e172fe720be5c544c3dadccb45a33890f5c97d6a340c3048fd048b",
   "sessions": [
     {
       "id": "absent-drive",
@@ -28,7 +28,8 @@
         "currentAttributes": 0,
         "wrapPending": false,
         "bellCount": 0
-      }
+      },
+      "expectedDriveSha256": "2ccef19db7e172fe720be5c544c3dadccb45a33890f5c97d6a340c3048fd048b"
     }
   ]
 }

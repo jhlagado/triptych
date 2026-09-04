@@ -154,7 +154,8 @@ and malformed commands, decimal overflow, wildcard/filename limits, extra
 operands, full/read-only/faulted disks and a valid command after every failure.
 The [SAVE overflow checkpoint](../reports/ccp-save-overflow.md) records the
 failing-before reproduction and correction for `SAVE 1280 X.COM`. Broader
-generated parser boundaries and malformed-command recovery remain open. The
+generated parser boundaries and malformed-command recovery are covered by the
+[parser qualification checkpoint](../reports/ccp-parser-qualification.md). The
 [extra-operand checkpoint](../reports/ccp-extra-operands.md) records the
 failing-before `DIR` and `TYPE` cases and their end-of-command checks. The
 [filename-boundary checkpoint](../reports/ccp-filename-boundaries.md) records
@@ -168,7 +169,7 @@ claims would be incorrect. Tests must check the documented outcome, preserve
 unrelated files and prove command recovery. Prove worst-case CCP stack and
 resident-size bounds with canaries and paths exercising failure handling. The
 [resident-stack checkpoint](../reports/ccp-resident-stack.md) fixes the stack
-shape, guards its lower boundary and records an eight-byte low-water result
+shape, guards its lower boundary and records a ten-byte low-water result
 across the current success, failure and transient-return corpus.
 
 Rerun BDOS's direct-call, extent, directory-failure and randomized filesystem

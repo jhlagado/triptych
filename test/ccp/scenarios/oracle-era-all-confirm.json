@@ -9,9 +9,21 @@
     {
       "id": "confirm-erase-all",
       "interactions": [
-        { "id": "boot", "inputAscii": "", "stopAfterAscii": "\r\nA>" },
-        { "id": "request", "inputAscii": "era *.*\r", "stopAfterAscii": "?" },
-        { "id": "confirm", "inputAscii": "Y\r", "stopAfterAscii": "\r\nA>" },
+        {
+          "id": "boot",
+          "inputAscii": "",
+          "stopAfterAscii": "\r\nA>"
+        },
+        {
+          "id": "request",
+          "inputAscii": "era *.*\r",
+          "stopAfterAscii": "?"
+        },
+        {
+          "id": "confirm",
+          "inputAscii": "Y\r",
+          "stopAfterAscii": "\r\nA>"
+        },
         {
           "id": "empty",
           "inputAscii": "dir\r",
@@ -26,7 +38,8 @@
         "currentAttributes": 0,
         "wrapPending": false,
         "bellCount": 0
-      }
+      },
+      "expectedDriveSha256": "1cc8191012e27ebc9ac4a26dfe9258054c6d7373fa9613aee32003cf9ed34efc"
     }
   ]
 }

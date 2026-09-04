@@ -38,7 +38,8 @@
         "wrapPending": false,
         "bellCount": 0,
         "screenSha256": "13cd3453fa0d46db30969da7b5fa7dbe7a634ee61d84f416d8d99925a5ba1033"
-      }
+      },
+      "expectedDriveSha256": "f0d8dd3fc9245ebc7718c600e1b6d8bcc86e6014df8e21c9e7ecdcf419e02164"
     }
   ]
 }

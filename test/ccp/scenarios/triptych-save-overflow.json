@@ -4,12 +4,16 @@
   "description": "Reject an overflowing SAVE page count before disk mutation and accept the next valid command",
   "systemCcp": "triptych",
   "systemBdos": "triptych",
-  "expectedInitialDriveSha256": "b168df5ee70d391430aab991a288d2ee79b779ba26ee25a4728f8a9234c74b91",
+  "expectedInitialDriveSha256": "2ccef19db7e172fe720be5c544c3dadccb45a33890f5c97d6a340c3048fd048b",
   "sessions": [
     {
       "id": "overflow-and-recovery",
       "interactions": [
-        { "id": "boot", "inputAscii": "", "stopAfterAscii": "\r\nA>" },
+        {
+          "id": "boot",
+          "inputAscii": "",
+          "stopAfterAscii": "\r\nA>"
+        },
         {
           "id": "overflowing-save",
           "inputAscii": "save 1280 overflow.com\r",
@@ -27,7 +31,7 @@
         }
       ],
       "expectedTranscript": "\r\nA>save 1280 overflow.com\r\r\n1280?\r\n\r\nA>dir overflow.com\r\r\nNO FILE\r\nA>dir readme.txt\r\r\nA: README   TXT\r\nA>",
-      "expectedDriveSha256": "b168df5ee70d391430aab991a288d2ee79b779ba26ee25a4728f8a9234c74b91",
+      "expectedDriveSha256": "2ccef19db7e172fe720be5c544c3dadccb45a33890f5c97d6a340c3048fd048b",
       "expectedTerminal": {
         "text": "\nA>save 1280 overflow.com\n1280?\n\nA>dir overflow.com\nNO FILE\nA>dir readme.txt\nA: README   TXT\nA>",
         "cursorRow": 8,
