@@ -41,6 +41,13 @@ The targeted scenario, complete headless scenario corpus and guarded
 BDOS gates, the Rust workspace and the release WASM build with AZM imports
 blocked.
 
+GitHub Pages run
+[`33915549518`](https://github.com/jhlagado/triptych/actions/runs/33915549518)
+built and deployed Triptych revision
+`e3d693acc7771a7fa77410d4dea2cab8d530d247`. A fresh download of the
+published `ccp.bin` has the same SHA-256, and the deployed configuration selects
+the Triptych CCP.
+
 This is a native-terminal observation and host-model WASM proof, not an ESP32
 measurement. Generated command-line coverage, media failures and the
 worst-case stack sentinel remain open.
