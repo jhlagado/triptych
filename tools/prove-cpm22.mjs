@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { compile, defaultFormatWriters } from "@jhlagado/azm/compile";
+import { assembleAtomBinary as assemble } from "./lib/assemble-atom.mjs";
 import { createZ80Runtime } from "@jhlagado/debug80-runtime/z80/runtime";
 import {
   installCpm22File,
@@ -24,38 +24,6 @@ const BIOS_SYSTEM_OFFSET = 0x1600;
 const BOOT_ROM_BYTES = 0x100;
 const BIOS_BYTES = 0x400;
 const BACKING_SECTOR_BYTES = 512;
-
-async function assemble(source) {
-  const result = await compile(
-    source,
-    {
-      emitBin: true,
-      emitHex: false,
-      emitD8m: false,
-      emitLst: false,
-      emitAsm80: false,
-      registerContracts: "off",
-      registerContractsInterfaces: [],
-    },
-    { formats: defaultFormatWriters },
-  );
-  const errors = result.diagnostics.filter(
-    (diagnostic) => diagnostic.severity === "error",
-  );
-  assert.deepEqual(
-    errors,
-    [],
-    errors
-      .map(
-        (diagnostic) =>
-          `${diagnostic.sourceName}:${diagnostic.line}:${diagnostic.column}: ${diagnostic.message}`,
-      )
-      .join("\n"),
-  );
-  const binary = result.artifacts.find((artifact) => artifact.kind === "bin");
-  assert.equal(binary?.kind, "bin", `AZM did not emit a binary for ${source}`);
-  return binary.bytes;
-}
 
 function padForBackingSectors(image) {
   const paddedLength =

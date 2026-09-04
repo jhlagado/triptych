@@ -43,6 +43,7 @@
     "generate:cpu-fixtures": "node tools/generate-embedded-cpu-fixtures.mjs",
     "check:cpu-fixtures": "node tools/generate-embedded-cpu-fixtures.mjs --check",
     "check:bdos-baseline": "node tools/check-bdos-baseline.mjs",
+    "check:atom-install": "node tools/check-atom-install.mjs",
     "check:ccp-matrix": "node tools/check-ccp-matrix.mjs",
     "check:ccp-readiness": "node --test tools/check-ccp-readiness.test.mjs",
     "check:cpm22-text": "node tools/check-cpm22-text.mjs",
@@ -67,11 +68,11 @@
     "check": "npm run build && npm run typecheck && npm run lint && npm run format:check && npm run check:ccp-readiness && npm test && npm run check:cpu-fixtures && npm run check:bdos-baseline && npm run check:ccp-matrix && npm run check:cpm22-text && npm run check:cpm-headless && npm run check:wasm-browser-ui && npm run check:rust"
   },
   "devDependencies": {
-    "@jhlagado/azm": "^0.4.0",
     "@jhlagado/debug80-runtime": "^0.2.0",
     "@types/node": "^24.13.3",
     "@typescript-eslint/eslint-plugin": "^8.42.0",
     "@typescript-eslint/parser": "^8.42.0",
+    "atom-z80": "git+https://github.com/jhlagado/atom.git#27b32ad97ee0596d1952617261b644f8ccc389f9",
     "eslint": "^8.55.0",
     "prettier": "^3.6.2",
     "typescript": "^5.9.2",

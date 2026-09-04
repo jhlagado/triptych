@@ -1,142 +1,142 @@
 ; CP/M 2.2 compatibility-proof BIOS for the ESP32-hosted Z80 SBC profile.
 
-        .org    $FA00
+        ORG     $FA00
 
-CCP_BASE                .equ $E400
-BDOS_ENTRY              .equ $EC06
-WARM_BOOT_RECORDS       .equ 44
-RECORDS_PER_TRACK       .equ 26
-RECORD_BYTES            .equ 128
+CCP_BASE EQU     $E400
+BDOSENT  EQU     $EC06
+WARMRECS EQU     44
+TRACKREC EQU     26
+RECBYTES EQU     128
 
-PORT_SERIAL_DATA        .equ $00
-PORT_SERIAL_STATUS      .equ $01
-PORT_DISK_STATUS        .equ $10
-PORT_DISK_DRIVE         .equ $11
-PORT_DISK_RECORD_0      .equ $12
-PORT_DISK_RECORD_1      .equ $13
-PORT_DISK_RECORD_2      .equ $14
-PORT_DISK_RECORD_3      .equ $15
-PORT_DISK_DATA          .equ $16
+SERDATA  EQU     $00
+SERSTAT  EQU     $01
+DSKSTAT  EQU     $10
+DSKDRIVE EQU     $11
+DSKREC0  EQU     $12
+DSKREC1  EQU     $13
+DSKREC2  EQU     $14
+DSKREC3  EQU     $15
+DSKDATA  EQU     $16
 
-DISK_COMMAND_READ       .equ 1
-DISK_COMMAND_WRITE      .equ 2
-DISK_COMMAND_FLUSH      .equ 3
-DISK_STATUS_BUSY        .equ 1
-DISK_STATUS_DATA        .equ 2
-DISK_STATUS_ERROR       .equ 4
+CMDREAD  EQU     1
+CMDWRITE EQU     2
+CMDFLUSH EQU     3
+DSKBUSY  EQU     1
+DSKREADY EQU     2
+DSKERROR EQU     4
 
-IOBYTE                  .equ $0003
-CURRENT_DISK            .equ $0004
-DEFAULT_DMA             .equ $0080
+IOBYTE   EQU     $0003
+CURDISK  EQU     $0004
+DFLTDMA  EQU     $0080
 
 ; CP/M 2.2 BIOS jump table. The ordinal and three-byte width are ABI.
         jp      ColdBoot
         jp      WarmBoot
-        jp      ConsoleStatus
-        jp      ConsoleInput
-        jp      ConsoleOutput
-        jp      ListOutput
-        jp      PunchOutput
-        jp      ReaderInput
+        jp      CONSTAT
+        jp      CONIN
+        jp      CONOUT
+        jp      LISTOUT
+        jp      PUNCHOUT
+        jp      READER
         jp      Home
-        jp      SelectDisk
+        jp      SELDSK
         jp      SetTrack
-        jp      SetSector
+        jp      SETSEC
         jp      SetDma
-        jp      ReadSector
-        jp      WriteSector
-        jp      ListStatus
-        jp      SectorTranslate
+        jp      READSEC
+        jp      WRITESEC
+        jp      LISTSTAT
+        jp      SECTRAN
 
 ColdBoot:
         di
-        ld      sp,BootStackTop
+        ld      sp,BOOTSP
         xor     a
         ld      (IOBYTE),a
-        ld      (CURRENT_DISK),a
+        ld      (CURDISK),a
         ld      c,a
-        call    InstallPageZero
+        call    PAGEZERO
         jp      CCP_BASE
 
 WarmBoot:
         di
-        ld      sp,BootStackTop
+        ld      sp,BOOTSP
         xor     a
-        out     (PORT_DISK_DRIVE),a
-        out     (PORT_DISK_RECORD_0),a
-        out     (PORT_DISK_RECORD_1),a
-        out     (PORT_DISK_RECORD_2),a
-        out     (PORT_DISK_RECORD_3),a
-        ld      (BootRecord),a
-        ld      a,WARM_BOOT_RECORDS
-        ld      (BootRecordsRemaining),a
+        out     (DSKDRIVE),a
+        out     (DSKREC0),a
+        out     (DSKREC1),a
+        out     (DSKREC2),a
+        out     (DSKREC3),a
+        ld      (BOOTREC),a
+        ld      a,WARMRECS
+        ld      (BOOTLEFT),a
         ld      hl,CCP_BASE
 
-WarmBootRead:
-        ld      a,(BootRecord)
-        out     (PORT_DISK_RECORD_0),a
-        ld      a,DISK_COMMAND_READ
-        out     (PORT_DISK_STATUS),a
-        call    WaitForRead
-        jr      nz,BootDiskError
-        ld      b,RECORD_BYTES
-        ld      c,PORT_DISK_DATA
+WARMREAD:
+        ld      a,(BOOTREC)
+        out     (DSKREC0),a
+        ld      a,CMDREAD
+        out     (DSKSTAT),a
+        call    WAITREAD
+        jr      nz,BOOTERR
+        ld      b,RECBYTES
+        ld      c,DSKDATA
         inir
-        call    WaitForCompletion
-        jr      nz,BootDiskError
-        ld      a,(BootRecord)
+        call    WAITDONE
+        jr      nz,BOOTERR
+        ld      a,(BOOTREC)
         inc     a
-        ld      (BootRecord),a
-        ld      a,(BootRecordsRemaining)
+        ld      (BOOTREC),a
+        ld      a,(BOOTLEFT)
         dec     a
-        ld      (BootRecordsRemaining),a
-        jr      nz,WarmBootRead
-        ld      a,(CURRENT_DISK)
+        ld      (BOOTLEFT),a
+        jr      nz,WARMREAD
+        ld      a,(CURDISK)
         ld      c,a
-        call    InstallPageZero
+        call    PAGEZERO
         jp      CCP_BASE
 
-BootDiskError:
-        ld      hl,BootErrorMessage
-        call    PrintZeroTerminated
+BOOTERR:
+        ld      hl,BOOTMSG
+        call    PRINTZ
         halt
-        jr      BootDiskError
+        jr      BOOTERR
 
-InstallPageZero:
+PAGEZERO:
         ld      a,$C3
         ld      ($0000),a
         ld      hl,WarmBoot
         ld      ($0001),hl
         ld      ($0005),a
-        ld      hl,BDOS_ENTRY
+        ld      hl,BDOSENT
         ld      ($0006),hl
         ret
 
-ConsoleStatus:
-        in      a,(PORT_SERIAL_STATUS)
+CONSTAT:
+        in      a,(SERSTAT)
         and     1
         ret     z
         ld      a,$FF
         ret
 
-ConsoleInput:
-        call    ConsoleStatus
+CONIN:
+        call    CONSTAT
         or      a
-        jr      z,ConsoleInput
-        in      a,(PORT_SERIAL_DATA)
+        jr      z,CONIN
+        in      a,(SERDATA)
         and     $7F
         ret
 
-ConsoleOutput:
+CONOUT:
         ld      a,c
-        out     (PORT_SERIAL_DATA),a
+        out     (SERDATA),a
         ret
 
-ListOutput:
-PunchOutput:
+LISTOUT:
+PUNCHOUT:
         ret
 
-ReaderInput:
+READER:
         ld      a,$1A
         ret
 
@@ -144,63 +144,63 @@ Home:
         ld      bc,0
 
 SetTrack:
-        ld      (CurrentTrack),bc
+        ld      (CURTRACK),bc
         ret
 
-SelectDisk:
+SELDSK:
         ld      a,c
         or      a
         ld      hl,0
         ret     nz
-        ld      hl,DiskParameterHeader
+        ld      hl,DPHEADER
         ret
 
-SetSector:
-        ld      (CurrentSector),bc
+SETSEC:
+        ld      (CURSECT),bc
         ret
 
 SetDma:
-        ld      (CurrentDma),bc
+        ld      (CURDMA),bc
         ret
 
-ReadSector:
-        call    SelectCurrentAddress
+READSEC:
+        call    SELADDR
         ret     nz
-        ld      a,DISK_COMMAND_READ
-        out     (PORT_DISK_STATUS),a
-        call    WaitForRead
+        ld      a,CMDREAD
+        out     (DSKSTAT),a
+        call    WAITREAD
         ret     nz
-        ld      hl,(CurrentDma)
-        ld      b,RECORD_BYTES
-        ld      c,PORT_DISK_DATA
+        ld      hl,(CURDMA)
+        ld      b,RECBYTES
+        ld      c,DSKDATA
         inir
-        call    WaitForCompletion
+        call    WAITDONE
         ret
 
-WriteSector:
-        call    SelectCurrentAddress
+WRITESEC:
+        call    SELADDR
         ret     nz
-        ld      a,DISK_COMMAND_WRITE
-        out     (PORT_DISK_STATUS),a
-        call    WaitForWrite
+        ld      a,CMDWRITE
+        out     (DSKSTAT),a
+        call    WAITWR
         ret     nz
-        ld      hl,(CurrentDma)
-        ld      b,RECORD_BYTES
-        ld      c,PORT_DISK_DATA
+        ld      hl,(CURDMA)
+        ld      b,RECBYTES
+        ld      c,DSKDATA
         otir
-        call    WaitForCompletion
+        call    WAITDONE
         ret     nz
-        ld      a,DISK_COMMAND_FLUSH
-        out     (PORT_DISK_STATUS),a
-        call    WaitForIdle
+        ld      a,CMDFLUSH
+        out     (DSKSTAT),a
+        call    WAITIDLE
         ret
 
 ; Convert CP/M's 16-bit track and one-based sector to a 32-bit linear record.
 ; The IBM 3740 proof disk contains only 2,002 records, so the upper half is zero.
-SelectCurrentAddress:
+SELADDR:
         xor     a
-        out     (PORT_DISK_DRIVE),a
-        ld      hl,(CurrentTrack)
+        out     (DSKDRIVE),a
+        ld      hl,(CURTRACK)
         ld      d,h
         ld      e,l
         add     hl,hl
@@ -209,125 +209,125 @@ SelectCurrentAddress:
         add     hl,hl
         add     hl,de
         add     hl,hl
-        ld      bc,(CurrentSector)
+        ld      bc,(CURSECT)
         dec     bc
         add     hl,bc
         ld      a,l
-        out     (PORT_DISK_RECORD_0),a
+        out     (DSKREC0),a
         ld      a,h
-        out     (PORT_DISK_RECORD_1),a
+        out     (DSKREC1),a
         xor     a
-        out     (PORT_DISK_RECORD_2),a
-        out     (PORT_DISK_RECORD_3),a
+        out     (DSKREC2),a
+        out     (DSKREC3),a
         ret
 
-WaitForRead:
-        in      a,(PORT_DISK_STATUS)
+WAITREAD:
+        in      a,(DSKSTAT)
         bit     0,a
-        jr      nz,WaitForRead
+        jr      nz,WAITREAD
         bit     2,a
-        jr      nz,DiskError
+        jr      nz,DISKERR
         bit     1,a
-        jr      z,WaitForRead
+        jr      z,WAITREAD
         xor     a
         ret
 
-WaitForWrite:
-        in      a,(PORT_DISK_STATUS)
+WAITWR:
+        in      a,(DSKSTAT)
         bit     0,a
-        jr      nz,WaitForWrite
+        jr      nz,WAITWR
         bit     2,a
-        jr      nz,DiskError
+        jr      nz,DISKERR
         bit     1,a
-        jr      z,WaitForWrite
+        jr      z,WAITWR
         xor     a
         ret
 
-WaitForCompletion:
-        in      a,(PORT_DISK_STATUS)
+WAITDONE:
+        in      a,(DSKSTAT)
         bit     0,a
-        jr      nz,WaitForCompletion
+        jr      nz,WAITDONE
         bit     2,a
-        jr      nz,DiskError
+        jr      nz,DISKERR
         bit     1,a
-        jr      nz,DiskError
+        jr      nz,DISKERR
         xor     a
         ret
 
-WaitForIdle:
-        in      a,(PORT_DISK_STATUS)
+WAITIDLE:
+        in      a,(DSKSTAT)
         bit     0,a
-        jr      nz,WaitForIdle
+        jr      nz,WAITIDLE
         bit     2,a
-        jr      nz,DiskError
+        jr      nz,DISKERR
         xor     a
         ret
 
-DiskError:
+DISKERR:
         ld      a,1
         or      a
         ret
 
-ListStatus:
+LISTSTAT:
         xor     a
         ret
 
-SectorTranslate:
+SECTRAN:
         ld      h,b
         ld      l,c
         inc     hl
         ret
 
-PrintZeroTerminated:
+PRINTZ:
         ld      a,(hl)
         or      a
         ret     z
-        out     (PORT_SERIAL_DATA),a
+        out     (SERDATA),a
         inc     hl
-        jr      PrintZeroTerminated
+        jr      PRINTZ
 
-BootErrorMessage:
-        .db     "CP/M BOOT ERROR",13,10,0
+BOOTMSG:
+        DB      "CP/M BOOT ERROR",13,10,0
 
-BootRecord:
-        .db     0
-BootRecordsRemaining:
-        .db     0
+BOOTREC:
+        DB      0
+BOOTLEFT:
+        DB      0
 
-CurrentTrack:
-        .dw     0
-CurrentSector:
-        .dw     1
-CurrentDma:
-        .dw     DEFAULT_DMA
+CURTRACK:
+        DW      0
+CURSECT:
+        DW      1
+CURDMA:
+        DW      DFLTDMA
 
-DiskParameterHeader:
-        .dw     0
-        .dw     0,0,0
-        .dw     DirectoryBuffer
-        .dw     DiskParameterBlock
-        .dw     ChecksumVector
-        .dw     AllocationVector
+DPHEADER:
+        DW      0
+        DW      0,0,0
+        DW      DIRBUF
+        DW      DPBLOCK
+        DW      CHKSVEC
+        DW      ALLOCVEC
 
-DiskParameterBlock:
-        .dw     26
-        .db     3
-        .db     7
-        .db     0
-        .dw     242
-        .dw     63
-        .db     $C0,$00
-        .dw     16
-        .dw     2
+DPBLOCK:
+        DW      26
+        DB      3
+        DB      7
+        DB      0
+        DW      242
+        DW      63
+        DB      $C0,$00
+        DW      16
+        DW      2
 
-DirectoryBuffer:
-        .ds     128
-ChecksumVector:
-        .ds     16
-AllocationVector:
-        .ds     31
+DIRBUF:
+        DS      128
+CHKSVEC:
+        DS      16
+ALLOCVEC:
+        DS      31
 
-        .ds     32
-BootStackTop:
+        DS      32
+BOOTSP:
 
-        .binto  $FDFF
+        DS      $FE00-$,0

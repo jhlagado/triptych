@@ -1,6 +1,6 @@
 # WASM-first software stability roadmap
 
-Date: 2026-09-05. Status: active goal; S0 complete, S1 next. This is the
+Date: 2026-09-05. Status: active goal; S0 complete, S1 in progress. This is the
 current cross-project execution plan. Component
 contracts remain authoritative; earlier reports retain their dated results.
 
@@ -20,6 +20,12 @@ CP/M program ever written. Full IDE development, new languages, video, sound,
 Windows-specific support and a replacement Z80 emulator are outside this goal.
 
 ## Component ownership
+
+The subsequent ownership decision separates portable CCP/BDOS into their own
+OS project, while the Triptych BIOS stays with the machine. The
+[component release plan](component-releases.md) defines the source, dependency
+and disk-building boundaries. The OS name/remote and Edit extraction remain
+pending; the table records current source locations.
 
 | Component             | Source authority                                                   | Role and boundary                                                                                                                    |
 | --------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
@@ -133,6 +139,14 @@ headless execution pass with the ATOM-built resident software.
 
 ### S2 — CCP completion and operating-system qualification
 
+Extract CCP and BDOS together into the independently released OS project once
+its name and remote are selected. Preserve their source history, interface
+contracts and component proofs. Separate configurable placement from portable
+behavior and prove an alternate headless target. Triptych consumes a pinned OS
+release and retains its integration tests. Its BIOS stays in Triptych and
+moves from the misleading `roms/cpu/bios.asm` path to `system/cpm/bios.asm`
+with every caller updated together; the real bootstrap remains under `roms/`.
+
 Finish the existing CCP matrix rather than adding a richer shell. Cover long
 and malformed commands, decimal overflow, wildcard/filename limits, extra
 operands, full/read-only/faulted disks and a valid command after every failure.
@@ -152,7 +166,8 @@ Keep BIOS with Triptych. Drive A, fixed disk geometry and the existing console
 profile remain the supported baseline; multi-drive and physical SD recovery
 are separate changes.
 
-Exit: every required CCP software row is proved; BDOS and BIOS regression gates
+Exit: the OS builds independently and Triptych consumes its immutable release;
+every required CCP software row is proved; BDOS and BIOS regression gates
 pass; incompatibilities and deliberate limits are listed. Hardware status
 remains independent and unqualified.
 
@@ -179,6 +194,11 @@ save-error behavior is preserved. A full edit/save/search/replace session runs
 against Triptych's current BDOS, not only the historical fixture.
 
 ### S4 — reproducible system and application distribution
+
+Use the input-lockfile/output-manifest distinction and the verified build
+sequence in the [component release plan](component-releases.md). Cargo manages
+Rust code dependencies; guest OS/application artifacts remain a separate
+release boundary. Triptych BIOS is selected by the Triptych build revision.
 
 Replace reliance on inherited demo application binaries with a declared
 distribution manifest. Pin source revisions and build inputs for CCP, BDOS,
@@ -280,7 +300,19 @@ contracts belong in their owning repositories; cross-module machine contracts
 remain in `docs/specifications/`. This plan coordinates releases, not source
 ownership. Existing reports must not be rewritten to imply new measurements.
 
-Current next task: migrate the remaining Nucleus development assembly helpers
-to ATOM in the reconciliation worktree, followed by its source-assembly proofs.
+Triptych's source migration is recorded in the
+[ATOM build checkpoint](../reports/atom-build-migration.md). Its shared image
+and test helpers now use ATOM; the baseline section above records the earlier
+starting state. Nucleus's development runtime and manifest helpers also use
+ATOM, and its first full-size flat-target proof has passed.
+
+Triptych's full check and 29 headless WASM scenarios now pass after a fresh
+installation. The missing-bundle investigation identified an npm symlinked
+cache-path problem; the unchanged ATOM pin passes the new Git/offline consumer
+check using canonical temporary paths.
+
+Current next task: complete Nucleus's remaining ATOM source-assembly proofs,
+then remove Atom's own AZM bootstrap/release calls. S1 remains in progress
+until both standalone toolchain gates pass.
 The first user-visible milestone is the ATOM-built Triptych browser image;
 the main usability milestone is S5's persistent edit/build/run session.

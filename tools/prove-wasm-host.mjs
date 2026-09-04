@@ -7,7 +7,7 @@ import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 
-import { compile, defaultFormatWriters } from "@jhlagado/azm/compile";
+import { assembleAtomBinary as assemble } from "./lib/assemble-atom.mjs";
 import { retargetCpm22Atom } from "./lib/cpm22-atom-target.mjs";
 import { installCpm22File, readCpm22File } from "./lib/cpm22-disk.mjs";
 import { runCpmHeadlessScenario } from "./lib/cpm-headless-scenario.mjs";
@@ -209,29 +209,6 @@ function canonicalTranscript(result) {
     );
   });
   return `${lines.join("\n")}\n`;
-}
-
-async function assemble(source) {
-  const result = await compile(
-    source,
-    {
-      emitBin: true,
-      emitHex: false,
-      emitD8m: false,
-      emitLst: false,
-      emitAsm80: false,
-      registerContracts: "off",
-      registerContractsInterfaces: [],
-    },
-    { formats: defaultFormatWriters },
-  );
-  const errors = result.diagnostics.filter(
-    (diagnostic) => diagnostic.severity === "error",
-  );
-  assert.deepEqual(errors, []);
-  const binary = result.artifacts.find((artifact) => artifact.kind === "bin");
-  assert.equal(binary?.kind, "bin");
-  return binary.bytes;
 }
 
 function padForBackingSectors(image) {

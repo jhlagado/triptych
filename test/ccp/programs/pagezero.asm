@@ -95,9 +95,9 @@ HEXBYTE:
 HEXDIG:
         AND     $0F
         ADD     A,'0'
-        CP      '9'+1
+        CP      58              ; '9'+1
         JR      C,PUTCHAR
-        ADD     A,'A'-'9'-1
+        ADD     A,7             ; 'A'-'9'-1
 
 PUTCHAR:
         PUSH    BC
@@ -120,16 +120,16 @@ NEWLINE:
         JP      PRINT
 
 DRVTEXT:
-        DB      'DRIVE=','$'
+        DB      "DRIVE=","$"
 TAILTXT:
-        DB      'TAIL=','$'
+        DB      "TAIL=","$"
 TERMTXT:
-        DB      'TERM=','$'
+        DB      "TERM=","$"
 FCB1TXT:
-        DB      'FCB1=','$'
+        DB      "FCB1=","$"
 FCB2TXT:
-        DB      'FCB2=','$'
+        DB      "FCB2=","$"
 RETTEXT:
-        DB      'RETURN',CR,LF,'$'
+        DB      "RETURN",CR,LF,"$"
 CRLFTXT:
-        DB      CR,LF,'$'
+        DB      CR,LF,"$"

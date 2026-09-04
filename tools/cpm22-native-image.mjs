@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { readFile, rename, rm, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 
-import { compile, defaultFormatWriters } from "@jhlagado/azm/compile";
+import { assembleAtomBinary as assemble } from "./lib/assemble-atom.mjs";
 
 const BDOS_SYSTEM_OFFSET = 0x0800;
 const BIOS_SYSTEM_OFFSET = 0x1600;
@@ -11,40 +11,6 @@ const CCP_BYTES = 0x0800;
 const BDOS_BYTES = 0x0e00;
 const BIOS_BYTES = 0x400;
 const BACKING_SECTOR_BYTES = 512;
-
-async function assemble(source) {
-  const result = await compile(
-    source,
-    {
-      emitBin: true,
-      emitHex: false,
-      emitD8m: false,
-      emitLst: false,
-      emitAsm80: false,
-      registerContracts: "off",
-      registerContractsInterfaces: [],
-    },
-    { formats: defaultFormatWriters },
-  );
-  const errors = result.diagnostics.filter(
-    (diagnostic) => diagnostic.severity === "error",
-  );
-  if (errors.length > 0) {
-    throw new Error(
-      errors
-        .map(
-          (diagnostic) =>
-            `${diagnostic.sourceName}:${diagnostic.line}:${diagnostic.column}: ${diagnostic.message}`,
-        )
-        .join("\n"),
-    );
-  }
-  const binary = result.artifacts.find((artifact) => artifact.kind === "bin");
-  if (binary?.kind !== "bin") {
-    throw new Error(`AZM did not emit a binary for ${source}`);
-  }
-  return binary.bytes;
-}
 
 function padForBackingSectors(image) {
   const paddedLength =

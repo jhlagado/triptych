@@ -19,6 +19,12 @@ Triptych owns:
 - ESP32 firmware, ROMs, hardware notes, and module-transport work;
 - tests and proof reports for those contracts.
 
+The portable CP/M-compatible OS (CCP and BDOS) is to become an independently
+released project. Its current Triptych paths are transitional. The Triptych
+BIOS stays here as machine-interface code; it must not move into the portable
+OS repository. See `docs/plans/component-releases.md` for extraction and release
+boundaries. The OS repository name and remote are still undecided.
+
 Do not add Triptych source, exports, ROMs, scripts, specifications, or UI entries
 to the Debug80 repository. ATOM is the required assembler for normal builds,
 tests and generated artifacts. AZM is historical and may be used only as an
@@ -32,23 +38,24 @@ an explicitly named adapter; production code under `src/` and firmware under
 
 Put work in the section that owns it:
 
-| Material                        | Destination                 |
-| ------------------------------- | --------------------------- |
-| CPU contracts and host models   | `src/cpu/`                  |
-| Portable Rust CPU core          | `crates/triptych-cpu-core/` |
-| Native and WASM CPU hosts       | `crates/triptych-host-*/`   |
-| CPU ESP-IDF implementation      | `firmware/cpu/`             |
-| Z80 bootstrap and BIOS source   | `roms/cpu/`                 |
-| Video contracts and host models | `src/video/`                |
-| Video ESP-IDF implementation    | `firmware/video/`           |
-| Sound contracts and host models | `src/sound/`                |
-| Sound ESP-IDF implementation    | `firmware/sound/`           |
-| Shared transport-neutral types  | `src/shared/`               |
-| Executable proofs               | `test/`                     |
-| Optional development tools      | `tools/`                    |
-| Normative contracts             | `docs/specifications/`      |
-| Staged development plans        | `docs/plans/`               |
-| Measurements and proof reports  | `docs/reports/`             |
+| Material                        | Destination                                                |
+| ------------------------------- | ---------------------------------------------------------- |
+| CPU contracts and host models   | `src/cpu/`                                                 |
+| Portable Rust CPU core          | `crates/triptych-cpu-core/`                                |
+| Native and WASM CPU hosts       | `crates/triptych-host-*/`                                  |
+| CPU ESP-IDF implementation      | `firmware/cpu/`                                            |
+| Z80 bootstrap ROM               | `roms/cpu/`                                                |
+| Triptych CP/M BIOS              | `system/cpm/` (planned migration from `roms/cpu/bios.asm`) |
+| Video contracts and host models | `src/video/`                                               |
+| Video ESP-IDF implementation    | `firmware/video/`                                          |
+| Sound contracts and host models | `src/sound/`                                               |
+| Sound ESP-IDF implementation    | `firmware/sound/`                                          |
+| Shared transport-neutral types  | `src/shared/`                                              |
+| Executable proofs               | `test/`                                                    |
+| Optional development tools      | `tools/`                                                   |
+| Normative contracts             | `docs/specifications/`                                     |
+| Staged development plans        | `docs/plans/`                                              |
+| Measurements and proof reports  | `docs/reports/`                                            |
 
 Keep CPU, video, and sound independently replaceable. Shared code must express
 a genuine wire, guest, or host-test boundary rather than hide module coupling.
@@ -107,9 +114,9 @@ distinguishes corruption from rejection.
 Use the adapter in `test/support/debug80-runtime.ts` for CPU tests. Do not import
 it from `src/`.
 
-Legacy CP/M build/proof helpers still contain AZM imports. Migrate them to ATOM
-before executing those normal paths; do not treat the old dependency as
-permission to use AZM. The retained CP/M image and grant are documented under
+CP/M build and proof helpers use `tools/lib/assemble-atom.mjs` and the pinned
+public ATOM API. Keep tests and release builders on this common assembly path;
+do not restore AZM imports or a fallback assembler. The retained CP/M image and grant are documented under
 `third_party/cpm22/`. An external image can also be selected:
 
 ```sh
