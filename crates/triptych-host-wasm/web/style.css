@@ -319,7 +319,11 @@ footer {
     min-height: 0;
     padding: 0.45rem;
     border-radius: 0.4rem;
-    font-size: clamp(0.72rem, 2.8vw, 0.82rem);
+    font-size: clamp(
+      0.58rem,
+      calc((var(--visual-viewport-height) - 8.5rem) / 30),
+      0.82rem
+    );
     line-height: 1.22;
     overscroll-behavior: contain;
   }

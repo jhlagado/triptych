@@ -41,8 +41,11 @@ let persistence;
 // keyboard opens. VisualViewport is the space the user can actually see.
 function syncVisualViewport() {
   const viewport = window.visualViewport;
-  const height = viewport?.height ?? window.innerHeight;
-  const width = viewport?.width ?? window.innerWidth;
+  // Some mobile engines briefly retain the old VisualViewport dimensions
+  // while the layout viewport has already contracted. The smaller value is
+  // the only area that is certainly visible in both states.
+  const height = Math.min(viewport?.height ?? Infinity, window.innerHeight);
+  const width = Math.min(viewport?.width ?? Infinity, window.innerWidth);
   const offsetTop = viewport?.offsetTop ?? 0;
   const offsetLeft = viewport?.offsetLeft ?? 0;
   const style = document.documentElement.style;

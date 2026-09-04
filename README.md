@@ -45,13 +45,18 @@ the machine contract nor the sound and video models import it.
 
 ## Development
 
-Node.js 20 or newer and the Rust toolchain pinned in `rust-toolchain.toml` are
-required.
+Node.js 20 or newer, the Rust toolchain pinned in `rust-toolchain.toml`, and a
+Playwright-managed Chromium browser are required for the complete acceptance
+gate.
 
 ```sh
 npm install
+npx playwright install chromium
 npm run check
 ```
+
+On a clean Linux machine, `npx playwright install --with-deps chromium` also
+installs Chromium's operating-system libraries. CI uses that form.
 
 Triptych includes a transitional CP/M 2.2 demonstration disk under the Bryan
 Sparks distribution grant recorded in `third_party/cpm22/`. The compatibility
@@ -162,12 +167,22 @@ npm run run:wasm-browser
 
 Open `http://127.0.0.1:8080/`, click the terminal, and type at the `A>` prompt.
 Set `TRIPTYCH_CPM22_IMAGE` to override the bundled disk; the page also retains
-its file picker. The browser modifies only its in-memory disk. The download
-control exports a new image containing guest writes that CP/M has flushed. The
-page implements Triptych's bounded 80-by-24 ANSI profile, including cursor
-movement, erase, bold, underline, reverse video, scrolling, and arrow-key
-input, so full-screen CP/M programs such as `EDIT.COM` work without displaying
-raw escape sequences.
+its file picker. After CP/M flushes a guest write, the page copies the complete
+working disk into browser-owned IndexedDB storage and reports the transaction
+separately from machine state. A later reload restores that disk. The download
+control exports a separate recoverable image, which can be selected in a fresh
+browser session. The page implements Triptych's bounded 80-by-24 ANSI profile,
+including cursor movement, erase, bold, underline, reverse video, scrolling,
+and arrow-key input, so full-screen CP/M programs such as `EDIT.COM` work
+without displaying raw escape sequences.
+
+The real-browser acceptance suite drives the same public page through Edit,
+NUC, persistence, download/reimport, a failed storage transaction, paste and
+the narrow keyboard layout:
+
+```sh
+npm run test:wasm-browser
+```
 
 The ESP32-S3 firmware uses a separate pinned Espressif Xtensa toolchain. Its
 [setup and build instructions](firmware/cpu/README.md) produce both an

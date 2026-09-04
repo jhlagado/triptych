@@ -58,6 +58,7 @@
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.{ts,mjs}\" \"tools/**/*.mjs\" \"crates/**/web/**/*.{js,css,html}\" \"docs/**/*.md\" \"firmware/**/*.md\" README.md AGENTS.md NOTICE.md",
     "format:check": "prettier --check \"src/**/*.ts\" \"test/**/*.{ts,mjs}\" \"tools/**/*.mjs\" \"crates/**/web/**/*.{js,css,html}\" \"docs/**/*.md\" \"firmware/**/*.md\" README.md AGENTS.md NOTICE.md",
     "test": "vitest run",
+    "test:wasm-browser": "npm run build:wasm-browser && playwright test --config=playwright.config.mjs",
     "test:cpu-conformance": "vitest run test/cpu/conformance.test.ts",
     "check:wasm-browser-ui": "node --check crates/triptych-host-wasm/web/app.js && node --check crates/triptych-host-wasm/web/terminal.js && node --check tools/build-wasm-host.mjs && node --check tools/serve-wasm-browser.mjs && node tools/check-wasm-browser-ui.mjs",
     "check:rust": "cargo fmt --all -- --check && cargo clippy --workspace --all-targets --all-features -- -D warnings && cargo test --workspace --all-features && cargo build -p triptych-host-wasm --target wasm32-unknown-unknown --release",
@@ -69,10 +70,11 @@
     "run:wasm-browser": "npm run build:wasm-browser && node tools/serve-wasm-browser.mjs",
     "proof:cpm-headless": "npm run build:wasm-host && node tools/prove-wasm-host.mjs --cpm-headless-only",
     "proof:wasm-host": "npm run build:wasm-host:conformance && node tools/prove-wasm-host.mjs",
-    "check": "npm run build && npm run typecheck && npm run lint && npm run format:check && npm run check:ccp-readiness && npm test && npm run check:cpu-fixtures && npm run check:bdos-baseline && npm run check:ccp-matrix && npm run check:ccp-failures && npm run check:ccp-parser && npm run check:ccp-stack && npm run check:cpm22-text && npm run check:cpm-headless && npm run check:wasm-browser-ui && npm run check:rust"
+    "check": "npm run build && npm run typecheck && npm run lint && npm run format:check && npm run check:ccp-readiness && npm test && npm run check:cpu-fixtures && npm run check:bdos-baseline && npm run check:ccp-matrix && npm run check:ccp-failures && npm run check:ccp-parser && npm run check:ccp-stack && npm run check:cpm22-text && npm run check:cpm-headless && npm run check:wasm-browser-ui && npm run test:wasm-browser && npm run check:rust"
   },
   "devDependencies": {
     "@jhlagado/debug80-runtime": "^0.2.0",
+    "@playwright/test": "1.62.1",
     "@types/node": "^24.13.3",
     "@typescript-eslint/eslint-plugin": "^8.42.0",
     "@typescript-eslint/parser": "^8.42.0",

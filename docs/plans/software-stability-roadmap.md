@@ -33,8 +33,7 @@ consume that pinned artifact.
 | ATOM                  | Standalone `atom` repository                                              | Assembler, native guest binaries and public host API. Required assembler for normal builds and tests.                                |
 | Nucleus / `NUC.COM`   | Standalone `nucleus` repository                                           | Language, compiler, runtime and platform adapters. Uses ATOM; preserves Node and other target support independently of Triptych.     |
 | Edit / `EDIT.COM`     | Standalone [`jhlagado/edit`](https://github.com/jhlagado/edit) repository | Editor core plus explicit terminal, filesystem and target-memory contracts. Triptych consumes the pinned `v0.1.0` application.       |
-| CCP                   | Triptych `roms/cpu/ccp/`                                                  | Original resident command processor; loads programs and implements CP/M built-ins.                                                   |
-| BDOS                  | Triptych `roms/cpu/bdos/`                                                 | Original CP/M-compatible operating-system services. Qualified against interface tests.                                               |
+| CCP and BDOS          | Future standalone OS repository; transitional sources remain in Triptych  | Portable guest operating-system layer, qualified through public CP/M interfaces. The repository name and remote are still pending.   |
 | BIOS and bootstrap    | Triptych `system/cpm/` and `roms/cpu/`, respectively                      | Machine-specific console, disk, boot and warm-start implementation. Remain with the machine.                                         |
 | CP/M distribution     | Triptych image tooling                                                    | Versioned composition of resident components, applications and sample files. Historical binaries are separately identified fixtures. |
 | Rust CPU core         | Triptych `crates/triptych-cpu-core/`                                      | Portable guest execution and machine state. No browser, native filesystem or editor policy.                                          |
@@ -351,8 +350,11 @@ standalone toolchain gates pass.
 
 The [WASM working-disk checkpoint](../reports/wasm-working-disk.md) records the
 first reload-safe browser storage path and a live local save/reload proof. It
-does not complete S5: the full editor/compiler workflow, browser interaction
-automation and storage-failure cases remain.
+is superseded for interaction coverage by the
+[real-browser acceptance checkpoint](../reports/wasm-browser-acceptance.md),
+which drives Edit, NUC, reload, download/reimport, storage failure, paste and
+the reduced mobile layout in Chromium. Physical mobile-keyboard behavior and
+long-duration backlog limits remain explicit S5 follow-up work.
 
 The [standalone Edit checkpoint](../reports/edit-standalone-release.md) records
 the preserved history, ATOM-only `v0.1.0` release, passing macOS/Linux proof and

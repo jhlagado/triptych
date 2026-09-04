@@ -29,6 +29,8 @@ jobs:
           cache: npm
       - name: Install JavaScript dependencies
         run: npm ci
+      - name: Install Chromium for browser acceptance
+        run: npx playwright install --with-deps chromium
       - name: Install pinned Rust toolchain
         run: rustup show
       - name: Install pinned wasm-bindgen CLI
