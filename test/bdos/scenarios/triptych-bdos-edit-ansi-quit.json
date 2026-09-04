@@ -4,7 +4,7 @@
   "description": "Launch EDIT.COM through the Triptych CCP and BDOS and prove its ANSI screen before quitting without saving",
   "systemCcp": "triptych",
   "systemBdos": "triptych",
-  "expectedInitialDriveSha256": "06b907b1e03f615b190dc83ed97d9c7862c5d32e5f8967e3568ae48e171a96ae",
+  "expectedInitialDriveSha256": "a6a0bd4f9d7e370eb0f78a2b6c592d518b962209197496b107b8eca7a17e051f",
   "sessions": [
     {
       "id": "open-and-quit-editor",
@@ -35,7 +35,7 @@
         }
       ],
       "expectedTranscript": "\r\nA>EDIT INPUT.NU\r\r\n\u001b[2J\u001b[Hsub main() fails\r\n    writeOutputByte('O') else fail\r\n    writeOutputByte('K') else fail\r\nend\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\u001b[24;1H\u001b[7mEDIT INPUT   .NU       ^S Save  ^Q Quit                                         \u001b[0m\u001b[1;1H\u001b[2J\u001b[H\r\nA>",
-      "expectedDriveSha256": "06b907b1e03f615b190dc83ed97d9c7862c5d32e5f8967e3568ae48e171a96ae",
+      "expectedDriveSha256": "a6a0bd4f9d7e370eb0f78a2b6c592d518b962209197496b107b8eca7a17e051f",
       "expectedTerminal": {
         "text": "\nA>",
         "cursorRow": 1,

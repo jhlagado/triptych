@@ -14,7 +14,7 @@
       "patches": [{ "offset": 0, "bytes": [195, 0, 0] }]
     }
   ],
-  "expectedInitialDriveSha256": "f639cbc84d97f0d3e7bd5149910eb557636c2f270a859ac6dbdd408ccfe35776",
+  "expectedInitialDriveSha256": "f5614538e2d54a1730f324c49f68819fc79216dfab22d6583a3768f77cca2b0d",
   "sessions": [
     {
       "id": "oversized-and-recovery",

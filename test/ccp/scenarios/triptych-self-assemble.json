@@ -22,7 +22,7 @@
       "sha256": "26cdac36f1cc94a62f8527d3e21125ae0f4de067196669275962196b9bcd2d4f"
     }
   ],
-  "expectedInitialDriveSha256": "872d470a64a32fc0550d2bd19ef9971dad3203a5181ef152be3fd4948c19b7f0",
+  "expectedInitialDriveSha256": "fb25cf7c36e526c4a4cfcd76bc788bf2c6d66be8968a1abe7978ea626aee7459",
   "sessions": [
     {
       "id": "assemble-ccp",
@@ -49,7 +49,7 @@
     {
       "name": "CCP.BIN",
       "bytes": 2048,
-      "sha256": "2bbe49b9be12186da02d439a407ddf40559da231bb4b828569ba4031def8f07f"
+      "sha256": "55aff78b1317e16c9be270822bf3d1f2f0be88bd836fe7ee2deca91bcae6fd80"
     }
   ]
 }

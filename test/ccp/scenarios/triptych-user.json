@@ -4,7 +4,7 @@
   "description": "Require the Triptych CCP to match USER selection and per-user directory visibility",
   "systemCcp": "triptych",
   "systemBdos": "triptych",
-  "expectedInitialDriveSha256": "06b907b1e03f615b190dc83ed97d9c7862c5d32e5f8967e3568ae48e171a96ae",
+  "expectedInitialDriveSha256": "a6a0bd4f9d7e370eb0f78a2b6c592d518b962209197496b107b8eca7a17e051f",
   "sessions": [
     {
       "id": "select-user",

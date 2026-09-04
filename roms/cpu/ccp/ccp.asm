@@ -110,6 +110,7 @@ NOTDRIVE:
         LD      (CMDSTRT),HL
         LD      DE,CMDFCB
         CALL    PARSEFCB
+        JP      C,BADCMD
         LD      (ARGSTRT),HL
         LD      DE,DIRKEY
         CALL    ISCMD
@@ -233,6 +234,7 @@ CMDDIR:
         LD      (CMDSTRT),HL
         LD      DE,CMDFCB
         CALL    PARSEFCB
+        JP      C,BADCMD
         CALL    SKIPSP
         LD      A,(HL)
         OR      A
@@ -362,6 +364,7 @@ CMDTYPE:
         JR      Z,TYPENO
         LD      DE,CMDFCB
         CALL    PARSEFCB
+        JP      C,BADCMD
         CALL    SKIPSP
         LD      A,(HL)
         OR      A
@@ -419,6 +422,7 @@ CMDERA:
         JP      Z,BADCMD
         LD      DE,CMDFCB
         CALL    PARSEFCB
+        JP      C,BADCMD
         CALL    SKIPSP
         LD      A,(HL)
         OR      A
@@ -479,6 +483,7 @@ CMDREN:
         JP      Z,BADCMD
         LD      DE,RENFCB
         CALL    PARSEFCB
+        JP      C,BADCMD
         LD      A,(HL)
         CP      '='
         JP      NZ,BADCMD
@@ -488,6 +493,7 @@ CMDREN:
         JP      Z,BADCMD
         LD      DE,CMDFCB
         CALL    PARSEFCB
+        JP      C,BADCMD
         CALL    SKIPSP
         LD      A,(HL)
         OR      A
@@ -604,6 +610,7 @@ SAVENEND:
         JP      Z,BADCMD
         LD      DE,CMDFCB
         CALL    PARSEFCB
+        JP      C,BADCMD
         CALL    SKIPSP
         LD      A,(HL)
         OR      A
@@ -743,9 +750,14 @@ FCBNAME:
         INC     DE
         LD      B,8
         CALL    PARFLD
+        RET     C
         LD      A,(HL)
         CP      '.'
-        RET     NZ
+        JR      Z,FCBDOT
+        OR      A
+        RET
+
+FCBDOT:
         INC     HL
         PUSH    HL
         LD      HL,(FCBBASE)
@@ -783,8 +795,22 @@ PARSKIP:
         RET     Z
         CP      '.'
         RET     Z
+
+PARLONG:
         INC     HL
-        JR      PARSKIP
+        LD      A,(HL)
+        OR      A
+        JP      Z,PLEND
+        CP      SPACE
+        JP      Z,PLEND
+        CP      '='
+        JP      Z,PLEND
+        CP      '.'
+        JR      NZ,PARLONG
+
+PLEND:
+        SCF
+        RET
 
 PARSTAR:
         LD      A,'?'
@@ -794,7 +820,19 @@ STARLOOP:
         INC     DE
         DJNZ    STARLOOP
         INC     HL
-        JR      PARSKIP
+
+PARIGN:
+        LD      A,(HL)
+        OR      A
+        RET     Z
+        CP      SPACE
+        RET     Z
+        CP      '='
+        RET     Z
+        CP      '.'
+        RET     Z
+        INC     HL
+        JR      PARIGN
 
 SKIPSP:
         LD      A,(HL)
