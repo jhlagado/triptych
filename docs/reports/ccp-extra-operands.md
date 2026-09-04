@@ -10,8 +10,10 @@ that extra operands are rejected before an operation begins.
 
 `CMDDIR` and `CMDTYPE` now retain the first operand as the diagnostic token and
 check for end of input after `PARSEFCB` and whitespace. The corrected scenario
-reports `README.TXT?` for both commands, then executes `DIR README.TXT` at the
-next prompt. Its disk remains byte-for-byte unchanged with SHA-256
+reports `README.TXT?` for both commands. The same scenario also supplies extra
+operands to `ERA`, `REN`, `SAVE` and `USER`, exercising the checks those handlers
+already had. It then executes `DIR README.TXT` at the next prompt. The disk
+remains byte-for-byte unchanged with SHA-256
 `06b907b1e03f615b190dc83ed97d9c7862c5d32e5f8967e3568ae48e171a96ae`.
 The complete guarded headless scenario corpus passes after the change.
 
