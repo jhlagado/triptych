@@ -1,0 +1,41 @@
+{
+  "schema": "triptych-cpm-headless-scenario-v1",
+  "id": "triptych-ccp-save-overflow",
+  "description": "Reject an overflowing SAVE page count before disk mutation and accept the next valid command",
+  "systemCcp": "triptych",
+  "systemBdos": "triptych",
+  "expectedInitialDriveSha256": "cb640c716f7cb69c9f112c6067cc8ca3ec4e3676de2335cec4358364acca5c51",
+  "sessions": [
+    {
+      "id": "overflow-and-recovery",
+      "interactions": [
+        { "id": "boot", "inputAscii": "", "stopAfterAscii": "\r\nA>" },
+        {
+          "id": "overflowing-save",
+          "inputAscii": "save 1280 overflow.com\r",
+          "stopAfterAscii": "\r\nA>"
+        },
+        {
+          "id": "confirm-absent",
+          "inputAscii": "dir overflow.com\r",
+          "stopAfterAscii": "\r\nA>"
+        },
+        {
+          "id": "valid-command-after-error",
+          "inputAscii": "dir readme.txt\r",
+          "stopAfterAscii": "\r\nA>"
+        }
+      ],
+      "expectedTranscript": "\r\nA>save 1280 overflow.com\r\r\n1280?\r\n\r\nA>dir overflow.com\r\r\nNO FILE\r\nA>dir readme.txt\r\r\nA: README   TXT\r\nA>",
+      "expectedDriveSha256": "cb640c716f7cb69c9f112c6067cc8ca3ec4e3676de2335cec4358364acca5c51",
+      "expectedTerminal": {
+        "text": "\nA>save 1280 overflow.com\n1280?\n\nA>dir overflow.com\nNO FILE\nA>dir readme.txt\nA: README   TXT\nA>",
+        "cursorRow": 8,
+        "cursorColumn": 2,
+        "currentAttributes": 0,
+        "wrapPending": false,
+        "bellCount": 0
+      }
+    }
+  ]
+}

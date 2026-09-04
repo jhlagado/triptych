@@ -151,8 +151,9 @@ the caller migration and byte-equivalence proof.
 Finish the existing CCP matrix rather than adding a richer shell. Cover long
 and malformed commands, decimal overflow, wildcard/filename limits, extra
 operands, full/read-only/faulted disks and a valid command after every failure.
-The source inspection identified `SAVE 1280 X.COM` as an overflow candidate;
-reproduce it in an executable test before changing the parser.
+The [SAVE overflow checkpoint](../reports/ccp-save-overflow.md) records the
+failing-before reproduction and correction for `SAVE 1280 X.COM`. Broader
+generated parser boundaries and malformed-command recovery remain open.
 
 Define replacement and partial-write behavior explicitly. Current SAVE deletes
 an existing target before creating its replacement; blanket transactional-save

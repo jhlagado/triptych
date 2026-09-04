@@ -12,7 +12,7 @@
     "path": "roms/cpu/ccp/ccp.asm",
     "loadAddress": 58368,
     "bytes": 2048,
-    "sha256": "0e6100dd4c825f626d70262943b8e5698143dca1dd1d045f3825aaa5e79e486d"
+    "sha256": "94ca6d2f216035c8b2d5b7ecabc5e7308573f3fc3a2b6234f8597b6d5a566752"
   },
   "features": [
     {
@@ -108,7 +108,8 @@
         "test/ccp/scenarios/oracle-builtin-errors.json",
         "test/ccp/scenarios/triptych-builtin-errors.json",
         "test/ccp/scenarios/oracle-mutation-builtins.json",
-        "test/ccp/scenarios/triptych-mutation-builtins.json"
+        "test/ccp/scenarios/triptych-mutation-builtins.json",
+        "test/ccp/scenarios/triptych-save-overflow.json"
       ]
     },
     {
@@ -138,7 +139,8 @@
         "test/ccp/scenarios/oracle-page-zero.json",
         "test/ccp/scenarios/triptych-page-zero.json",
         "test/ccp/scenarios/oracle-builtin-errors.json",
-        "test/ccp/scenarios/triptych-builtin-errors.json"
+        "test/ccp/scenarios/triptych-builtin-errors.json",
+        "test/ccp/scenarios/triptych-save-overflow.json"
       ]
     },
     {
@@ -147,7 +149,8 @@
       "evidence": [
         "test/ccp/scenarios/triptych-loader-oversized.json",
         "test/ccp/scenarios/triptych-era-all-cancel.json",
-        "test/ccp/scenarios/triptych-builtin-errors.json"
+        "test/ccp/scenarios/triptych-builtin-errors.json",
+        "test/ccp/scenarios/triptych-save-overflow.json"
       ]
     },
     {

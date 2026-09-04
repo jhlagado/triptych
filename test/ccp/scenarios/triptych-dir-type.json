@@ -4,7 +4,7 @@
   "description": "Run DIR and TYPE through the Triptych CCP and BDOS with exact oracle-compatible transcripts",
   "systemCcp": "triptych",
   "systemBdos": "triptych",
-  "expectedInitialDriveSha256": "183cc8f95e8ee7beee0776e87c29e6429191cdeab4393365cb6c4049cbccf089",
+  "expectedInitialDriveSha256": "cb640c716f7cb69c9f112c6067cc8ca3ec4e3676de2335cec4358364acca5c51",
   "sessions": [
     {
       "id": "dir-and-type",
@@ -26,7 +26,7 @@
         }
       ],
       "expectedTranscript": "\r\nA>DIR\r\r\nA: README   TXT : SMOKE    COM : ATOM     COM : INPUT    ASM\r\nA: HELLO    ASM : LARGE    ASM : PART1    ASM : PART2    ASM\r\nA: BUILD    ASM : NUC      COM : INPUT    NU  : EDIT     COM\r\nA>TYPE README.TXT\r\r\nDebug80 CP/M 2.2 platform\r\n\r\nA>",
-      "expectedDriveSha256": "183cc8f95e8ee7beee0776e87c29e6429191cdeab4393365cb6c4049cbccf089",
+      "expectedDriveSha256": "cb640c716f7cb69c9f112c6067cc8ca3ec4e3676de2335cec4358364acca5c51",
       "expectedTerminal": {
         "text": "\nA>DIR\nA: README   TXT : SMOKE    COM : ATOM     COM : INPUT    ASM\nA: HELLO    ASM : LARGE    ASM : PART1    ASM : PART2    ASM\nA: BUILD    ASM : NUC      COM : INPUT    NU  : EDIT     COM\nA>TYPE README.TXT\nDebug80 CP/M 2.2 platform\n\nA>",
         "cursorRow": 8,

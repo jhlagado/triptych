@@ -569,6 +569,7 @@ SAVENUM:
         LD      E,A
         LD      A,B
         ADD     A,A
+        JP      C,BADCMD
         LD      D,A
         ADD     A,A
         ADD     A,A
