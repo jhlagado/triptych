@@ -52,13 +52,45 @@ AZM's static register-contract analysis; executable register, stack and control
 flow checks remain the qualification mechanism. Nucleus's earlier unpublished
 reconciliation and separate compiler-rewrite work are preserved.
 
+## Published-pin consumer qualification
+
+The three compiler-output equivalence tests initially exceeded their
+30-second limits while rebuilding baselines through emulated ATOM. The
+isolated flat case confirmed a timeout rather than an output mismatch. With
+180-second wall-clock allowances, all three exact comparisons pass: flat
+58.003 seconds, banked 73.249 seconds, and entry-bank-one 72.140 seconds. Their
+NOBJ, Intel HEX and D8 assertions and guest execution budgets are unchanged.
+The log is `/tmp/nucleus-equivalence-atom-wallclock.log`.
+
+Nucleus's unpublished reconciliation worktree now pins the published ATOM
+commit above in its package declaration and lockfile. A separate source
+snapshot at `/private/tmp/nucleus-pinned-consumer.wmGpWy` installed the Git
+dependencies with a fresh npm cache and no local package override. The first
+attempt disabled scripts and omitted required compiled JavaScript; normal
+`npm ci` with a second empty cache prepared those files. All 14 adapter tests,
+type checking and the runtime-boundary check pass against that installation.
+The generated-image check also passes there: all compiler variants, runtime
+profiles, runner, resolver and CP/M embedded assets match their checked-in
+files exactly. Its log is `/tmp/nucleus-pinned-generated-images-prepared.log`.
+Relocation and compiler checks remain in progress against the fresh install.
+
+Nucleus's CI edit removes its historical Debug80/AZM checkout, build and link
+steps, and adds the source-adapter tests before the existing release gate.
+The workflow has been parsed locally but has not run on GitHub. Existing
+unpublished reconciliation changes and the separate compiler rewrite remain
+preserved.
+
 ## Next gate
 
 Finish Nucleus's full source/manifest suites,
-verify generated images and the installed runtime boundary, then select the
-published ATOM commit and repeat the consumer checks without a development
-override. Nucleus publication and downstream pins remain gated on that work.
+verify generated images and complete the consumer checks against the published
+ATOM commit without a development override. Nucleus publication and downstream
+pins remain gated on that work.
 Triptych retains its existing ATOM pin and BIOS ownership. No Pages, Linux,
 mobile-device or ESP32 qualification is claimed here. Triptych's guarded
 `npm run check` passed after these roadmap/report updates; the log is
 `/tmp/triptych-nucleus-relocation-checkpoint-check.log`.
+
+The complete guarded Triptych check also passed after the published-pin
+checkpoint update. Its log is `/tmp/triptych-nucleus-published-pin-check.log`.
+Triptych's own dependency pin was not changed for that run.
