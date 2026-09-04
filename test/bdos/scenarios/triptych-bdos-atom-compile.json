@@ -4,7 +4,7 @@
   "description": "Assemble HELLO.ASM with the real ATOM.COM through the Triptych CCP and BDOS, then execute the persisted HELLO.COM in a fresh machine",
   "systemCcp": "triptych",
   "systemBdos": "triptych",
-  "expectedInitialDriveSha256": "418fc57432743b7a52c3f1f69f4c56c1411c35e81f25cc733254cd2cb20573fc",
+  "expectedInitialDriveSha256": "b168df5ee70d391430aab991a288d2ee79b779ba26ee25a4728f8a9234c74b91",
   "sessions": [
     {
       "id": "assemble-hello",
@@ -21,7 +21,7 @@
         }
       ],
       "expectedTranscript": "\r\nA>ATOM HELLO.ASM\r\r\n\r\nHELLO.COM written\r\n\r\nA>",
-      "expectedDriveSha256": "4856d094a20721573fcc779911e49845fb9b58524cafe7a0bd9c3d9488423168",
+      "expectedDriveSha256": "a30643aff2978a8359a32655411e0d73e93729c4db536b940be8877fc9a6155d",
       "expectedTerminal": {
         "text": "\nA>ATOM HELLO.ASM\n\nHELLO.COM written\n\nA>",
         "cursorRow": 5,
@@ -47,7 +47,7 @@
         }
       ],
       "expectedTranscript": "\r\nA>HELLO\r\r\nHello from native Atom\r\n\r\nA>",
-      "expectedDriveSha256": "4856d094a20721573fcc779911e49845fb9b58524cafe7a0bd9c3d9488423168",
+      "expectedDriveSha256": "a30643aff2978a8359a32655411e0d73e93729c4db536b940be8877fc9a6155d",
       "expectedTerminal": {
         "text": "\nA>HELLO\nHello from native Atom\n\nA>",
         "cursorRow": 4,

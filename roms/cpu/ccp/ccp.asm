@@ -947,6 +947,12 @@ ERAALL:
 LOADBUF:
         DS      128,0
 
+; A fixed sentinel separates reusable command scratch from the downward-growing
+; resident stack. The host proof checks that every byte survives the deepest
+; built-in and error-recovery paths.
+STKGUARD:
+        DS      16,$A5
+STKGUEND:
 STKBASE:
         DS      48,0
 STKTOP:

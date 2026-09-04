@@ -4,7 +4,7 @@
   "description": "Reject drive prefixes outside the CP/M A-through-P range before access and recover",
   "systemCcp": "triptych",
   "systemBdos": "triptych",
-  "expectedInitialDriveSha256": "418fc57432743b7a52c3f1f69f4c56c1411c35e81f25cc733254cd2cb20573fc",
+  "expectedInitialDriveSha256": "b168df5ee70d391430aab991a288d2ee79b779ba26ee25a4728f8a9234c74b91",
   "sessions": [
     {
       "id": "invalid-drive-prefix-and-recovery",
@@ -27,7 +27,7 @@
         }
       ],
       "expectedTranscript": "\r\nA>dir @:readme.txt\r\r\n@:README.TXT?\r\n\r\nA>dir q:readme.txt\r\r\nQ:README.TXT?\r\n\r\nA>dir a:readme.txt\r\r\nA: README   TXT\r\nA>",
-      "expectedDriveSha256": "418fc57432743b7a52c3f1f69f4c56c1411c35e81f25cc733254cd2cb20573fc",
+      "expectedDriveSha256": "b168df5ee70d391430aab991a288d2ee79b779ba26ee25a4728f8a9234c74b91",
       "expectedTerminal": {
         "text": "\nA>dir @:readme.txt\n@:README.TXT?\n\nA>dir q:readme.txt\nQ:README.TXT?\n\nA>dir a:readme.txt\nA: README   TXT\nA>",
         "cursorRow": 9,

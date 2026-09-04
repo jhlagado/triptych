@@ -166,7 +166,10 @@ Define replacement and partial-write behavior explicitly. Current SAVE deletes
 an existing target before creating its replacement; blanket transactional-save
 claims would be incorrect. Tests must check the documented outcome, preserve
 unrelated files and prove command recovery. Prove worst-case CCP stack and
-resident-size bounds with canaries and paths exercising failure handling.
+resident-size bounds with canaries and paths exercising failure handling. The
+[resident-stack checkpoint](../reports/ccp-resident-stack.md) fixes the stack
+shape, guards its lower boundary and records an eight-byte low-water result
+across the current success, failure and transient-return corpus.
 
 Rerun BDOS's direct-call, extent, directory-failure and randomized filesystem
 tests. Retain original implementation through published interfaces and

@@ -4,7 +4,7 @@
   "description": "Reject extra DIR and TYPE operands before performing the command and recover at the next prompt",
   "systemCcp": "triptych",
   "systemBdos": "triptych",
-  "expectedInitialDriveSha256": "418fc57432743b7a52c3f1f69f4c56c1411c35e81f25cc733254cd2cb20573fc",
+  "expectedInitialDriveSha256": "b168df5ee70d391430aab991a288d2ee79b779ba26ee25a4728f8a9234c74b91",
   "sessions": [
     {
       "id": "extra-operands-and-recovery",
@@ -47,7 +47,7 @@
         }
       ],
       "expectedTranscript": "\r\nA>dir readme.txt extra\r\r\nREADME.TXT?\r\n\r\nA>type readme.txt extra\r\r\nREADME.TXT?\r\n\r\nA>era readme.txt extra\r\r\nREADME.TXT?\r\n\r\nA>ren foo.txt=readme.txt extra\r\r\nFOO.TXT=README.TXT?\r\n\r\nA>save 1 page.com extra\r\r\n1?\r\n\r\nA>user 1 extra\r\r\n1?\r\n\r\nA>dir readme.txt\r\r\nA: README   TXT\r\nA>",
-      "expectedDriveSha256": "418fc57432743b7a52c3f1f69f4c56c1411c35e81f25cc733254cd2cb20573fc",
+      "expectedDriveSha256": "b168df5ee70d391430aab991a288d2ee79b779ba26ee25a4728f8a9234c74b91",
       "expectedTerminal": {
         "text": "\nA>dir readme.txt extra\nREADME.TXT?\n\nA>type readme.txt extra\nREADME.TXT?\n\nA>era readme.txt extra\nREADME.TXT?\n\nA>ren foo.txt=readme.txt extra\nFOO.TXT=README.TXT?\n\nA>save 1 page.com extra\n1?\n\nA>user 1 extra\n1?\n\nA>dir readme.txt\nA: README   TXT\nA>",
         "cursorRow": 21,

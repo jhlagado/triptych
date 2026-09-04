@@ -12,7 +12,7 @@
     "path": "roms/cpu/ccp/ccp.asm",
     "loadAddress": 58368,
     "bytes": 2048,
-    "sha256": "eace2cd6e1ed77c59ccfa92dc891720f97927c436f773315727293b2135c322a"
+    "sha256": "361dc3a0f75cd175d255b3388f2729b158cdc7ab6169e3b0358499dc8b2d2447"
   },
   "features": [
     {
@@ -169,8 +169,12 @@
     },
     {
       "id": "resident-stack-and-size",
-      "status": "partial",
-      "evidence": ["docs/reports/atom-ccp-builtins-checkpoint.md"]
+      "status": "proved",
+      "evidence": [
+        "docs/reports/atom-ccp-builtins-checkpoint.md",
+        "docs/reports/ccp-resident-stack.md",
+        "tools/prove-ccp-stack.mjs"
+      ]
     },
     {
       "id": "bundled-applications",

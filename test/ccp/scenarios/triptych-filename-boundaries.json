@@ -4,7 +4,7 @@
   "description": "Reject overlong command, filename, and extension fields without truncation or disk mutation",
   "systemCcp": "triptych",
   "systemBdos": "triptych",
-  "expectedInitialDriveSha256": "418fc57432743b7a52c3f1f69f4c56c1411c35e81f25cc733254cd2cb20573fc",
+  "expectedInitialDriveSha256": "b168df5ee70d391430aab991a288d2ee79b779ba26ee25a4728f8a9234c74b91",
   "sessions": [
     {
       "id": "overlong-fields-and-recovery",
@@ -42,7 +42,7 @@
         }
       ],
       "expectedTranscript": "\r\nA>dir abcdefgh.txt\r\r\nNO FILE\r\nA>dir readmeeeex.txt\r\r\nREADMEEEEX.TXT?\r\n\r\nA>type readme.txtx\r\r\nREADME.TXTX?\r\n\r\nA>save 1 toolonggg.com\r\r\n1?\r\n\r\nA>aaaaaaaaa\r\r\nAAAAAAAAA?\r\n\r\nA>dir readme.txt\r\r\nA: README   TXT\r\nA>",
-      "expectedDriveSha256": "418fc57432743b7a52c3f1f69f4c56c1411c35e81f25cc733254cd2cb20573fc",
+      "expectedDriveSha256": "b168df5ee70d391430aab991a288d2ee79b779ba26ee25a4728f8a9234c74b91",
       "expectedTerminal": {
         "text": "\nA>dir abcdefgh.txt\nNO FILE\nA>dir readmeeeex.txt\nREADMEEEEX.TXT?\n\nA>type readme.txtx\nREADME.TXTX?\n\nA>save 1 toolonggg.com\n1?\n\nA>aaaaaaaaa\nAAAAAAAAA?\n\nA>dir readme.txt\nA: README   TXT\nA>",
         "cursorRow": 17,

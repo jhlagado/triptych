@@ -46,6 +46,7 @@
     "check:bdos-baseline": "node tools/check-bdos-baseline.mjs",
     "check:atom-install": "node tools/check-atom-install.mjs",
     "check:ccp-matrix": "node tools/check-ccp-matrix.mjs",
+    "check:ccp-stack": "npm run build:wasm-host && node tools/prove-ccp-stack.mjs",
     "check:ccp-readiness": "node --test tools/check-ccp-readiness.test.mjs",
     "check:cpm22-text": "node tools/check-cpm22-text.mjs",
     "normalize:cpm22-text": "node tools/normalize-cpm22-text.mjs",
@@ -66,7 +67,7 @@
     "run:wasm-browser": "npm run build:wasm-browser && node tools/serve-wasm-browser.mjs",
     "proof:cpm-headless": "npm run build:wasm-host && node tools/prove-wasm-host.mjs --cpm-headless-only",
     "proof:wasm-host": "npm run build:wasm-host:conformance && node tools/prove-wasm-host.mjs",
-    "check": "npm run build && npm run typecheck && npm run lint && npm run format:check && npm run check:ccp-readiness && npm test && npm run check:cpu-fixtures && npm run check:bdos-baseline && npm run check:ccp-matrix && npm run check:cpm22-text && npm run check:cpm-headless && npm run check:wasm-browser-ui && npm run check:rust"
+    "check": "npm run build && npm run typecheck && npm run lint && npm run format:check && npm run check:ccp-readiness && npm test && npm run check:cpu-fixtures && npm run check:bdos-baseline && npm run check:ccp-matrix && npm run check:ccp-stack && npm run check:cpm22-text && npm run check:cpm-headless && npm run check:wasm-browser-ui && npm run check:rust"
   },
   "devDependencies": {
     "@jhlagado/debug80-runtime": "^0.2.0",
