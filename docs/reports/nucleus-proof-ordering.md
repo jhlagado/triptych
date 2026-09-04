@@ -25,19 +25,36 @@ fixture address changed; source strings and instruction statements are intact.
 
 Host deadlines now allow time for emulated ATOM assembly. Guest execution and
 memory limits and exact-output assertions are unchanged. The combined Stage
-7/NOBJ run passes all 13 tests; the complete corrected manifest run remains in
-progress. Their logs
-are `/tmp/nucleus-manifest-corrected.log` and
+7/NOBJ run passes all 13 tests. The complete corrected manifest run passes all
+24 tests in 944.72 seconds, including every large compiler layout and the
+direct-Z80 semantic proofs. Their logs are
+`/tmp/nucleus-manifest-corrected.log` and
 `/tmp/nucleus-stage7-nobj-corrected.log`. Details and measurements are in
 Nucleus's `docs/reports/atom-proof-ordering.md`.
 
+The installed-package check also passes. It packs the current Nucleus output,
+installs it in an isolated consumer without ATOM or AZM, imports every public
+export, and compiles and runs a byte-echo program through the library and
+command-line interfaces. A rejected second build leaves the preceding object
+intact. The checked archive has 234 files and 3,861,114 unpacked bytes; it is
+an unpublished worktree artifact rather than a release.
+
 A new candidate snapshot at `/private/tmp/nucleus-release-candidate.3sVlJd`
 has installed the pinned Git dependency with an empty cache and no package
-override. All 15 adapter tests pass there. Its complete release gate is running;
-the log is `/tmp/nucleus-release-candidate-gate.log`.
+override. All 15 adapter tests pass there. Its former complete release gate
+passes: deterministic image checks, type checking, 563 tests across 57 files,
+the distribution build and runtime-boundary check. The test suite took 1,684.82
+seconds; the log is `/tmp/nucleus-release-candidate-gate.log`.
 
-Triptych's complete guarded `npm run check` passes; its log is
-`/tmp/triptych-proof-ordering-check.log`. Next: collect the manifest and clean
-release results, then qualify Nucleus publication and downstream updates.
-BIOS remains Triptych-owned. No new Linux, Pages, mobile device or ESP32 result
-is claimed here.
+Triptych now pins ATOM revision
+`802b5c2d320bec777f427755ff2d7338e3b80a05`. A clean install from an empty npm
+cache imports ATOM and its independently installed Z80 tool services without
+AZM. The complete guarded `npm run check` then passes with 175 TypeScript tests
+across 14 files, the component-lock and WASM working-disk proofs, all native
+Rust tests and the release WASM build. Its log is
+`/tmp/triptych-final-atom-check.log`.
+
+Next: finish the expanded release gate in the final Nucleus worktree, then
+qualify Nucleus publication and downstream updates. BIOS remains
+Triptych-owned. No new Linux, Pages, mobile device or ESP32 result is claimed
+here.

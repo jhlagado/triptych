@@ -73,7 +73,7 @@
     "@types/node": "^24.13.3",
     "@typescript-eslint/eslint-plugin": "^8.42.0",
     "@typescript-eslint/parser": "^8.42.0",
-    "atom-z80": "git+https://github.com/jhlagado/atom.git#27b32ad97ee0596d1952617261b644f8ccc389f9",
+    "atom-z80": "git+https://github.com/jhlagado/atom.git#802b5c2d320bec777f427755ff2d7338e3b80a05",
     "eslint": "^8.55.0",
     "prettier": "^3.6.2",
     "typescript": "^5.9.2",
