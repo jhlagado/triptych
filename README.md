@@ -182,7 +182,10 @@ the [specifications](docs/specifications/) contain the experimental register
 contracts. Current implementation work is limited to the CPU module; the
 [CPU development plan](docs/plans/cpu-development.md) records the portable
 Rust, native, WebAssembly, ESP32-S3, and breadboard stages and their proof
-gates. The [Atom BDOS roadmap](docs/plans/atom-bdos-roadmap.md) and
+gates. The [component-lock contract](docs/specifications/component-lock-v1.md)
+defines how a future release selects independently maintained Z80 software
+without treating those projects as Rust crates. The
+[Atom BDOS roadmap](docs/plans/atom-bdos-roadmap.md) and
 [BDOS contract](docs/specifications/bdos-v0.1.md) define the independent,
 interface-driven replacement of the transitional BDOS. The
 [Atom CCP roadmap](docs/plans/atom-ccp-roadmap.md) and

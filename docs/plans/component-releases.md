@@ -1,7 +1,9 @@
 # Component ownership and release assembly
 
-2026-09-05. Ownership decisions are settled as described below. The lockfile
-and artifact pipeline are planned work under S2–S4 of the
+2026-09-05. Ownership decisions are settled as described below. The
+[component-lock v1 contract](../specifications/component-lock-v1.md) and its
+validator now define the input boundary. A populated production lock and the
+artifact pipeline remain work under S2–S4 of the
 [software stability roadmap](software-stability-roadmap.md); no new release
 manifest or standalone OS repository has been published yet.
 
