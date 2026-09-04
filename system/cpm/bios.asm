@@ -1,4 +1,4 @@
-; CP/M 2.2 compatibility-proof BIOS for the ESP32-hosted Z80 SBC profile.
+; Triptych CP/M BIOS: disk-loaded Z80 machine interface, resident in RAM.
 
         ORG     $FA00
 

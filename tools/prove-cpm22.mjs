@@ -99,7 +99,7 @@ function runCommand(machine, counters, command, expected) {
 
 const [bootRom, bios, bundledDisk] = await Promise.all([
   assemble(join(sourceDirectory, "bootstrap.asm")),
-  assemble(join(sourceDirectory, "bios.asm")),
+  assemble(join(repositoryRoot, "system", "cpm", "bios.asm")),
   readFile(resolve(cpmImagePath)),
 ]);
 assert.equal(bootRom.length, BOOT_ROM_BYTES);

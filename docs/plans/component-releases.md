@@ -23,12 +23,10 @@ defines the BIOS call contract; it does not own Triptych's implementation.
 An OS test BIOS may simulate those calls without importing Triptych hardware
 ports. Supporting a second real machine does not require moving Triptych BIOS.
 
-CCP, BDOS and the current BIOS are loaded from disk into RAM. Their existing
-`roms/cpu/` placement is transitional and does not describe their execution
-storage. During integration migration, the BIOS destination is
-`system/cpm/bios.asm`; the actual bootstrap stays under `roms/cpu/`. Update
-every builder, fixture and link in the same verified rename. Do not create a
-second maintained copy while leaving callers on the old path.
+CCP, BDOS and the BIOS are loaded from disk into RAM. The Triptych BIOS is at
+`system/cpm/bios.asm`; the actual bootstrap stays under `roms/cpu/`. The CCP and
+BDOS paths under `roms/cpu/` remain transitional until OS extraction. There is
+one maintained BIOS source, shared by the image builders and machine proofs.
 
 ## Two dependency mechanisms
 

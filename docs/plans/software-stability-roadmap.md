@@ -34,7 +34,7 @@ pending; the table records current source locations.
 | Edit / `EDIT.COM`     | Currently Debug80 CP/M sources; planned standalone Edit repository | Editor core plus explicit terminal, filesystem and target-memory adapters. Triptych consumes a built application.                    |
 | CCP                   | Triptych `roms/cpu/ccp/`                                           | Original resident command processor; loads programs and implements CP/M built-ins.                                                   |
 | BDOS                  | Triptych `roms/cpu/bdos/`                                          | Original CP/M-compatible operating-system services. Qualified against interface tests.                                               |
-| BIOS and bootstrap    | Triptych `roms/cpu/`                                               | Machine-specific console, disk, boot and warm-start implementation. Remain with the machine.                                         |
+| BIOS and bootstrap    | Triptych `system/cpm/` and `roms/cpu/`, respectively               | Machine-specific console, disk, boot and warm-start implementation. Remain with the machine.                                         |
 | CP/M distribution     | Triptych image tooling                                             | Versioned composition of resident components, applications and sample files. Historical binaries are separately identified fixtures. |
 | Rust CPU core         | Triptych `crates/triptych-cpu-core/`                               | Portable guest execution and machine state. No browser, native filesystem or editor policy.                                          |
 | WASM and macOS/Linux  | Triptych host crates                                               | Browser or terminal input, scheduling and host storage around the same Rust machine.                                                 |
@@ -143,9 +143,10 @@ Extract CCP and BDOS together into the independently released OS project once
 its name and remote are selected. Preserve their source history, interface
 contracts and component proofs. Separate configurable placement from portable
 behavior and prove an alternate headless target. Triptych consumes a pinned OS
-release and retains its integration tests. Its BIOS stays in Triptych and
-moves from the misleading `roms/cpu/bios.asm` path to `system/cpm/bios.asm`
-with every caller updated together; the real bootstrap remains under `roms/`.
+release and retains its integration tests. Its BIOS stays in Triptych at
+`system/cpm/bios.asm`; the real bootstrap remains under `roms/`. The
+[BIOS placement checkpoint](../reports/bios-placement-migration.md) records
+the caller migration and byte-equivalence proof.
 
 Finish the existing CCP matrix rather than adding a richer shell. Cover long
 and malformed commands, decimal overflow, wildcard/filename limits, extra

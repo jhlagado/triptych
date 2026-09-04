@@ -32,7 +32,7 @@
         "bytes": 1024,
         "sha256": "3b575ee7990ee5865c6ddbf26b1b2c75a8fac81c47ddc285d18d488f83cd5b9d",
         "jumpEntries": 17,
-        "runtimeDisposition": "replaced by a fresh assembly of roms/cpu/bios.asm before execution"
+        "runtimeDisposition": "replaced by a fresh assembly of system/cpm/bios.asm before execution"
       }
     ]
   }

@@ -30,7 +30,8 @@ ESP32 physical qualification follows separately when hardware is available.
 | `crates/triptych-cpu-core`    | portable allocation-free Rust CPU machine                                   |
 | `crates/triptych-host-native` | macOS/Linux terminal and file-backed disk host                              |
 | `crates/triptych-host-wasm`   | headless JavaScript/WASM adapter with owned in-memory disks                 |
-| `roms/cpu`                    | Z80 bootstrap and CP/M compatibility BIOS sources                           |
+| `roms/cpu`                    | Z80 bootstrap ROM; transitional CCP/BDOS sources pending OS extraction      |
+| `system/cpm`                  | Triptych CP/M BIOS, loaded from disk into RAM                               |
 | `firmware/cpu`                | standalone Rust-over-ESP-IDF CPU-module firmware                            |
 | `firmware/video`              | future ESP-IDF VGA-module firmware                                          |
 | `firmware/sound`              | future ESP-IDF I²S sound-module firmware                                    |

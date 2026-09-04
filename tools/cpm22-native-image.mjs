@@ -127,7 +127,7 @@ export async function assembleTriptychCpuFirmware(repositoryRoot) {
     assemble(join(sourceDirectory, "bootstrap.asm")),
     assemble(join(sourceDirectory, "ccp", "ccp.asm")),
     assemble(join(sourceDirectory, "bdos", "bdos.asm")),
-    assemble(join(sourceDirectory, "bios.asm")),
+    assemble(join(repositoryRoot, "system", "cpm", "bios.asm")),
   ]);
   if (bootRom.length !== BOOT_ROM_BYTES) {
     throw new Error(

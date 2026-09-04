@@ -291,7 +291,7 @@ async function proveCpm() {
     assemble(join(sourceDirectory, "bootstrap.asm")),
     assemble(join(sourceDirectory, "ccp", "ccp.asm")),
     assemble(join(sourceDirectory, "bdos", "bdos.asm")),
-    assemble(join(sourceDirectory, "bios.asm")),
+    assemble(join(repositoryRoot, "system", "cpm", "bios.asm")),
     readFile(resolve(cpmImagePath)),
   ]);
   const configuredScenario = process.env.TRIPTYCH_CPM_SCENARIO;

@@ -35,7 +35,7 @@ describe("Triptych BDOS console transient", () => {
     [bootRom, replacementBdos, bios, consoleProgram] = await Promise.all([
       assembleZ80ForTest(resolve(repositoryRoot, "roms/cpu/bootstrap.asm")),
       assembleZ80ForTest(resolve(repositoryRoot, "roms/cpu/bdos/bdos.asm")),
-      assembleZ80ForTest(resolve(repositoryRoot, "roms/cpu/bios.asm")),
+      assembleZ80ForTest(resolve(repositoryRoot, "system/cpm/bios.asm")),
       assembleZ80ForTest(
         resolve(repositoryRoot, "test/bdos/programs/console-smoke.asm"),
       ),

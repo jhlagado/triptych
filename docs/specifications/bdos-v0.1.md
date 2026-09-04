@@ -116,7 +116,7 @@ fixtures are reviewed.
 
 ## BIOS dependency
 
-The correct BIOS for Triptych is `roms/cpu/bios.asm`. It adapts the portable
+The correct BIOS for Triptych is `system/cpm/bios.asm`. It adapts the portable
 CP/M boundary to Triptych's serial and logical-record ports. BDOS must not call
 those ports directly.
 

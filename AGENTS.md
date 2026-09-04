@@ -38,24 +38,24 @@ an explicitly named adapter; production code under `src/` and firmware under
 
 Put work in the section that owns it:
 
-| Material                        | Destination                                                |
-| ------------------------------- | ---------------------------------------------------------- |
-| CPU contracts and host models   | `src/cpu/`                                                 |
-| Portable Rust CPU core          | `crates/triptych-cpu-core/`                                |
-| Native and WASM CPU hosts       | `crates/triptych-host-*/`                                  |
-| CPU ESP-IDF implementation      | `firmware/cpu/`                                            |
-| Z80 bootstrap ROM               | `roms/cpu/`                                                |
-| Triptych CP/M BIOS              | `system/cpm/` (planned migration from `roms/cpu/bios.asm`) |
-| Video contracts and host models | `src/video/`                                               |
-| Video ESP-IDF implementation    | `firmware/video/`                                          |
-| Sound contracts and host models | `src/sound/`                                               |
-| Sound ESP-IDF implementation    | `firmware/sound/`                                          |
-| Shared transport-neutral types  | `src/shared/`                                              |
-| Executable proofs               | `test/`                                                    |
-| Optional development tools      | `tools/`                                                   |
-| Normative contracts             | `docs/specifications/`                                     |
-| Staged development plans        | `docs/plans/`                                              |
-| Measurements and proof reports  | `docs/reports/`                                            |
+| Material                        | Destination                 |
+| ------------------------------- | --------------------------- |
+| CPU contracts and host models   | `src/cpu/`                  |
+| Portable Rust CPU core          | `crates/triptych-cpu-core/` |
+| Native and WASM CPU hosts       | `crates/triptych-host-*/`   |
+| CPU ESP-IDF implementation      | `firmware/cpu/`             |
+| Z80 bootstrap ROM               | `roms/cpu/`                 |
+| Triptych CP/M BIOS              | `system/cpm/`               |
+| Video contracts and host models | `src/video/`                |
+| Video ESP-IDF implementation    | `firmware/video/`           |
+| Sound contracts and host models | `src/sound/`                |
+| Sound ESP-IDF implementation    | `firmware/sound/`           |
+| Shared transport-neutral types  | `src/shared/`               |
+| Executable proofs               | `test/`                     |
+| Optional development tools      | `tools/`                    |
+| Normative contracts             | `docs/specifications/`      |
+| Staged development plans        | `docs/plans/`               |
+| Measurements and proof reports  | `docs/reports/`             |
 
 Keep CPU, video, and sound independently replaceable. Shared code must express
 a genuine wire, guest, or host-test boundary rather than hide module coupling.
