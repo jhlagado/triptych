@@ -321,10 +321,14 @@ records the qualified ATOM correction and the Nucleus relocation migration.
 The published ATOM pin now passes Nucleus's fresh-install generated-image,
 relocation and 36-test compiler checks. The
 [proof-ordering checkpoint](../reports/nucleus-proof-ordering.md) records the
-three corrected fixture layouts and the host-deadline changes. Current next
-task: finish the corrected source/manifest suites and repeat release
-qualification against the pinned Git dependency, then verify component revisions before advancing
-downstream pins. S1 remains
-in progress until both standalone toolchain gates pass.
+three corrected fixture layouts and the host-deadline changes. Its complete
+24-test manifest suite now passes; clean release qualification and publication
+remain before downstream pins can advance. S1 remains in progress until both
+standalone toolchain gates pass.
+
+The [WASM working-disk checkpoint](../reports/wasm-working-disk.md) records the
+first reload-safe browser storage path and a live local save/reload proof. It
+does not complete S5: the full editor/compiler workflow, browser interaction
+automation and storage-failure cases remain.
 The first user-visible milestone is the ATOM-built Triptych browser image;
 the main usability milestone is S5's persistent edit/build/run session.

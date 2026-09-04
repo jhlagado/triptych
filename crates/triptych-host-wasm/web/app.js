@@ -6,6 +6,8 @@ import {
   TerminalBuffer,
   textInputToBytes,
 } from "./terminal.js";
+import { WorkingDiskPersistence } from "./working-disk-persistence.js";
+import { openWorkingDiskStore } from "./working-disk-store.js";
 
 const CCP_SYSTEM_OFFSET = 0x0000;
 const BDOS_SYSTEM_OFFSET = 0x0800;
@@ -14,6 +16,7 @@ const BACKING_SECTOR_BYTES = 512;
 
 const terminalElement = document.querySelector("#terminal");
 const statusElement = document.querySelector("#status");
+const saveStatusElement = document.querySelector("#save-status");
 const diskInput = document.querySelector("#disk-input");
 const resetButton = document.querySelector("#reset");
 const downloadButton = document.querySelector("#download");
@@ -31,6 +34,8 @@ let bios;
 let diskName = "triptych-cpm22.img";
 let runGeneration = 0;
 let controlPending = false;
+let machineRunning = false;
+let persistence;
 
 // The layout viewport is inconsistent across mobile browsers once the software
 // keyboard opens. VisualViewport is the space the user can actually see.
@@ -56,18 +61,18 @@ function setKeyboardOpen(open) {
 
 function stopMachine(error) {
   runGeneration += 1;
-  machine = undefined;
+  machineRunning = false;
   resetButton.disabled = true;
-  downloadButton.disabled = true;
+  downloadButton.disabled = machine === undefined;
   setStatus(
-    "Machine stopped after a WebAssembly fault. Reload the page to restart.",
+    "Machine stopped after a WebAssembly fault. Download remains available for flushed disk data.",
     "error",
   );
   console.error("Triptych WebAssembly machine stopped", error);
 }
 
 function enqueueInput(bytes) {
-  if (machine === undefined || bytes.length === 0) return false;
+  if (!machineRunning || bytes.length === 0) return false;
   try {
     machine.enqueue_serial_input(bytes);
     return true;
@@ -97,6 +102,40 @@ function setStatus(message, state = "idle") {
   statusElement.dataset.state = state;
 }
 
+function setSaveStatus(message, state = "idle") {
+  saveStatusElement.textContent = message;
+  saveStatusElement.dataset.state = state;
+}
+
+function reportPersistenceState({ state, error }) {
+  switch (state) {
+    case "loading":
+      setSaveStatus("Checking this browser for a saved working disk…");
+      break;
+    case "empty":
+      setSaveStatus("No saved working disk yet.");
+      break;
+    case "restored":
+      setSaveStatus(
+        "Restored the working disk saved in this browser.",
+        "saved",
+      );
+      break;
+    case "saving":
+      setSaveStatus("Saving the working disk in this browser…", "saving");
+      break;
+    case "saved":
+      setSaveStatus("Working disk saved in this browser.", "saved");
+      break;
+    case "error":
+      setSaveStatus(
+        `Browser storage failed: ${error instanceof Error ? error.message : String(error)} Use Download working disk for a recoverable copy.`,
+        "error",
+      );
+      break;
+  }
+}
+
 function renderOutput() {
   const output = machine?.take_serial_output();
   if (output?.length > 0) {
@@ -106,13 +145,17 @@ function renderOutput() {
 }
 
 function runMachine(generation) {
-  if (machine === undefined || generation !== runGeneration) return;
+  if (!machineRunning || generation !== runGeneration) return;
   try {
     const deadline = performance.now() + 6;
     do {
       machine.run_slice(25_000, 250_000);
     } while (performance.now() < deadline);
     renderOutput();
+    const flushCount = machine.drive_flush_count(0);
+    persistence?.observeFlush(flushCount, diskName, () =>
+      machine.export_drive(0),
+    );
   } catch (error) {
     stopMachine(error);
     return;
@@ -141,11 +184,16 @@ function boot(source, name) {
   machine = new TriptychCpu(bootRom);
   machine.install_drive(0, disk, true);
   machine.reset();
+  machineRunning = true;
   terminal.clear();
   renderTerminal(terminalElement, terminal.snapshot());
-  diskName = name.replace(/\.(dsk|img)$/iu, "") + "-triptych.img";
+  diskName = /-triptych\.img$/iu.test(name)
+    ? name
+    : name.replace(/\.(dsk|img)$/iu, "") + "-triptych.img";
   resetButton.disabled = false;
   downloadButton.disabled = false;
+  persistence?.beginMachine(machine.drive_flush_count(0));
+  persistence?.replace(diskName, machine.export_drive(0));
   setStatus(
     `Running ${name}; click or tap the terminal and type at A>.`,
     "running",
@@ -293,7 +341,21 @@ try {
   const configuration = await fetch("config.json", { cache: "no-store" }).then(
     (response) => response.json(),
   );
-  if (configuration.diskUrl === null) {
+  let restored;
+  try {
+    const store = await openWorkingDiskStore();
+    persistence = new WorkingDiskPersistence(store, reportPersistenceState);
+    restored = await persistence.restore();
+  } catch (error) {
+    reportPersistenceState({ state: "error", error });
+  }
+  if (restored !== undefined) {
+    boot(restored.bytes, restored.name);
+    setStatus(
+      `Running the restored working disk; click or tap the terminal and type at A>.`,
+      "running",
+    );
+  } else if (configuration.diskUrl === null) {
     setStatus("Choose a CP/M disk image to start.");
   } else {
     await bootFromUrl(configuration.diskUrl, configuration.diskName);

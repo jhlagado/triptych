@@ -111,6 +111,14 @@ if (browser) {
     ),
     copyFile(join(sourceDirectory, "app.js"), join(outputDirectory, "app.js")),
     copyFile(
+      join(sourceDirectory, "working-disk-persistence.js"),
+      join(outputDirectory, "working-disk-persistence.js"),
+    ),
+    copyFile(
+      join(sourceDirectory, "working-disk-store.js"),
+      join(outputDirectory, "working-disk-store.js"),
+    ),
+    copyFile(
       join(sourceDirectory, "terminal.js"),
       join(outputDirectory, "terminal.js"),
     ),

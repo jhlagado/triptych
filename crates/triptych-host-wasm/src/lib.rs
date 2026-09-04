@@ -75,6 +75,17 @@ impl TriptychCpu {
             .ok_or_else(|| JsError::new("drive is not installed"))
     }
 
+    /// Count successful guest flush commands for one installed drive.
+    ///
+    /// Browser storage uses this edge to persist only disk states that have
+    /// crossed the guest-visible durability boundary.
+    pub fn drive_flush_count(&self, drive: u8) -> Result<u32, JsError> {
+        self.sectors
+            .drive(drive)
+            .map(|drive| drive.flush_count)
+            .ok_or_else(|| JsError::new("drive is not installed"))
+    }
+
     pub fn reset(&mut self) {
         let mut devices = Devices::new(&mut self.console, &mut self.sectors);
         self.machine.reset(&mut devices);
@@ -242,6 +253,7 @@ impl Console for WasmConsole {
 struct WasmDrive {
     bytes: Vec<u8>,
     writable: bool,
+    flush_count: u32,
 }
 
 #[derive(Default)]
@@ -268,6 +280,7 @@ impl WasmSectorStore {
         self.drives[index] = Some(WasmDrive {
             bytes: image.to_vec(),
             writable,
+            flush_count: 0,
         });
         Ok(())
     }
@@ -333,7 +346,9 @@ impl SectorStore for WasmSectorStore {
     }
 
     fn flush(&mut self, drive: u8) -> Result<(), StorageFault> {
-        self.drive(drive).map(|_| ()).ok_or(StorageFault)
+        let drive = self.drive_mut(drive).ok_or(StorageFault)?;
+        drive.flush_count = drive.flush_count.wrapping_add(1);
+        Ok(())
     }
 }
 
@@ -384,6 +399,22 @@ mod tests {
         assert!(observer.operations.is_empty());
         observer.observe(operation(3));
         assert!(observer.operations.is_empty());
+    }
+
+    #[test]
+    fn wasm_sector_store_counts_successful_flushes_per_drive() {
+        let mut sectors = WasmSectorStore::default();
+        sectors.install(0, &[0; SECTOR_BYTES], true).unwrap();
+        sectors.install(1, &[0; SECTOR_BYTES], true).unwrap();
+
+        assert_eq!(sectors.drive(0).unwrap().flush_count, 0);
+        SectorStore::flush(&mut sectors, 0).unwrap();
+        SectorStore::flush(&mut sectors, 0).unwrap();
+        SectorStore::flush(&mut sectors, 1).unwrap();
+
+        assert_eq!(sectors.drive(0).unwrap().flush_count, 2);
+        assert_eq!(sectors.drive(1).unwrap().flush_count, 1);
+        assert!(SectorStore::flush(&mut sectors, 2).is_err());
     }
 }
 

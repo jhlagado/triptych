@@ -36,10 +36,18 @@ const webDirectory = resolve(
   "triptych-host-wasm",
   "web",
 );
-const [applicationSource, indexSource, styleSource] = await Promise.all([
+const [
+  applicationSource,
+  indexSource,
+  styleSource,
+  persistenceSource,
+  storeSource,
+] = await Promise.all([
   readFile(resolve(webDirectory, "app.js"), "utf8"),
   readFile(resolve(webDirectory, "index.html"), "utf8"),
   readFile(resolve(webDirectory, "style.css"), "utf8"),
+  readFile(resolve(webDirectory, "working-disk-persistence.js"), "utf8"),
+  readFile(resolve(webDirectory, "working-disk-store.js"), "utf8"),
 ]);
 assert.ok(indexSource.includes("interactive-widget=resizes-content"));
 assert.ok(
@@ -50,6 +58,11 @@ assert.ok(
 );
 assert.ok(applicationSource.includes('"ccp.bin"'));
 assert.ok(applicationSource.includes("disk.set(ccp, CCP_SYSTEM_OFFSET)"));
+assert.ok(applicationSource.includes("machine.drive_flush_count(0)"));
+assert.ok(applicationSource.includes("persistence?.observeFlush"));
+assert.ok(persistenceSource.includes("class WorkingDiskPersistence"));
+assert.ok(storeSource.includes('const OBJECT_STORE = "working-disks"'));
+assert.ok(indexSource.includes('id="save-status"'));
 assert.ok(styleSource.includes("body.terminal-keyboard-open main"));
 assert.ok(
   styleSource.includes("grid-template-columns: repeat(4, minmax(0, 1fr))"),

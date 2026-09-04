@@ -33,6 +33,11 @@ cannot retain an unbounded diagnostic history. A trace consumer must call
 with `take_io_trace`. A packed I/O word uses bits 0–7 for the byte, bits 8–23
 for the complete Z80 port, and bit 24 for write versus read.
 
+`drive_flush_count` increments after each successful guest flush command. A
+browser can compare this count after an execution slice and copy the drive only
+when guest software has crossed its durability boundary. The count does not
+make browser storage durable by itself.
+
 The non-default `conformance` feature adds only a pre-reset architectural-state
 patcher used by the language-neutral fixture runner. Normal builds do not
 expose arbitrary CPU-state mutation.
@@ -89,6 +94,12 @@ npm run run:wasm-browser
 The server listens only on `127.0.0.1`. `TRIPTYCH_CPM22_IMAGE` can override the
 bundled disk, and the page retains a file picker for selecting another image.
 The current Triptych resident components are installed into either source
-image in browser memory; the supplied image is never modified. `Download
-working disk` exports the in-memory image, including only guest writes flushed
-through the disk controller.
+image in browser memory; the supplied image is never modified.
+
+The page stores drive A in IndexedDB. It commits an initial working copy and a
+new snapshot after every successful guest flush, then reports completion in a
+separate save-status line. Reload restores that snapshot and reinstalls the
+current Triptych resident components. A CP/M write and a completed browser
+transaction are separate durability boundaries; wait for “Working disk saved”
+before closing the page. `Download working disk` remains the explicit backup
+path and contains only guest writes flushed through the disk controller.
