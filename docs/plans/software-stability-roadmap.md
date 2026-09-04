@@ -1,7 +1,7 @@
 # WASM-first software stability roadmap
 
-Date: 2026-09-05. Status: active goal; S0 complete, S1 and S3 in progress. This is the
-current cross-project execution plan. Component
+Date: 2026-09-05. Status: active goal; S0 and S3 complete, S1 in progress. This is
+the current cross-project execution plan. Component
 contracts remain authoritative; earlier reports retain their dated results.
 
 ## Stable release target
@@ -25,8 +25,8 @@ The subsequent ownership decision separates portable CCP/BDOS into their own
 OS project, while the Triptych BIOS stays with the machine. The
 [component release plan](component-releases.md) defines the source, dependency
 and disk-building boundaries. The OS name/remote remains pending. Edit has
-reached its first independent release; its consumer migrations remain in
-progress.
+reached its first independent release, and both Triptych and Debug80 now
+consume that pinned artifact.
 
 | Component             | Source authority                                                          | Role and boundary                                                                                                                    |
 | --------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
@@ -181,6 +181,11 @@ pass; incompatibilities and deliberate limits are listed. Hardware status
 remains independent and unqualified.
 
 ### S3 — independently maintained Edit
+
+Status: complete. Standalone release `v0.1.0`, the
+[release checkpoint](../reports/edit-standalone-release.md), and the
+[persistent workflow checkpoint](../reports/edit-nucleus-persistent-workflow.md)
+record the source, consumer and behavioral gates.
 
 Inventory and extract the exact editor-owned source and proof history from
 Debug80. Preserve its buffer, navigation, search/replace, ANSI screen and
@@ -347,8 +352,9 @@ the preserved history, ATOM-only `v0.1.0` release, passing macOS/Linux proof and
 Triptych's verified release input. The
 [persistent Edit–Nucleus checkpoint](../reports/edit-nucleus-persistent-workflow.md)
 proves the complete search/replace/save/compile/run/reopen loop and preserves a
-CCP `TYPE`-then-transient regression test. S3 remains in progress until Debug80
-becomes only a consumer.
+CCP `TYPE`-then-transient regression test. Debug80 revision `6e1aa910` removes
+the duplicate editor source and proof suite while retaining its CP/M consumer
+acceptance and verifying the same `v0.1.0` artifact.
 
 The first user-visible milestone is the ATOM-built Triptych browser image;
 the main usability milestone is S5's persistent edit/build/run session.

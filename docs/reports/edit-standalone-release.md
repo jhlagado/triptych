@@ -28,4 +28,6 @@ The
 now proves search/replace, save, NUC compilation, execution, fresh-machine
 reopen and rerun through Triptych's current CCP/BDOS. This is host-model and CI
 evidence, not ESP32 or physical-hardware qualification. Remaining S3 work is
-Debug80's migration from source owner to released-artifact consumer.
+now complete: Debug80 revision `6e1aa910` consumes the same pinned release,
+retains its CP/M integration acceptance, and removes the duplicate editor
+implementation, candidates and source-owned proof commands.

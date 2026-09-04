@@ -1,8 +1,8 @@
 # Edit extraction manifest
 
-Date: 2026-09-05. Status: standalone extraction and first release complete;
-Triptych and Debug80 consumer migration in progress. This manifest records the
-ownership and migration boundary used for the extraction.
+Date: 2026-09-05. Status: extraction, first release and both consumer migrations
+complete. This manifest records the ownership and migration boundary used for
+the extraction.
 
 ## Destination boundary
 
@@ -162,10 +162,9 @@ mechanism for the guest application.
    sources and source-build commands while retaining consumer integration
    tests.
 
-The standalone build and proof portion is complete: Linux CI and macOS both
-pass with ATOM as the only executable assembler, and `EDIT.COM` exactly matches
-the retained digest. Full migration is complete only when
-Debug80, both consumers use the same immutable artifact, and a clean Triptych
-checkout can compose that artifact without a Debug80 checkout. Until then,
-Debug80 remains the sole source authority and Triptych's bundled `EDIT.COM` is
-only a staged integration artifact.
+The migration is complete. Linux CI and macOS pass with ATOM as the only
+executable assembler in Edit, and `EDIT.COM` exactly matches the retained
+digest. Triptych revision `c958b0e` and Debug80 revision `6e1aa910` both verify
+and consume the same immutable `v0.1.0` artifact without rebuilding editor
+source. Debug80 retains its host integration evidence but no longer contains a
+writable copy of the implementation or its source-owned proof suite.
