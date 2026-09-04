@@ -240,6 +240,12 @@ sibling directory, Debug80 monorepo source or AZM installation.
 
 ### S5 — usable and recoverable WASM development sessions
 
+Status: complete for the supported desktop-browser profile. The
+[real-browser acceptance checkpoint](../reports/wasm-browser-acceptance.md)
+records the full guest workflow, persistence and recovery tests, bounded
+terminal queues, and narrow-viewport automation. Physical Android/iOS keyboard
+behavior remains explicitly provisional and does not block the software gate.
+
 Specify a browser-owned persistent disk store, separate from the Rust machine.
 Use committed disk snapshots and explicit save status: a guest BDOS save and a
 completed browser-storage transaction are distinct events. Test reload,

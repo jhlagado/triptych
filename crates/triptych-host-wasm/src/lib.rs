@@ -12,6 +12,7 @@ use wasm_bindgen::prelude::*;
 const RUN_HALTED: u8 = 0;
 const RUN_STEP_LIMIT: u8 = 1;
 const RUN_TSTATE_LIMIT: u8 = 2;
+const MAX_SERIAL_INPUT_BYTES: usize = 16 * 1024;
 
 #[wasm_bindgen]
 pub struct TriptychCpu {
@@ -148,8 +149,17 @@ impl TriptychCpu {
         })
     }
 
-    pub fn enqueue_serial_input(&mut self, bytes: &[u8]) {
+    /// Enqueue one complete host input batch, or reject it without accepting a
+    /// prefix when the bounded console queue has insufficient room.
+    pub fn enqueue_serial_input(&mut self, bytes: &[u8]) -> bool {
+        let Some(length) = self.console.input.len().checked_add(bytes.len()) else {
+            return false;
+        };
+        if length > MAX_SERIAL_INPUT_BYTES {
+            return false;
+        }
         self.console.input.extend(bytes.iter().copied());
+        true
     }
 
     pub fn serial_output(&self) -> Vec<u8> {
@@ -415,6 +425,15 @@ mod tests {
         assert_eq!(sectors.drive(0).unwrap().flush_count, 2);
         assert_eq!(sectors.drive(1).unwrap().flush_count, 1);
         assert!(SectorStore::flush(&mut sectors, 2).is_err());
+    }
+
+    #[test]
+    fn serial_input_rejects_a_batch_that_would_exceed_the_queue_limit() {
+        let mut machine = TriptychCpu::new(&[0; BOOT_ROM_BYTES]).unwrap();
+        assert!(machine.enqueue_serial_input(&vec![1; MAX_SERIAL_INPUT_BYTES]));
+        assert_eq!(machine.console.input.len(), MAX_SERIAL_INPUT_BYTES);
+        assert!(!machine.enqueue_serial_input(&[2]));
+        assert_eq!(machine.console.input.len(), MAX_SERIAL_INPUT_BYTES);
     }
 }
 

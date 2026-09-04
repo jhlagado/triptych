@@ -13,6 +13,7 @@ const CCP_SYSTEM_OFFSET = 0x0000;
 const BDOS_SYSTEM_OFFSET = 0x0800;
 const BIOS_SYSTEM_OFFSET = 0x1600;
 const BACKING_SECTOR_BYTES = 512;
+const MAX_SERIAL_INPUT_BYTES = 16 * 1024;
 
 const terminalElement = document.querySelector("#terminal");
 const statusElement = document.querySelector("#status");
@@ -77,8 +78,13 @@ function stopMachine(error) {
 function enqueueInput(bytes) {
   if (!machineRunning || bytes.length === 0) return false;
   try {
-    machine.enqueue_serial_input(bytes);
-    return true;
+    const accepted = machine.enqueue_serial_input(bytes);
+    if (accepted) return true;
+    setStatus(
+      `Input was not sent because its ${bytes.length} bytes exceed the available ${MAX_SERIAL_INPUT_BYTES}-byte terminal queue. The machine is still running.`,
+      "error",
+    );
+    return false;
   } catch (error) {
     stopMachine(error);
     return false;
@@ -139,22 +145,28 @@ function reportPersistenceState({ state, error }) {
   }
 }
 
-function renderOutput() {
+function drainOutput() {
   const output = machine?.take_serial_output();
   if (output?.length > 0) {
     terminal.write(output);
-    renderTerminal(terminalElement, terminal.snapshot());
+    return true;
   }
+  return false;
 }
 
 function runMachine(generation) {
   if (!machineRunning || generation !== runGeneration) return;
   try {
     const deadline = performance.now() + 6;
+    let outputChanged = false;
     do {
       machine.run_slice(25_000, 250_000);
+      // A Z80 instruction can emit at most one serial byte. Draining after
+      // every bounded slice caps the transient WASM output batch at 25,000
+      // bytes even if several slices fit in one animation frame.
+      outputChanged = drainOutput() || outputChanged;
     } while (performance.now() < deadline);
-    renderOutput();
+    if (outputChanged) renderTerminal(terminalElement, terminal.snapshot());
     const flushCount = machine.drive_flush_count(0);
     persistence?.observeFlush(flushCount, diskName, () =>
       machine.export_drive(0),

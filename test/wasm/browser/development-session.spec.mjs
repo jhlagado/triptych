@@ -40,6 +40,13 @@ async function runCommand(page, command) {
   await waitForPrompt(page, `A>${command}`);
 }
 
+async function runScrollingCommand(page, command) {
+  const before = await terminalText(page);
+  await sendCommand(page, command);
+  await expect.poll(() => terminalText(page)).not.toBe(before);
+  await waitForPrompt(page);
+}
+
 async function waitForSavedDisk(page) {
   await expect(page.locator("#save-status")).toHaveText(
     "Working disk saved in this browser.",
@@ -136,6 +143,58 @@ test("a downloaded working disk can be imported into a fresh browser session", a
   }
 });
 
+test("a flushed disk remains downloadable after a controlled WASM fault", async ({
+  browser,
+  page,
+}, testInfo) => {
+  await page.route("**/app.js", async (route) => {
+    const response = await route.fetch();
+    const source = await response.text();
+    const marker = "  try {\n    const deadline = performance.now() + 6;";
+    const instrumented = source.replace(
+      marker,
+      `  try {
+    if (globalThis.__triptychTestFault === true) {
+      globalThis.__triptychTestFault = false;
+      throw new Error("controlled browser acceptance fault");
+    }
+    const deadline = performance.now() + 6;`,
+    );
+    expect(instrumented).not.toBe(source);
+    await route.fulfill({ response, body: instrumented });
+  });
+
+  await boot(page);
+  await runCommand(page, "SAVE 1 FAULT.COM");
+  await waitForSavedDisk(page);
+  await page.evaluate(() => {
+    globalThis.__triptychTestFault = true;
+  });
+  await expect(page.locator("#status")).toContainText(
+    "Machine stopped after a WebAssembly fault",
+  );
+  await expect(page.locator("#reset")).toBeDisabled();
+  await expect(page.locator("#download")).toBeEnabled();
+
+  const downloadPromise = page.waitForEvent("download");
+  await page.locator("#download").click();
+  const download = await downloadPromise;
+  const diskPath = testInfo.outputPath("fault-recovery.img");
+  await download.saveAs(diskPath);
+
+  const cleanContext = await browser.newContext();
+  try {
+    const cleanPage = await cleanContext.newPage();
+    await boot(cleanPage);
+    await cleanPage.locator("#disk-input").setInputFiles(diskPath);
+    await waitForPrompt(cleanPage);
+    await runCommand(cleanPage, "DIR");
+    await expect(cleanPage.locator("#terminal")).toContainText("FAULT    COM");
+  } finally {
+    await cleanContext.close();
+  }
+});
+
 test("a failed IndexedDB transaction is reported and a later flush recovers", async ({
   page,
 }) => {
@@ -185,6 +244,35 @@ test("terminal paste normalizes a browser newline to a CP/M command", async ({
   });
   await waitForPrompt(page, "A>DIR");
   await expect(page.locator("#terminal")).toContainText("EDIT    COM");
+
+  await page.locator("#terminal").evaluate((terminal) => {
+    const clipboard = new DataTransfer();
+    clipboard.setData("text/plain", "X".repeat(16 * 1024 + 1));
+    terminal.dispatchEvent(
+      new ClipboardEvent("paste", {
+        bubbles: true,
+        cancelable: true,
+        clipboardData: clipboard,
+      }),
+    );
+  });
+  await expect(page.locator("#status")).toContainText(
+    "exceed the available 16384-byte terminal queue",
+  );
+  await runScrollingCommand(page, "TYPE LARGE.ASM");
+  await runCommand(page, "DIR");
+});
+
+test("repeated scrolling output retains a fixed terminal and remains responsive", async ({
+  page,
+}) => {
+  await boot(page);
+  for (let index = 0; index < 12; index += 1) {
+    await runScrollingCommand(page, "TYPE LARGE.ASM");
+    await runCommand(page, "DIR");
+  }
+  await expect(page.locator("#terminal")).toContainText("EDIT    COM");
+  expect(await terminalText(page)).toHaveLength(24 * 80 + 23);
 });
 
 test("the terminal and mobile keys remain inside a reduced visual viewport", async ({
