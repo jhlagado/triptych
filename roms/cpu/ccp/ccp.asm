@@ -230,8 +230,13 @@ LOADBAD:
 CMDDIR:
         LD      HL,(ARGSTRT)
         CALL    SKIPSP
+        LD      (CMDSTRT),HL
         LD      DE,CMDFCB
         CALL    PARSEFCB
+        CALL    SKIPSP
+        LD      A,(HL)
+        OR      A
+        JP      NZ,BADCMD
         LD      HL,(ARGSTRT)
         CALL    SKIPSP
         LD      A,(HL)
@@ -351,11 +356,16 @@ PUTNAME:
 CMDTYPE:
         LD      HL,(ARGSTRT)
         CALL    SKIPSP
+        LD      (CMDSTRT),HL
         LD      A,(HL)
         OR      A
         JR      Z,TYPENO
         LD      DE,CMDFCB
         CALL    PARSEFCB
+        CALL    SKIPSP
+        LD      A,(HL)
+        OR      A
+        JP      NZ,BADCMD
         LD      DE,CMDFCB
         LD      C,15
         CALL    BDOS

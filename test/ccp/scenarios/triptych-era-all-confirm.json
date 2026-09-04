@@ -4,7 +4,7 @@
   "description": "Require confirmed ERA *.* deletion to match the public oracle transcript and directory result",
   "systemCcp": "triptych",
   "systemBdos": "triptych",
-  "expectedInitialDriveSha256": "cb640c716f7cb69c9f112c6067cc8ca3ec4e3676de2335cec4358364acca5c51",
+  "expectedInitialDriveSha256": "06b907b1e03f615b190dc83ed97d9c7862c5d32e5f8967e3568ae48e171a96ae",
   "sessions": [
     {
       "id": "confirm-erase-all",

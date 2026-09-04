@@ -1,36 +1,36 @@
 {
   "schema": "triptych-cpm-headless-scenario-v1",
-  "id": "triptych-ccp-save-overflow",
-  "description": "Reject an overflowing SAVE page count before disk mutation and accept the next valid command",
+  "id": "triptych-ccp-extra-operands",
+  "description": "Reject extra DIR and TYPE operands before performing the command and recover at the next prompt",
   "systemCcp": "triptych",
   "systemBdos": "triptych",
   "expectedInitialDriveSha256": "06b907b1e03f615b190dc83ed97d9c7862c5d32e5f8967e3568ae48e171a96ae",
   "sessions": [
     {
-      "id": "overflow-and-recovery",
+      "id": "extra-operands-and-recovery",
       "interactions": [
         { "id": "boot", "inputAscii": "", "stopAfterAscii": "\r\nA>" },
         {
-          "id": "overflowing-save",
-          "inputAscii": "save 1280 overflow.com\r",
+          "id": "dir-extra",
+          "inputAscii": "dir readme.txt extra\r",
           "stopAfterAscii": "\r\nA>"
         },
         {
-          "id": "confirm-absent",
-          "inputAscii": "dir overflow.com\r",
+          "id": "type-extra",
+          "inputAscii": "type readme.txt extra\r",
           "stopAfterAscii": "\r\nA>"
         },
         {
-          "id": "valid-command-after-error",
+          "id": "valid-command-after-errors",
           "inputAscii": "dir readme.txt\r",
           "stopAfterAscii": "\r\nA>"
         }
       ],
-      "expectedTranscript": "\r\nA>save 1280 overflow.com\r\r\n1280?\r\n\r\nA>dir overflow.com\r\r\nNO FILE\r\nA>dir readme.txt\r\r\nA: README   TXT\r\nA>",
+      "expectedTranscript": "\r\nA>dir readme.txt extra\r\r\nREADME.TXT?\r\n\r\nA>type readme.txt extra\r\r\nREADME.TXT?\r\n\r\nA>dir readme.txt\r\r\nA: README   TXT\r\nA>",
       "expectedDriveSha256": "06b907b1e03f615b190dc83ed97d9c7862c5d32e5f8967e3568ae48e171a96ae",
       "expectedTerminal": {
-        "text": "\nA>save 1280 overflow.com\n1280?\n\nA>dir overflow.com\nNO FILE\nA>dir readme.txt\nA: README   TXT\nA>",
-        "cursorRow": 8,
+        "text": "\nA>dir readme.txt extra\nREADME.TXT?\n\nA>type readme.txt extra\nREADME.TXT?\n\nA>dir readme.txt\nA: README   TXT\nA>",
+        "cursorRow": 9,
         "cursorColumn": 2,
         "currentAttributes": 0,
         "wrapPending": false,

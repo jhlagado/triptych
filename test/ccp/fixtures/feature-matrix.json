@@ -12,7 +12,7 @@
     "path": "roms/cpu/ccp/ccp.asm",
     "loadAddress": 58368,
     "bytes": 2048,
-    "sha256": "94ca6d2f216035c8b2d5b7ecabc5e7308573f3fc3a2b6234f8597b6d5a566752"
+    "sha256": "2bbe49b9be12186da02d439a407ddf40559da231bb4b828569ba4031def8f07f"
   },
   "features": [
     {
@@ -140,7 +140,8 @@
         "test/ccp/scenarios/triptych-page-zero.json",
         "test/ccp/scenarios/oracle-builtin-errors.json",
         "test/ccp/scenarios/triptych-builtin-errors.json",
-        "test/ccp/scenarios/triptych-save-overflow.json"
+        "test/ccp/scenarios/triptych-save-overflow.json",
+        "test/ccp/scenarios/triptych-extra-operands.json"
       ]
     },
     {
@@ -150,7 +151,8 @@
         "test/ccp/scenarios/triptych-loader-oversized.json",
         "test/ccp/scenarios/triptych-era-all-cancel.json",
         "test/ccp/scenarios/triptych-builtin-errors.json",
-        "test/ccp/scenarios/triptych-save-overflow.json"
+        "test/ccp/scenarios/triptych-save-overflow.json",
+        "test/ccp/scenarios/triptych-extra-operands.json"
       ]
     },
     {

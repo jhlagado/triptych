@@ -153,7 +153,9 @@ and malformed commands, decimal overflow, wildcard/filename limits, extra
 operands, full/read-only/faulted disks and a valid command after every failure.
 The [SAVE overflow checkpoint](../reports/ccp-save-overflow.md) records the
 failing-before reproduction and correction for `SAVE 1280 X.COM`. Broader
-generated parser boundaries and malformed-command recovery remain open.
+generated parser boundaries and malformed-command recovery remain open. The
+[extra-operand checkpoint](../reports/ccp-extra-operands.md) records the
+failing-before `DIR` and `TYPE` cases and their end-of-command checks.
 
 Define replacement and partial-write behavior explicitly. Current SAVE deletes
 an existing target before creating its replacement; blanket transactional-save
