@@ -17,7 +17,9 @@ The portable CP/M-compatible operating system will have a separate repository
 and release lifecycle. CCP and BDOS move together with their interface
 contracts, source history and component tests. The OS name and remote are
 still undecided. Triptych becomes a consumer and retains machine integration
-tests against the pinned OS release.
+tests against the pinned OS release. The
+[extraction manifest](os-extraction-manifest.md) lists the exact first source,
+contract and proof boundaries.
 
 The Triptych BIOS remains in Triptych. It is Z80 machine-interface code and
 belongs with the machine despite the surrounding Rust implementation. The OS
