@@ -1,0 +1,14 @@
+{
+  "format": "edit-build-manifest-v1",
+  "artifact": "EDIT.COM",
+  "version": "0.1.0",
+  "bytes": 3003,
+  "sha256": "bbe4ac2b6236d178089fcd01822d0d7fa3c6159f0d2da3655eba1212dda5aa02",
+  "assembler": {
+    "name": "atom-z80",
+    "revision": "802b5c2d320bec777f427755ff2d7338e3b80a05"
+  },
+  "loadAddress": 256,
+  "entryAddress": 256,
+  "contract": "docs/specification.md"
+}

@@ -723,7 +723,11 @@ FCBSPACE:
         INC     DE
         DJNZ    FCBSPACE
         XOR     A
-        LD      B,4
+        ; A parsed FCB is reusable command state, so reset the complete tail:
+        ; EX/S1/S2/RC, the allocation map, CR, and the random-record fields.
+        ; Leaving CR behind makes the command after TYPE begin loading at
+        ; record one rather than at the start of its COM file.
+        LD      B,24
 
 FCBZERO:
         LD      (DE),A

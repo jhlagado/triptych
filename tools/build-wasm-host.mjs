@@ -4,6 +4,7 @@ import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 
 import { assembleTriptychCpuFirmware } from "./cpm22-native-image.mjs";
+import { installVerifiedEditRelease } from "./lib/edit-release.mjs";
 
 const repositoryRoot = resolve(import.meta.dirname, "..");
 const browser = process.argv.includes("--browser");
@@ -100,7 +101,10 @@ if (browser) {
       `bundled CP/M disk digest changed: expected ${bundledDiskSha256}, got ${actualDiskSha256}`,
     );
   }
-  const systemDisk = Uint8Array.from(bundledDisk);
+  const systemDisk = await installVerifiedEditRelease(
+    bundledDisk,
+    repositoryRoot,
+  );
   systemDisk.set(ccp, CCP_SYSTEM_OFFSET);
   systemDisk.set(bdos, BDOS_SYSTEM_OFFSET);
   systemDisk.set(bios, BIOS_SYSTEM_OFFSET);

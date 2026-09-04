@@ -10,10 +10,13 @@ manifest or standalone OS repository has been published yet.
 ## Source ownership
 
 ATOM, Nucleus and Edit are independently maintained development tools. They
-may have CP/M builds without being restricted to CP/M. ATOM and Nucleus already
-have standalone repositories. The
-[Edit extraction manifest](edit-extraction-manifest.md) fixes the exact source,
-proof and adapter boundary before its standalone repository is created.
+may have CP/M builds without being restricted to CP/M. All three now have
+standalone repositories. The
+[Edit extraction manifest](edit-extraction-manifest.md) records the exact
+source, proof and adapter boundary. Edit `v0.1.0` is published at immutable
+revision `ac59b478b686b7cd1a3a340064e82d64fdc58589`. Triptych vendors and
+verifies that release artifact while the complete S4 distribution builder is
+developed.
 
 The portable CP/M-compatible operating system will have a separate repository
 and release lifecycle. CCP and BDOS move together with their interface

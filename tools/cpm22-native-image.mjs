@@ -3,6 +3,7 @@ import { readFile, rename, rm, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 
 import { assembleAtomBinary as assemble } from "./lib/assemble-atom.mjs";
+import { installVerifiedEditRelease } from "./lib/edit-release.mjs";
 
 const BDOS_SYSTEM_OFFSET = 0x0800;
 const BIOS_SYSTEM_OFFSET = 0x1600;
@@ -41,7 +42,10 @@ export async function prepareNativeCpm22Image({
     );
   }
 
-  const workingDisk = Uint8Array.from(sourceDisk);
+  const workingDisk = await installVerifiedEditRelease(
+    sourceDisk,
+    repositoryRoot,
+  );
   if (systemCcp === "triptych") {
     workingDisk.set(ccp, 0);
   } else if (systemCcp !== "oracle") {

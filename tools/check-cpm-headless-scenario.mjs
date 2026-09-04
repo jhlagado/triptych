@@ -61,7 +61,9 @@ const scenario = {
       id: "fresh-machine-with-persisted-drive",
       inputAscii: "DIR\r",
       stopAfterAscii: "XXXX",
-      expectedTranscript: secondTranscript,
+      expectedTranscriptSha256:
+        "62ed4e42c5a7926bd285c5db0e944709876ef0cdfb9862bfb54fcb3758e7c60b",
+      expectedTranscriptBytesLength: 80,
       expectedDriveSha256:
         "4444bdef64b16c42c32b4f536c6950aab0f82602efbde724702536791cbc61f7",
       expectedTerminal: {

@@ -1,6 +1,6 @@
 # WASM-first software stability roadmap
 
-Date: 2026-09-05. Status: active goal; S0 complete, S1 in progress. This is the
+Date: 2026-09-05. Status: active goal; S0 complete, S1 and S3 in progress. This is the
 current cross-project execution plan. Component
 contracts remain authoritative; earlier reports retain their dated results.
 
@@ -24,25 +24,26 @@ Windows-specific support and a replacement Z80 emulator are outside this goal.
 The subsequent ownership decision separates portable CCP/BDOS into their own
 OS project, while the Triptych BIOS stays with the machine. The
 [component release plan](component-releases.md) defines the source, dependency
-and disk-building boundaries. The OS name/remote and Edit extraction remain
-pending; the table records current source locations.
+and disk-building boundaries. The OS name/remote remains pending. Edit has
+reached its first independent release; its consumer migrations remain in
+progress.
 
-| Component             | Source authority                                                   | Role and boundary                                                                                                                    |
-| --------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
-| ATOM                  | Standalone `atom` repository                                       | Assembler, native guest binaries and public host API. Required assembler for normal builds and tests.                                |
-| Nucleus / `NUC.COM`   | Standalone `nucleus` repository                                    | Language, compiler, runtime and platform adapters. Uses ATOM; preserves Node and other target support independently of Triptych.     |
-| Edit / `EDIT.COM`     | Currently Debug80 CP/M sources; planned standalone Edit repository | Editor core plus explicit terminal, filesystem and target-memory adapters. Triptych consumes a built application.                    |
-| CCP                   | Triptych `roms/cpu/ccp/`                                           | Original resident command processor; loads programs and implements CP/M built-ins.                                                   |
-| BDOS                  | Triptych `roms/cpu/bdos/`                                          | Original CP/M-compatible operating-system services. Qualified against interface tests.                                               |
-| BIOS and bootstrap    | Triptych `system/cpm/` and `roms/cpu/`, respectively               | Machine-specific console, disk, boot and warm-start implementation. Remain with the machine.                                         |
-| CP/M distribution     | Triptych image tooling                                             | Versioned composition of resident components, applications and sample files. Historical binaries are separately identified fixtures. |
-| Rust CPU core         | Triptych `crates/triptych-cpu-core/`                               | Portable guest execution and machine state. No browser, native filesystem or editor policy.                                          |
-| WASM and macOS/Linux  | Triptych host crates                                               | Browser or terminal input, scheduling and host storage around the same Rust machine.                                                 |
-| ESP32-S3              | Triptych `firmware/cpu/`                                           | Future physical console/storage adapters and CPU firmware; existing build evidence is not physical qualification.                    |
-| Debug80 Runtime       | Standalone `debug80-runtime` repository                            | TypeScript Z80 engine and headless Node support. Development-only adapter in Triptych.                                               |
-| Z80 Tool Services     | Standalone `z80-tool-services` repository                          | Shared language-neutral host/native service contracts and tests. No machine or editor ownership.                                     |
-| Debug80               | Standalone `debug80` repository                                    | Optional IDE/debugger consuming released tools and runtime. No Triptych production dependency.                                       |
-| Development workspace | Local `z80-workspace` launcher                                     | Optional pinned multi-repository checkout/build orchestration; never the authority for component source.                             |
+| Component             | Source authority                                                          | Role and boundary                                                                                                                    |
+| --------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| ATOM                  | Standalone `atom` repository                                              | Assembler, native guest binaries and public host API. Required assembler for normal builds and tests.                                |
+| Nucleus / `NUC.COM`   | Standalone `nucleus` repository                                           | Language, compiler, runtime and platform adapters. Uses ATOM; preserves Node and other target support independently of Triptych.     |
+| Edit / `EDIT.COM`     | Standalone [`jhlagado/edit`](https://github.com/jhlagado/edit) repository | Editor core plus explicit terminal, filesystem and target-memory contracts. Triptych consumes the pinned `v0.1.0` application.       |
+| CCP                   | Triptych `roms/cpu/ccp/`                                                  | Original resident command processor; loads programs and implements CP/M built-ins.                                                   |
+| BDOS                  | Triptych `roms/cpu/bdos/`                                                 | Original CP/M-compatible operating-system services. Qualified against interface tests.                                               |
+| BIOS and bootstrap    | Triptych `system/cpm/` and `roms/cpu/`, respectively                      | Machine-specific console, disk, boot and warm-start implementation. Remain with the machine.                                         |
+| CP/M distribution     | Triptych image tooling                                                    | Versioned composition of resident components, applications and sample files. Historical binaries are separately identified fixtures. |
+| Rust CPU core         | Triptych `crates/triptych-cpu-core/`                                      | Portable guest execution and machine state. No browser, native filesystem or editor policy.                                          |
+| WASM and macOS/Linux  | Triptych host crates                                                      | Browser or terminal input, scheduling and host storage around the same Rust machine.                                                 |
+| ESP32-S3              | Triptych `firmware/cpu/`                                                  | Future physical console/storage adapters and CPU firmware; existing build evidence is not physical qualification.                    |
+| Debug80 Runtime       | Standalone `debug80-runtime` repository                                   | TypeScript Z80 engine and headless Node support. Development-only adapter in Triptych.                                               |
+| Z80 Tool Services     | Standalone `z80-tool-services` repository                                 | Shared language-neutral host/native service contracts and tests. No machine or editor ownership.                                     |
+| Debug80               | Standalone `debug80` repository                                           | Optional IDE/debugger consuming released tools and runtime. No Triptych production dependency.                                       |
+| Development workspace | Local `z80-workspace` launcher                                            | Optional pinned multi-repository checkout/build orchestration; never the authority for component source.                             |
 
 CP/M is the guest operating environment. WASM and macOS are hosts for the
 Triptych machine. ATOM, NUC and Edit are applications with their own lifetimes.
@@ -196,8 +197,9 @@ second platform; do not create a general IDE framework in this stage.
 
 Triptych and Debug80 then consume the same versioned editor artifact. Remove
 the old source copy only after extraction, tests and consumer migration are
-verified. A local standalone repository can be prepared first; a new public
-remote requires an explicit destination and visibility decision.
+verified. Public release `jhlagado/edit` `v0.1.0` pins revision
+`ac59b478b686b7cd1a3a340064e82d64fdc58589` and the 3,003-byte application
+digest `bbe4ac2b6236d178089fcd01822d0d7fa3c6159f0d2da3655eba1212dda5aa02`.
 
 Exit: Edit builds and tests outside Debug80 with ATOM. Its current editing and
 save-error behavior is preserved. A full edit/save/search/replace session runs
@@ -339,5 +341,14 @@ The [WASM working-disk checkpoint](../reports/wasm-working-disk.md) records the
 first reload-safe browser storage path and a live local save/reload proof. It
 does not complete S5: the full editor/compiler workflow, browser interaction
 automation and storage-failure cases remain.
+
+The [standalone Edit checkpoint](../reports/edit-standalone-release.md) records
+the preserved history, ATOM-only `v0.1.0` release, passing macOS/Linux proof and
+Triptych's verified release input. The
+[persistent Edit–Nucleus checkpoint](../reports/edit-nucleus-persistent-workflow.md)
+proves the complete search/replace/save/compile/run/reopen loop and preserves a
+CCP `TYPE`-then-transient regression test. S3 remains in progress until Debug80
+becomes only a consumer.
+
 The first user-visible milestone is the ATOM-built Triptych browser image;
 the main usability milestone is S5's persistent edit/build/run session.

@@ -1,0 +1,112 @@
+{
+  "schema": "triptych-cpm-headless-scenario-v1",
+  "id": "triptych-bdos-edit-nucleus-persistent",
+  "description": "Edit and save a Nucleus program, compile and run it, then reopen the source and rerun the generated COM file in a fresh machine",
+  "systemCcp": "triptych",
+  "systemBdos": "triptych",
+  "expectedInitialDriveSha256": "418fc57432743b7a52c3f1f69f4c56c1411c35e81f25cc733254cd2cb20573fc",
+  "maximumSlices": 1000,
+  "sessions": [
+    {
+      "id": "edit-compile-run",
+      "interactions": [
+        { "id": "boot", "inputAscii": "", "stopAfterAscii": "\r\nA>" },
+        {
+          "id": "launch-editor",
+          "inputAscii": "EDIT INPUT.NU\r",
+          "stopAfterAscii": "\u001b[1;1H"
+        },
+        {
+          "id": "find-literal",
+          "inputBytes": [6, 39, 79, 39, 13],
+          "stopAfterAscii": "\u001b[2;21H"
+        },
+        {
+          "id": "replace-literal",
+          "inputBytes": [18, 39, 89, 39, 13],
+          "stopAfterAscii": "\u001b[2;21H"
+        },
+        { "id": "save", "inputBytes": [19], "stopAfterAscii": "\u001b[2;21H" },
+        { "id": "quit", "inputBytes": [17], "stopAfterAscii": "\r\nA>" },
+        {
+          "id": "compile",
+          "inputAscii": "NUC INPUT.NU\r",
+          "stopAfterAscii": "\r\nA>"
+        },
+        { "id": "run", "inputAscii": "INPUT\r", "stopAfterAscii": "YK\r\nA>" }
+      ],
+      "expectedTranscriptSha256": "56fb4ddddb506b22b3b187c1e4692c68c053c8176ba9fc8e7273765ce337894f",
+      "expectedTranscriptBytesLength": 1852,
+      "expectedDriveSha256": "f84e4f344974a1a039a5983cfdf08ca2748b4ae48cf81799558c19f4f410bd53",
+      "expectedTerminal": {
+        "text": "\nA>NUC INPUT.NU\n\nA>INPUT\nYK\nA>",
+        "cursorRow": 5,
+        "cursorColumn": 2,
+        "currentAttributes": 0,
+        "wrapPending": false,
+        "bellCount": 0,
+        "screenSha256": "bf3b3d5c0ae19a5904eae03ae54fb6a185147a87acb2a1d71d0d42f362c6fe3f"
+      }
+    },
+    {
+      "id": "reopen-persisted-source",
+      "interactions": [
+        { "id": "boot", "inputAscii": "", "stopAfterAscii": "\r\nA>" },
+        {
+          "id": "type-source",
+          "inputAscii": "TYPE INPUT.NU\r",
+          "stopAfterAscii": "\r\nA>"
+        },
+        {
+          "id": "reopen-editor",
+          "inputAscii": "EDIT INPUT.NU\r",
+          "stopAfterAscii": "\u001b[1;1H",
+          "expectedTerminal": {
+            "text": "sub main() fails\n    writeOutputByte('Y') else fail\n    writeOutputByte('K') else fail\nend\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nEDIT INPUT   .NU       ^S Save  ^Q Quit",
+            "cursorRow": 0,
+            "cursorColumn": 0,
+            "currentAttributes": 0,
+            "wrapPending": false,
+            "bellCount": 0,
+            "screenSha256": "a85a1067555078d1ee67714cd977f51bec32578cf6abe9ab657d1c3d2821667d"
+          }
+        },
+        { "id": "quit-editor", "inputBytes": [17], "stopAfterAscii": "\r\nA>" },
+        {
+          "id": "run-persisted-program",
+          "inputAscii": "INPUT\r",
+          "stopAfterAscii": "YK\r\nA>"
+        }
+      ],
+      "expectedTranscriptSha256": "23c893a619599074264e36997a526a8bdcd48e822e9998fac5b89dbdf6ef8b3b",
+      "expectedTranscriptBytesLength": 401,
+      "expectedDriveSha256": "f84e4f344974a1a039a5983cfdf08ca2748b4ae48cf81799558c19f4f410bd53",
+      "expectedTerminal": {
+        "text": "\nA>INPUT\nYK\nA>",
+        "cursorRow": 3,
+        "cursorColumn": 2,
+        "currentAttributes": 0,
+        "wrapPending": false,
+        "bellCount": 0,
+        "screenSha256": "bf63fee2345ee55d3577dea27ac128a3a85f3c7f9a5631c4b4dccc34eb122f2a"
+      }
+    }
+  ],
+  "expectedFinalFiles": [
+    {
+      "name": "INPUT.NU",
+      "bytes": 128,
+      "sha256": "2ce7df9e2c537759763bab2df7d9cf90f13b934be3c01393ffb3d1179b4a7f9f"
+    },
+    {
+      "name": "INPUT.COM",
+      "bytes": 25600,
+      "sha256": "ece4160d60bc9ad5be53f9cfe3e438b28c9f9fb2b0c482c20bcdb00998f0da88"
+    },
+    {
+      "name": "EDIT.COM",
+      "bytes": 3072,
+      "sha256": "c39db09039ddb9287c5cbc4381875855e735255a8a0a4f3741dedf51d314848b"
+    }
+  ]
+}

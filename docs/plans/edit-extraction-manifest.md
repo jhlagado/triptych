@@ -1,8 +1,8 @@
 # Edit extraction manifest
 
-Date: 2026-09-05. This manifest fixes the ownership and migration boundary for
-Edit before any files leave Debug80. It is not a second source authority and
-does not create or publish a repository.
+Date: 2026-09-05. Status: standalone extraction and first release complete;
+Triptych and Debug80 consumer migration in progress. This manifest records the
+ownership and migration boundary used for the extraction.
 
 ## Destination boundary
 
@@ -29,9 +29,11 @@ Debug80 APIs do not belong in the editor core.
 
 ## Current source authority
 
-Until extraction is accepted, authority remains Debug80 at
-`jhlagado/debug80`, currently revision
-`fa7ad9b2826c8cffded397c830a5ea900d883c1a`. The production source set is:
+The original authority was Debug80 at `jhlagado/debug80`, revision
+`fa7ad9b2826c8cffded397c830a5ea900d883c1a`. Authority has moved to public
+repository `jhlagado/edit`, release `v0.1.0`, revision
+`ac59b478b686b7cd1a3a340064e82d64fdc58589`. The extracted production source
+set came from:
 
 - `apps/debug80-vscode/roms/cpm22/editor.asm`
 - `apps/debug80-vscode/roms/cpm22/editor-memory.asmi`
@@ -160,7 +162,9 @@ mechanism for the guest application.
    sources and source-build commands while retaining consumer integration
    tests.
 
-Extraction is complete only when Edit builds and proves itself outside
+The standalone build and proof portion is complete: Linux CI and macOS both
+pass with ATOM as the only executable assembler, and `EDIT.COM` exactly matches
+the retained digest. Full migration is complete only when
 Debug80, both consumers use the same immutable artifact, and a clean Triptych
 checkout can compose that artifact without a Debug80 checkout. Until then,
 Debug80 remains the sole source authority and Triptych's bundled `EDIT.COM` is

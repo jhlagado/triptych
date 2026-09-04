@@ -13,7 +13,7 @@
       "sha256": "5b2aa38b306f72bec01e226dba731f010ed0c1ee2c74a1041f922ca29888c561"
     }
   ],
-  "expectedInitialDriveSha256": "a1d5c4f97f4413d96b31f7d79551cb4df60a356c659cf65d340b45a52679283c",
+  "expectedInitialDriveSha256": "1d4d1d622e5089f38078fc6c34e86b26632feac2612b2469abf849d718611118",
   "sessions": [
     {
       "id": "page-zero-and-return",

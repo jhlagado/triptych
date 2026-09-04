@@ -35,7 +35,7 @@ The range check adds ten bytes to code. State and stack capacity are unchanged.
 | Unused resident capacity             | `$EB69..$EBFF` |   151 |
 
 The assembled CCP SHA-256 is
-`79a5e20604d49ad3aeb7d00847139ac6245e5f265b8f4515f5b9b33bda366df2`.
+`eace2cd6e1ed77c59ccfa92dc891720f97927c436f773315727293b2135c322a`.
 The targeted scenario, complete headless scenario corpus and guarded
 `npm run check` pass. The latter includes 175 TypeScript tests, the CCP and
 BDOS gates, the Rust workspace and the release WASM build with AZM imports

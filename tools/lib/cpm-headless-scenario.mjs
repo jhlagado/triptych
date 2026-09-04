@@ -41,6 +41,43 @@ function bytesFromFixture(session, textField, bytesField) {
   return Uint8Array.from(Buffer.from(text, "ascii"));
 }
 
+function transcriptExpectation(session) {
+  const hasExact =
+    session.expectedTranscript !== undefined ||
+    session.expectedTranscriptBytes !== undefined;
+  const hasDigest =
+    session.expectedTranscriptSha256 !== undefined ||
+    session.expectedTranscriptBytesLength !== undefined;
+  assert.notEqual(
+    hasExact,
+    hasDigest,
+    `${session.id} must define either an exact transcript or its SHA-256 and byte length`,
+  );
+  if (hasExact) {
+    return {
+      exact: bytesFromFixture(
+        session,
+        "expectedTranscript",
+        "expectedTranscriptBytes",
+      ),
+    };
+  }
+  assert.match(
+    session.expectedTranscriptSha256,
+    /^[0-9a-f]{64}$/,
+    `${session.id} expectedTranscriptSha256`,
+  );
+  assert.ok(
+    Number.isInteger(session.expectedTranscriptBytesLength) &&
+      session.expectedTranscriptBytesLength >= 0,
+    `${session.id} expectedTranscriptBytesLength`,
+  );
+  return {
+    sha256: session.expectedTranscriptSha256,
+    bytes: session.expectedTranscriptBytesLength,
+  };
+}
+
 function endsWith(bytes, suffix) {
   if (suffix.length > bytes.length) return false;
   const offset = bytes.length - suffix.length;
@@ -173,11 +210,7 @@ export function runCpmHeadlessScenario({
 
   for (const session of scenario.sessions) {
     assert.equal(typeof session.id, "string");
-    const expectedTranscript = bytesFromFixture(
-      session,
-      "expectedTranscript",
-      "expectedTranscriptBytes",
-    );
+    const expectedTranscript = transcriptExpectation(session);
     const machine = createMachine(Uint8Array.from(persisted));
     try {
       let transcript = new Uint8Array();
@@ -224,11 +257,24 @@ export function runCpmHeadlessScenario({
         }
         interactionResults.push(interactionResult);
       }
-      assert.deepEqual(
-        transcript,
-        expectedTranscript,
-        `${session.id} raw serial transcript: ${JSON.stringify(Buffer.from(transcript).toString("ascii"))}`,
-      );
+      if (expectedTranscript.exact !== undefined) {
+        assert.deepEqual(
+          transcript,
+          expectedTranscript.exact,
+          `${session.id} raw serial transcript: ${JSON.stringify(Buffer.from(transcript).toString("ascii"))}`,
+        );
+      } else {
+        assert.equal(
+          transcript.length,
+          expectedTranscript.bytes,
+          `${session.id} raw serial transcript byte length`,
+        );
+        assert.equal(
+          sha256(transcript),
+          expectedTranscript.sha256,
+          `${session.id} raw serial transcript SHA-256`,
+        );
+      }
 
       const { snapshot, screenSha256 } = assertTerminal(
         session.id,

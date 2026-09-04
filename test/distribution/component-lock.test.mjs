@@ -7,7 +7,7 @@ import {
 
 const revision = "1".repeat(40);
 const digest = "2".repeat(64);
-const trusted = new Set(["atom-binary", "verified-prebuilt"]);
+const trusted = new Set(["atom-binary", "edit-package", "verified-prebuilt"]);
 
 function fixture() {
   return {
@@ -48,18 +48,17 @@ function fixture() {
         id: "edit",
         role: "application",
         source: {
-          kind: "prebuilt",
-          path: "third_party/edit/EDIT.COM",
-          bytes: 4096,
-          sha256: digest,
-          provenance: "third_party/edit/README.md",
+          kind: "git",
+          repository: "https://github.com/jhlagado/edit.git",
+          revision: "ac59b478b686b7cd1a3a340064e82d64fdc58589",
+          path: "package.json",
         },
-        recipe: "verified-prebuilt",
+        recipe: "edit-package",
         target: { origin: 0x0100, capacity: 0xd000 },
         install: { kind: "file", name: "EDIT.COM", padByte: 0x1a },
         licence: {
-          spdx: "LicenseRef-Edit",
-          provenance: "third_party/edit/README.md",
+          spdx: "GPL-3.0-or-later",
+          provenance: "LICENSE",
         },
       },
     ],
@@ -113,8 +112,8 @@ describe("Triptych component lock", () => {
         }),
     ],
     [
-      "a prebuilt source with a build recipe",
-      (lock) => (lock.components[2].recipe = "atom-binary"),
+      "a Git source with the prebuilt recipe",
+      (lock) => (lock.components[2].recipe = "verified-prebuilt"),
     ],
     [
       "a target beyond 64 KiB",

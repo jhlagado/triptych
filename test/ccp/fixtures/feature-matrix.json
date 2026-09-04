@@ -12,7 +12,7 @@
     "path": "roms/cpu/ccp/ccp.asm",
     "loadAddress": 58368,
     "bytes": 2048,
-    "sha256": "79a5e20604d49ad3aeb7d00847139ac6245e5f265b8f4515f5b9b33bda366df2"
+    "sha256": "eace2cd6e1ed77c59ccfa92dc891720f97927c436f773315727293b2135c322a"
   },
   "features": [
     {
@@ -44,7 +44,15 @@
       "status": "proved",
       "evidence": [
         "test/ccp/scenarios/oracle-page-zero.json",
-        "test/ccp/scenarios/triptych-page-zero.json"
+        "test/ccp/scenarios/triptych-page-zero.json",
+        "test/bdos/scenarios/triptych-bdos-edit-nucleus-persistent.json"
+      ]
+    },
+    {
+      "id": "command-fcb-reset",
+      "status": "proved",
+      "evidence": [
+        "test/bdos/scenarios/triptych-bdos-edit-nucleus-persistent.json"
       ]
     },
     {
