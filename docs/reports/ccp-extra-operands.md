@@ -30,3 +30,10 @@ The assembled CCP SHA-256 is
 This is a host-model proof, not an ESP32 measurement. Long-command generation,
 filename and wildcard boundaries, media failures and the worst-case stack
 sentinel remain open.
+
+GitHub Pages workflow run
+[`33909978220`](https://github.com/jhlagado/triptych/actions/runs/33909978220)
+passed for commit `901e15a`. A later fetch from
+<https://jhlagado.github.io/triptych/> returned the Triptych system profile;
+both `ccp.bin` and the CCP slot at the start of `cpm22.img` had the assembled
+SHA-256 above.
