@@ -5,10 +5,7 @@ import { fileURLToPath } from "node:url";
 
 import { assembleAtomBinary as assemble } from "./lib/assemble-atom.mjs";
 import { createZ80Runtime } from "@jhlagado/debug80-runtime/z80/runtime";
-import {
-  installCpm22File,
-  readCpm22File,
-} from "@jhlagado/debug80-runtime/platforms/cpm22/filesystem";
+import { installCpm22File, readCpm22File } from "./lib/cpm22-disk.mjs";
 import { createEsp32SbcRuntime } from "../dist/cpu/runtime.js";
 
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));
@@ -117,11 +114,10 @@ const mainProgram = Uint8Array.from([
   0xc9,
   ...Buffer.from("TRIPTYCH\r\n$", "ascii"),
 ]);
-const proofImage = installCpm22File(
-  Uint8Array.from(bundledDisk),
-  "MAIN.COM",
-  mainProgram,
-);
+const proofImage = installCpm22File(Uint8Array.from(bundledDisk), {
+  name: "MAIN.COM",
+  bytes: mainProgram,
+});
 proofImage.set(bios, BIOS_SYSTEM_OFFSET);
 const paddedProofImage = padForBackingSectors(proofImage);
 
@@ -143,12 +139,9 @@ const persisted = first.machine.disk.exportPersistentImages()[0];
 assert.ok(persisted);
 const persistedCpmImage = persisted.slice(0, proofImage.length);
 const resultFile = readCpm22File(persistedCpmImage, "RESULT.TXT");
-assert.ok(resultFile, "SMOKE.COM did not publish RESULT.TXT");
 const expectedResultText = "CP/M file services are working";
 assert.equal(
-  Buffer.from(resultFile.bytes.slice(0, expectedResultText.length)).toString(
-    "ascii",
-  ),
+  Buffer.from(resultFile.slice(0, expectedResultText.length)).toString("ascii"),
   expectedResultText,
 );
 
