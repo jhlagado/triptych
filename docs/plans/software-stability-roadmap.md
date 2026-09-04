@@ -312,8 +312,13 @@ installation. The missing-bundle investigation identified an npm symlinked
 cache-path problem; the unchanged ATOM pin passes the new Git/offline consumer
 check using canonical temporary paths.
 
-Current next task: complete Nucleus's remaining ATOM source-assembly proofs,
-then remove Atom's own AZM bootstrap/release calls. S1 remains in progress
-until both standalone toolchain gates pass.
+The local [ATOM-only release checkpoint](../reports/atom-only-release-checkpoint.md)
+records completion of ATOM's normal build and verification migration, including
+358 passing tests with AZM blocked and an offline package installation.
+
+Current next task: resolve ATOM's final-byte output boundary needed by the
+remaining Nucleus relocation proof, then finish Nucleus reconciliation and
+qualify the component revisions before advancing downstream pins. S1 remains
+in progress until both standalone toolchain gates pass.
 The first user-visible milestone is the ATOM-built Triptych browser image;
 the main usability milestone is S5's persistent edit/build/run session.
