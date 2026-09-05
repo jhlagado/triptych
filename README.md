@@ -45,7 +45,7 @@ the machine contract nor the sound and video models import it.
 
 ## Development
 
-Node.js 20 or newer, the Rust toolchain pinned in `rust-toolchain.toml`, and a
+Node.js 20 or newer, Python 3, the Rust toolchain pinned in `rust-toolchain.toml`, and a
 Playwright-managed Chromium browser are required for the complete acceptance
 gate.
 

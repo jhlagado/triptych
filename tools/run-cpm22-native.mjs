@@ -97,7 +97,19 @@ try {
   console.log("Press Ctrl-C to stop.\n");
 
   savedTerminalState = runStty(["-g"], true);
-  runStty(["-echo", "-icanon", "min", "1", "time", "0", "-icrnl", "isig"]);
+  runStty([
+    "-echo",
+    "-icanon",
+    "min",
+    "1",
+    "time",
+    "0",
+    "-icrnl",
+    "-ixon",
+    "-ixoff",
+    "-opost",
+    "isig",
+  ]);
 
   child = spawn(hostExecutable, [prepared.bootRomPath, prepared.diskPath], {
     stdio: "inherit",
