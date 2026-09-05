@@ -279,6 +279,11 @@ than being declared universally qualified.
 
 ### S6 — macOS/Linux parity and Debug80 consumption
 
+The [distribution parity checkpoint](../reports/native-wasm-distribution-parity.md)
+records the shared ATOM/Edit/NUC session and exact native/WASM comparisons.
+Its macOS proof passed; Linux CI execution and remaining Debug80 consumer
+updates are still required before S6 is complete.
+
 Run the same guest workflows through headless WASM and the native host. Compare
 raw console bytes, terminal snapshots and exported file/disk contents at
 defined checkpoints. Prove native terminal setup/restoration through PTY
