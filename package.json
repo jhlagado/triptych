@@ -69,7 +69,7 @@
     "proof:native-terminal": "cargo build -p triptych-host-native && python3 tools/prove-native-terminal.py",
     "proof:cpm-image-native": "cargo build -p triptych-cpm-image -p triptych-host-native && node tools/prove-cpm-image-native.mjs",
     "run:cpm22-native": "cargo build -p triptych-host-native && node tools/run-cpm22-native.mjs",
-    "run:ccp-native": "TRIPTYCH_CPM22_IMAGE=third_party/cpm22/cpm22.img TRIPTYCH_CPM_CCP=triptych npm run run:cpm22-native",
+    "run:ccp-native": "npm run run:cpm22-native",
     "run:wasm-browser": "npm run build:wasm-browser && node tools/serve-wasm-browser.mjs",
     "proof:cpm-headless": "npm run build:wasm-host && node tools/prove-wasm-host.mjs --cpm-headless-only",
     "proof:wasm-host": "npm run build:wasm-host:conformance && node tools/prove-wasm-host.mjs",

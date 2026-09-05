@@ -8,6 +8,10 @@ import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 
 import { assembleAtomBinary as assemble } from "./lib/assemble-atom.mjs";
+import {
+  portableCpmBinary,
+  preparePortableCpmSource,
+} from "./lib/portable-cpm-source.mjs";
 import { retargetCpm22Atom } from "./lib/cpm22-atom-target.mjs";
 import { installCpm22File, readCpm22File } from "./lib/cpm22-disk.mjs";
 import { runCpmHeadlessScenario } from "./lib/cpm-headless-scenario.mjs";
@@ -289,8 +293,8 @@ async function proveCpm() {
   );
   const [bootRom, ccp, bdos, bios, sourceDisk] = await Promise.all([
     assemble(join(sourceDirectory, "bootstrap.asm")),
-    assemble(join(sourceDirectory, "ccp", "ccp.asm")),
-    assemble(join(sourceDirectory, "bdos", "bdos.asm")),
+    portableCpmBinary(repositoryRoot, "ccp"),
+    portableCpmBinary(repositoryRoot, "bdos"),
     assemble(join(repositoryRoot, "system", "cpm", "bios.asm")),
     readFile(resolve(cpmImagePath)),
   ]);
@@ -331,7 +335,17 @@ async function proveCpm() {
     }
     for (const initialFile of scenario.initialFiles ?? []) {
       let bytes;
-      if (initialFile.encoding === "cpm-text") {
+      if (initialFile.encoding === "portable-cpm-source") {
+        const id = ["ccp", "bdos"].find(
+          (name) =>
+            initialFile.path === `third_party/portable-cpm/src/${name}.asm`,
+        );
+        assert.ok(id, `${scenario.id} unsupported Portable CP/M source`);
+        bytes = cpmText(
+          Buffer.from(await preparePortableCpmSource(repositoryRoot, id)),
+          initialFile.path,
+        );
+      } else if (initialFile.encoding === "cpm-text") {
         const sourcePath = repositoryPath(initialFile.path);
         const source = await readFile(sourcePath);
         bytes = cpmText(source, initialFile.path);

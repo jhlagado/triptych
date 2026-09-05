@@ -20,8 +20,8 @@ Triptych owns:
 - tests and proof reports for those contracts.
 
 The portable CP/M-compatible OS (CCP and BDOS) is independently maintained at
-`https://github.com/jhlagado/portable-cpm`. Its current Triptych source copies
-are transitional until the pinned-release consumer migration is verified. The Triptych
+`https://github.com/jhlagado/portable-cpm`. Triptych consumes its pinned release
+and retains hash-checked upstream source snapshots only for integration proofs. The Triptych
 BIOS stays here as machine-interface code; it must not move into the portable
 OS repository. See `docs/plans/component-releases.md` for extraction and release
 boundaries. Do not develop a second authoritative CCP or BDOS copy here.

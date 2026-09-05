@@ -3,11 +3,11 @@
 2026-09-05. Ownership decisions are settled as described below. The
 [component-lock v1 contract](../specifications/component-lock-v1.md) and its
 validator define the input boundary. The populated lock and private fresh-disk
-builder now pass a headless workflow; consumer migration and publication
+builder now pass a headless workflow; final consumer qualification and publication
 remain work under S2–S4 of the
 [software stability roadmap](software-stability-roadmap.md). Portable CP/M
 `v0.1.0` is published and selected by the distribution lock; the browser/native
-default migration remains unfinished.
+defaults now use that distribution. Clean-release and hosted acceptance remain open.
 
 ## Source ownership
 
@@ -17,8 +17,7 @@ standalone repositories. The
 [Edit extraction manifest](edit-extraction-manifest.md) records the exact
 source, proof and adapter boundary. Edit `v0.1.1` is published at immutable
 revision `2427501773e8d158d556631b8a4ba1cb972fcb4a`. Triptych vendors and
-verifies that release artifact while the complete S4 distribution builder is
-developed.
+verifies that release artifact in the S4 distribution builder.
 
 The portable CP/M-compatible operating system has a separate repository,
 [`jhlagado/portable-cpm`](https://github.com/jhlagado/portable-cpm), and release
@@ -37,7 +36,9 @@ ports. Supporting a second real machine does not require moving Triptych BIOS.
 
 CCP, BDOS and the BIOS are loaded from disk into RAM. The Triptych BIOS is at
 `system/cpm/bios.asm`; the actual bootstrap stays under `roms/cpu/`. The CCP and
-BDOS paths under `roms/cpu/` remain transitional until the release-input migration passes. There is
+BDOS now come from the pinned Portable CP/M release. Hash-checked upstream sources
+under `third_party/portable-cpm/src/` support integration proofs, not independent
+development. The transitional `roms/cpu/ccp/` and `roms/cpu/bdos/` copies are removed. There is
 one maintained BIOS source, shared by the image builders and machine proofs.
 
 ## Two dependency mechanisms
@@ -46,7 +47,7 @@ Cargo manages Triptych's Rust packages and their compiled crates. npm manages
 JavaScript development tools. Neither package manager defines ownership of the
 guest OS or applications.
 
-A component lockfile will select external Z80 sources and artifacts for a
+A component lockfile selects external Z80 sources and artifacts for a
 Triptych release. Triptych's own BIOS and bootstrap are selected by the
 Triptych source revision being built. They need no external package or
 self-referential revision entry in that lockfile.

@@ -5,13 +5,8 @@ import { basename, extname, join, relative, resolve } from "node:path";
 
 const repositoryRoot = resolve(import.meta.dirname, "..");
 const documentRoot = join(repositoryRoot, "dist", "wasm-browser");
-const bundledDiskPath = join(
-  repositoryRoot,
-  "third_party",
-  "cpm22",
-  "cpm22.img",
-);
-const diskPath = resolve(process.env.TRIPTYCH_CPM22_IMAGE ?? bundledDiskPath);
+const diskOverride = process.env.TRIPTYCH_CPM22_IMAGE || undefined;
+const diskPath = resolve(diskOverride ?? join(documentRoot, "cpm22.img"));
 const requestedPort = Number.parseInt(process.env.PORT ?? "8080", 10);
 if (
   !Number.isInteger(requestedPort) ||
@@ -69,7 +64,7 @@ const server = createServer(async (request, response) => {
       return;
     }
     const url = new URL(request.url ?? "/", "http://127.0.0.1");
-    if (url.pathname === "/config.json") {
+    if (diskOverride !== undefined && url.pathname === "/config.json") {
       sendJson(
         response,
         {
@@ -80,7 +75,7 @@ const server = createServer(async (request, response) => {
       );
       return;
     }
-    if (url.pathname === "/cpm22.img") {
+    if (diskOverride !== undefined && url.pathname === "/cpm22.img") {
       await sendFile(response, diskPath, method);
       return;
     }

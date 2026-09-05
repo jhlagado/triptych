@@ -1,28 +1,28 @@
-; Triptych-owned CP/M 2.2 BDOS.
+; Portable CP/M BDOS, CP/M 2.2 interface profile.
 ;
-; This source intentionally uses the common Atom/AZM subset. Names fit Atom's
+; This source intentionally uses ATOM's portable source subset. Names fit its
 ; eight-character limit, and all code, data, and stack storage remain inside
-; the fixed $EC00..$F9FF resident slot.
+; the profile's fixed-size BDOS resident slot.
 
-        ORG     $EC00
+        ORG     BDOSBAS
 
 IOBYTE  EQU     $0003
 
-BIOWBT  EQU     $FA03
-BIOCST  EQU     $FA06
-BIOCIN  EQU     $FA09
-BIOCOT  EQU     $FA0C
-BIOLST  EQU     $FA0F
-BIOPUN  EQU     $FA12
-BIORDR  EQU     $FA15
-BIOHOM  EQU     $FA18
-BIOSEL  EQU     $FA1B
-BIOTRK  EQU     $FA1E
-BIOSEC  EQU     $FA21
-BIODMA  EQU     $FA24
-BIORDS  EQU     $FA27
-BIOWRS  EQU     $FA2A
-BIOTRN  EQU     $FA30
+BIOWBT  EQU     BIOSBAS+$03
+BIOCST  EQU     BIOSBAS+$06
+BIOCIN  EQU     BIOSBAS+$09
+BIOCOT  EQU     BIOSBAS+$0C
+BIOLST  EQU     BIOSBAS+$0F
+BIOPUN  EQU     BIOSBAS+$12
+BIORDR  EQU     BIOSBAS+$15
+BIOHOM  EQU     BIOSBAS+$18
+BIOSEL  EQU     BIOSBAS+$1B
+BIOTRK  EQU     BIOSBAS+$1E
+BIOSEC  EQU     BIOSBAS+$21
+BIODMA  EQU     BIOSBAS+$24
+BIORDS  EQU     BIOSBAS+$27
+BIOWRS  EQU     BIOSBAS+$2A
+BIOTRN  EQU     BIOSBAS+$30
 
 CTRLC   EQU     3
 CTRLE   EQU     5
@@ -2114,4 +2114,4 @@ STKBASE:
         DS      64,0
 STKTOP:
 
-        DS      $FA00-$,0
+        DS      BIOSBAS-$,0

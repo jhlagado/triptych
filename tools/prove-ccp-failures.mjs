@@ -5,6 +5,7 @@ import { createRequire } from "node:module";
 import { resolve } from "node:path";
 
 import { assembleAtomBinary } from "./lib/assemble-atom.mjs";
+import { portableCpmBinary } from "./lib/portable-cpm-source.mjs";
 import { installCpm22File, readCpm22File } from "./lib/cpm22-disk.mjs";
 
 const repositoryRoot = resolve(import.meta.dirname, "..");
@@ -37,10 +38,8 @@ function endsWith(output, suffix) {
 
 const [bootRom, ccp, bdos, bios, sourceDisk] = await Promise.all([
   assembleAtomBinary(resolve(repositoryRoot, "roms", "cpu", "bootstrap.asm")),
-  assembleAtomBinary(resolve(repositoryRoot, "roms", "cpu", "ccp", "ccp.asm")),
-  assembleAtomBinary(
-    resolve(repositoryRoot, "roms", "cpu", "bdos", "bdos.asm"),
-  ),
+  portableCpmBinary(repositoryRoot, "ccp"),
+  portableCpmBinary(repositoryRoot, "bdos"),
   assembleAtomBinary(resolve(repositoryRoot, "system", "cpm", "bios.asm")),
   readFile(resolve(repositoryRoot, "third_party", "cpm22", "cpm22.img")),
 ]);

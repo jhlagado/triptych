@@ -223,9 +223,11 @@ against Triptych's current BDOS, not only the historical fixture.
 Status: the populated lock, private fresh-disk builder and released-component
 headless workflow are implemented. The
 [first-boot checkpoint](../reports/pinned-distribution-first-boot.md) records
-the verified inputs and remaining browser/native default migration. S4 is not
-complete until those consumers use the same distribution and clean-release
-publication passes.
+the first verified inputs. Browser and native defaults now use the pinned
+distribution; integration source proofs use verified Portable CP/M snapshots.
+S4 remains open until clean-release reproducibility and publication pass. The
+browser acceptance gate compares the HTTP disk and configuration with the
+deployment manifest so a server override cannot silently test a different disk.
 
 Use the input-lockfile/output-manifest distinction and the verified build
 sequence in the [component release plan](component-releases.md). Cargo manages

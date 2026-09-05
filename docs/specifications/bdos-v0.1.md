@@ -203,8 +203,10 @@ persistence follow the
 
 ## Source and build boundary
 
-Production source will live below `roms/cpu/bdos/` and use original
-Atom-compatible assembly. `%INCLUDE` may divide the implementation into
+Production source lives at `src/bdos.asm` in `jhlagado/portable-cpm` and uses
+original ATOM-compatible assembly. Triptych's source snapshot is verified
+against the pinned release manifest, not maintained as a second implementation.
+`%INCLUDE` may divide the implementation into
 modules, but the build produces one fixed resident image. Host-side generation
 or assembly helpers belong in `tools/`; direct and whole-system proofs belong
 in `test/`.

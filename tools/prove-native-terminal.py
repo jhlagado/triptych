@@ -68,7 +68,8 @@ def prove(exit_method):
 
         environment = dict(os.environ)
         environment.pop("TRIPTYCH_CPM22_WORK_DISK", None)
-        environment["TRIPTYCH_CPM22_IMAGE"] = str(ROOT / "third_party/cpm22/cpm22.img")
+        environment.pop("TRIPTYCH_CPM22_IMAGE", None)
+        environment.pop("TRIPTYCH_CPM_CCP", None)
         process = subprocess.Popen(
             [sys.executable, str(Path(__file__).resolve()), "--session", str(report_write)], cwd=ROOT,
             stdin=slave, stdout=slave, stderr=slave, env=environment,
@@ -85,9 +86,9 @@ def prove(exit_method):
         assert not active[1] & termios.OPOST, "host translates guest output bytes"
         assert not active[3] & (termios.ICANON | termios.ECHO), "host buffers or echoes guest input"
         assert active[3] & termios.ISIG, "documented Ctrl-C host exit is disabled"
-        os.write(master, b"DIR README.TXT\r")
+        os.write(master, b"DIR HELLO.ASM\r")
         response = wait_for(master, process, b"\r\nA>")
-        assert b"README   TXT" in response, response
+        assert b"HELLO    ASM" in response, response
         assert b"\r\r\r\n" not in response, "host added an extra carriage return"
         os.write(master, b"EDIT PTY.TXT\r")
         wait_for(master, process, b"^Q Quit")

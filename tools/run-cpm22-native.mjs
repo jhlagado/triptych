@@ -25,11 +25,6 @@ const systemCcp = process.env.TRIPTYCH_CPM_CCP ?? "triptych";
 if (systemCcp !== "oracle" && systemCcp !== "triptych") {
   throw new Error("TRIPTYCH_CPM_CCP must be oracle or triptych");
 }
-if (!sourceImagePath && !workingImagePath) {
-  throw new Error(
-    "set TRIPTYCH_CPM22_WORK_DISK to a persistent working image or TRIPTYCH_CPM22_IMAGE to a provenance-reviewed disposable source image",
-  );
-}
 if (process.platform === "win32") {
   throw new Error(
     "the interactive launcher currently supports macOS and Linux terminals",
@@ -81,18 +76,25 @@ try {
   console.log("Triptych native CP/M 2.2 terminal");
   console.log(`Rust host: ${hostExecutable}`);
   console.log(
-    `CCP: ${systemCcp === "triptych" ? "Triptych" : "retained compatibility oracle"}`,
+    `CCP: ${systemCcp === "triptych" ? "pinned Portable CP/M release" : "retained compatibility oracle"}`,
   );
   if (persistent) {
     console.log(`Working disk: ${resolve(workingImagePath)}`);
     console.log(`Pre-launch SHA-256: ${prepared.sourceImageSha256}`);
     console.log("Flushed guest writes remain in this working image.");
-  } else {
+  } else if (sourceImagePath !== undefined) {
     console.log(`Source disk: ${resolve(sourceImagePath)}`);
     console.log(`Source SHA-256: ${prepared.sourceImageSha256}`);
     console.log(
       "Disk writes go to a temporary copy and are discarded on exit.",
     );
+  } else {
+    console.log(
+      "Source disk: fresh pinned CP/M distribution (development build)",
+    );
+    console.log(`Distribution manifest: ${prepared.distributionManifestPath}`);
+    console.log(`Disk SHA-256: ${prepared.workingImageSha256}`);
+    console.log("Disk writes are disposable and are discarded on exit.");
   }
   console.log("Press Ctrl-C to stop.\n");
 

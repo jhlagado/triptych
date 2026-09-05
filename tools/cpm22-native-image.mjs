@@ -1,9 +1,14 @@
 import { createHash } from "node:crypto";
+import assert from "node:assert/strict";
 import { readFile, rename, rm, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 
 import { assembleAtomBinary as assemble } from "./lib/assemble-atom.mjs";
 import { installVerifiedEditRelease } from "./lib/edit-release.mjs";
+import { buildCpmDistribution } from "./lib/cpm-distribution.mjs";
+import { validateComponentLock } from "./lib/component-lock.mjs";
+import { readVerifiedRelease } from "./lib/verified-release.mjs";
+import { validateDistributionManifest } from "./lib/distribution-manifests.mjs";
 
 const BDOS_SYSTEM_OFFSET = 0x0800;
 const BIOS_SYSTEM_OFFSET = 0x1600;
@@ -31,6 +36,37 @@ export async function prepareNativeCpm22Image({
   outputDirectory,
   systemCcp = "triptych",
 }) {
+  if (sourceImagePath === undefined) {
+    if (systemCcp !== "triptych") {
+      throw new Error(
+        "historical CCP selection requires an explicit source image",
+      );
+    }
+    // Interactive development may use a dirty checkout; its manifest records it.
+    const distribution = await buildCpmDistribution(repositoryRoot, {
+      allowDirty: true,
+    });
+    const bootRomPath = join(outputDirectory, "bootstrap.bin");
+    const diskPath = join(outputDirectory, "cpm22.img");
+    const distributionManifestPath = join(
+      outputDirectory,
+      "distribution.manifest.json",
+    );
+    await Promise.all([
+      writeFile(bootRomPath, distribution.bootstrap),
+      writeFile(diskPath, distribution.disk),
+      writeFile(
+        distributionManifestPath,
+        `${JSON.stringify(distribution.manifest, null, 2)}\n`,
+      ),
+    ]);
+    return {
+      bootRomPath,
+      diskPath,
+      distributionManifestPath,
+      workingImageSha256: distribution.manifest.disk.sha256,
+    };
+  }
   const [{ bootRom, ccp, bdos, bios }, sourceDisk] = await Promise.all([
     assembleTriptychCpuFirmware(repositoryRoot),
     readFile(resolve(sourceImagePath)),
@@ -70,7 +106,7 @@ export async function prepareNativeCpm22Image({
 }
 
 /**
- * Installs the current Triptych CCP, BDOS, and BIOS in an existing working
+ * Installs the pinned portable CCP/BDOS and local Triptych BIOS in an existing working
  * disk.
  * The disk is published by one same-directory rename, so an assembly or write
  * failure cannot leave a partly patched image behind.
@@ -127,10 +163,31 @@ export async function prepareNativeCpm22WorkingImage({
 
 export async function assembleTriptychCpuFirmware(repositoryRoot) {
   const sourceDirectory = join(repositoryRoot, "roms", "cpu");
+  const lock = validateComponentLock(
+    JSON.parse(
+      await readFile(
+        join(repositoryRoot, "distribution/components.lock.json"),
+        "utf8",
+      ),
+    ),
+    { recipes: new Set(["verified-release", "atom-binary", "atom-cpm22"]) },
+  );
+  assert.equal(lock.targetProfile, "triptych-cpu-v0.1");
+  async function resident(id) {
+    const component = lock.components.find((entry) => entry.id === id);
+    assert.ok(component, `distribution lock is missing ${id}`);
+    const verified = await readVerifiedRelease(repositoryRoot, component);
+    validateDistributionManifest(
+      component,
+      verified.manifest,
+      lock.atom.revision,
+    );
+    return verified.bytes;
+  }
   const [bootRom, ccp, bdos, bios] = await Promise.all([
     assemble(join(sourceDirectory, "bootstrap.asm")),
-    assemble(join(sourceDirectory, "ccp", "ccp.asm")),
-    assemble(join(sourceDirectory, "bdos", "bdos.asm")),
+    resident("ccp"),
+    resident("bdos"),
     assemble(join(repositoryRoot, "system", "cpm", "bios.asm")),
   ]);
   if (bootRom.length !== BOOT_ROM_BYTES) {

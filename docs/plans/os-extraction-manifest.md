@@ -4,6 +4,14 @@ Date: 2026-09-05. This manifest fixes the ownership and migration boundary
 before an operating-system repository is named or created. It is not a release
 manifest and does not authorize a source copy to become a second authority.
 
+Current migration: the destination is `jhlagado/portable-cpm`, release `v0.1.0`
+at `579657f9177b31e1fccf0c05f72ba2ee76f3d052`. The old implementation paths listed
+below are historical extraction inputs and have been removed. Triptych now uses
+the pinned release for production and verifies upstream source snapshots under
+`third_party/portable-cpm/src/` against its raw and profiled-source digests for
+integration tests. BIOS remains local. Final clean consumer and hosted acceptance
+are tracked by the software stability roadmap.
+
 ## Destination boundary
 
 The portable operating-system repository owns CCP, BDOS and the contracts they

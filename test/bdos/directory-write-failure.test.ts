@@ -8,20 +8,13 @@ import {
   runBdosDirectCallSequence,
   unexpectedDirectCallWrites,
 } from "../support/bdos-direct-call.js";
-import { assembleZ80WithLabelsForTest } from "../support/assemble-z80.js";
+import { assemblePortableCpmSource } from "../../tools/lib/portable-cpm-source.mjs";
 
 const repositoryRoot = resolve(import.meta.dirname, "..", "..");
 const referenceDisk = readFileSync(
   resolve(repositoryRoot, "third_party", "cpm22", "cpm22.img"),
 );
 const referenceBdos = referenceDisk.subarray(0x0800, 0x1600);
-const replacementBdosSource = resolve(
-  repositoryRoot,
-  "roms",
-  "cpu",
-  "bdos",
-  "bdos.asm",
-);
 const sequenceDirectory = resolve(
   repositoryRoot,
   "test",
@@ -169,7 +162,7 @@ describe("CP/M 2.2 BDOS directory-write failure atomicity", () => {
   let stackBase = 0;
 
   beforeAll(async () => {
-    const assembled = await assembleZ80WithLabelsForTest(replacementBdosSource);
+    const assembled = await assemblePortableCpmSource(repositoryRoot, "bdos");
     replacementBdos = assembled.bytes;
     stackBase = assembled.labels.STKBASE!;
   });

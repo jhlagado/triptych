@@ -1,15 +1,15 @@
 {
   "schema": "triptych-cpm-headless-scenario-v1",
   "id": "triptych-ccp-self-assemble",
-  "description": "Assemble the Triptych CCP source inside CP/M with ATOM.COM and verify the exact resident image",
+  "description": "Assemble the pinned Portable CP/M CCP source with its Triptych profile inside CP/M using historical ATOM.COM and verify the released resident image",
   "systemCcp": "triptych",
   "systemBdos": "triptych",
   "maximumSlices": 4000,
   "initialFiles": [
     {
       "name": "CCP.ASM",
-      "path": "roms/cpu/ccp/ccp.asm",
-      "encoding": "cpm-text"
+      "path": "third_party/portable-cpm/src/ccp.asm",
+      "encoding": "portable-cpm-source"
     }
   ],
   "initialTools": [
@@ -22,7 +22,7 @@
       "sha256": "26cdac36f1cc94a62f8527d3e21125ae0f4de067196669275962196b9bcd2d4f"
     }
   ],
-  "expectedInitialDriveSha256": "ade859b17db03e4cc0f5e10c73be8d4ed89cd8fd9cb9572e4ef043570aa6d727",
+  "expectedInitialDriveSha256": "23bf9fbc17fb5ce3bfb5993b548819f18ee18744c5dee913c212092a6c5accf9",
   "sessions": [
     {
       "id": "assemble-ccp",
@@ -47,7 +47,7 @@
         "wrapPending": false,
         "bellCount": 0
       },
-      "expectedDriveSha256": "80272f12c33696050fa02b5436adb9ce1183348c945ae74a760461683bffc81d"
+      "expectedDriveSha256": "d72946827c00b9ef174d249cfed928d19c673d5f8d625c51021881cff09a355f"
     }
   ],
   "expectedFinalFiles": [

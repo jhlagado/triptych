@@ -30,7 +30,9 @@ ESP32 physical qualification follows separately when hardware is available.
 | `crates/triptych-cpu-core`    | portable allocation-free Rust CPU machine                                   |
 | `crates/triptych-host-native` | macOS/Linux terminal and file-backed disk host                              |
 | `crates/triptych-host-wasm`   | headless JavaScript/WASM adapter with owned in-memory disks                 |
-| `roms/cpu`                    | Z80 bootstrap ROM; transitional CCP/BDOS sources pending OS extraction      |
+| `roms/cpu`                    | Z80 bootstrap ROM                                                           |
+| `distribution`                | Pinned component inputs and application samples                             |
+| `third_party/portable-cpm`    | Released CCP/BDOS and hash-checked upstream source snapshots                |
 | `system/cpm`                  | Triptych CP/M BIOS, loaded from disk into RAM                               |
 | `firmware/cpu`                | standalone Rust-over-ESP-IDF CPU-module firmware                            |
 | `firmware/video`              | future ESP-IDF VGA-module firmware                                          |
@@ -77,14 +79,14 @@ The interactive macOS/Linux launcher starts the same Rust host in the current
 terminal:
 
 ```sh
-TRIPTYCH_CPM22_IMAGE=/path/to/cpm22.img npm run run:cpm22-native
+npm run run:cpm22-native
 ```
 
-The launcher prints the source image's SHA-256 digest, assembles Triptych's
-boot ROM, CCP, BDOS, and BIOS, and installs the resident components in a
-temporary copy of the disk. CP/M disk writes last for the session and are
-discarded when the launcher exits with Ctrl-C; the supplied image is never
-modified. The shorter CCP-specific command starts the same configuration:
+The default launcher builds a fresh disk from pinned CCP, BDOS, ATOM, NUC and
+Edit inputs plus the local BIOS and bootstrap. It prints the disk digest and
+development manifest. Disk writes last for the session and are discarded on
+Ctrl-C. Set `TRIPTYCH_CPM22_IMAGE` only to select an explicit disposable source
+copy; that source is not modified. The shorter alias starts the same default:
 
 ```sh
 npm run run:ccp-native
@@ -123,9 +125,11 @@ TRIPTYCH_CPM22_WORK_DISK=/path/to/triptych-working.img \
 npm run run:cpm22-native
 ```
 
-The launcher installs the current Triptych CCP, BDOS, and BIOS atomically
+The launcher installs the pinned CCP/BDOS and local Triptych BIOS atomically
 before boot. Guest writes that reach the disk controller's flush boundary
-remain in the named working image across host processes.
+remain in the named working image across host processes. Startup preserves
+application and user-file records; it does not upgrade ATOM, NUC or Edit in a
+saved working disk.
 
 The Stage 5 WebAssembly proof additionally needs the exactly matching
 `wasm-bindgen` 0.2.127 command-line tool:
@@ -157,16 +161,16 @@ Set `TRIPTYCH_CPM_SCENARIO=/path/to/scenario.json` to replay another CCP or
 defines readable ASCII and arbitrary byte inputs, terminal snapshots, and
 cross-session disk persistence.
 
-The same toolchain builds an interactive browser terminal. It installs the
-current Triptych CCP, BDOS, and BIOS into the bundled or user-selected disk
-before starting CP/M automatically:
+The same toolchain builds an interactive browser terminal from the pinned
+fresh distribution. A restored or user-selected disk receives current resident
+system records while its applications and user files are preserved:
 
 ```sh
 npm run run:wasm-browser
 ```
 
 Open `http://127.0.0.1:8080/`, click the terminal, and type at the `A>` prompt.
-Set `TRIPTYCH_CPM22_IMAGE` to override the bundled disk; the page also retains
+Set `TRIPTYCH_CPM22_IMAGE` explicitly to override the local server's release disk; the page also retains
 its file picker. After CP/M flushes a guest write, the page copies the complete
 working disk into browser-owned IndexedDB storage and reports the transaction
 separately from machine state. A later reload restores that disk. The download
@@ -198,7 +202,7 @@ contracts. Current implementation work is limited to the CPU module; the
 [CPU development plan](docs/plans/cpu-development.md) records the portable
 Rust, native, WebAssembly, ESP32-S3, and breadboard stages and their proof
 gates. The [component-lock contract](docs/specifications/component-lock-v1.md)
-defines how a future release selects independently maintained Z80 software
+defines how the release selects independently maintained Z80 software
 without treating those projects as Rust crates. The
 [Atom BDOS roadmap](docs/plans/atom-bdos-roadmap.md) and
 [BDOS contract](docs/specifications/bdos-v0.1.md) define the independent,

@@ -33,8 +33,9 @@ terminal state do not survive a session boundary.
 The optional scenario-level `systemCcp` and `systemBdos` fields independently
 select the resident implementations installed before the first session.
 Omission or `oracle` retains that frozen transitional component; `triptych`
-assembles and installs `roms/cpu/ccp/ccp.asm` or
-`roms/cpu/bdos/bdos.asm`. These selections are test setup, not services visible
+assembles and installs the pinned source snapshots under
+`third_party/portable-cpm/src/` using the released Triptych placement profile.
+These selections are test setup, not services visible
 to the guest. Each scenario still pins the digest of the resulting complete
 starting image, so changing either implementation cannot silently reuse stale
 expectations.
@@ -75,6 +76,13 @@ length, fill byte, and optional bounded byte patches. Generated input is for
 capacity and boundary fixtures whose size is the behavior under test, not for
 encoding guest implementation logic. The repository file and original
 transitional disk remain unchanged.
+
+A `portable-cpm-source` entry selects exactly
+`third_party/portable-cpm/src/ccp.asm` or `bdos.asm`. Preparation verifies the
+source and profiled-source hashes against the pinned upstream release manifest,
+prepends the released CCPBAS/BDOSBAS/BIOSBAS/BIOSEND equates, then applies the
+same ASCII/CRLF and record-padding rules. This encoding is test-only and does
+not permit arbitrary source rewriting or a different target profile.
 
 An optional `initialPrograms` array installs a test-only transient assembled
 from repository-owned Atom-compatible source. Each entry has kind

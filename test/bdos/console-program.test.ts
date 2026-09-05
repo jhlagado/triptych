@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import { beforeAll, describe, expect, it } from "vitest";
 import { createEsp32SbcRuntime } from "../../src/cpu/runtime.js";
 import { assembleZ80ForTest } from "../support/assemble-z80.js";
+import { portableCpmBinary } from "../../tools/lib/portable-cpm-source.mjs";
 import { createDebug80TestHarness } from "../support/debug80-runtime.js";
 
 const repositoryRoot = resolve(import.meta.dirname, "..", "..");
@@ -34,7 +35,7 @@ describe("Triptych BDOS console transient", () => {
   beforeAll(async () => {
     [bootRom, replacementBdos, bios, consoleProgram] = await Promise.all([
       assembleZ80ForTest(resolve(repositoryRoot, "roms/cpu/bootstrap.asm")),
-      assembleZ80ForTest(resolve(repositoryRoot, "roms/cpu/bdos/bdos.asm")),
+      portableCpmBinary(repositoryRoot, "bdos"),
       assembleZ80ForTest(resolve(repositoryRoot, "system/cpm/bios.asm")),
       assembleZ80ForTest(
         resolve(repositoryRoot, "test/bdos/programs/console-smoke.asm"),

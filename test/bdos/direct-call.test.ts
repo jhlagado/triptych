@@ -15,7 +15,7 @@ import {
   runBdosDirectCallSequence,
   unexpectedDirectCallWrites,
 } from "../support/bdos-direct-call.js";
-import { assembleZ80WithLabelsForTest } from "../support/assemble-z80.js";
+import { assemblePortableCpmSource } from "../../tools/lib/portable-cpm-source.mjs";
 
 const repositoryRoot = resolve(import.meta.dirname, "..", "..");
 const referenceDisk = readFileSync(
@@ -24,13 +24,6 @@ const referenceDisk = readFileSync(
 const referenceBdos = referenceDisk.subarray(0x0800, 0x1600);
 const expectedBdosSha256 =
   "258fe1b659a979fa9adab000fd2ee27b165349179f6b5f5b8b5266ea3385ac22";
-const replacementBdosSource = resolve(
-  repositoryRoot,
-  "roms",
-  "cpu",
-  "bdos",
-  "bdos.asm",
-);
 let replacementBdos: Uint8Array;
 let replacementLabels: Readonly<Record<string, number>>;
 const functionFixtureDirectory = resolve(
@@ -298,7 +291,7 @@ function expectFixtureResult(
 
 describe("CP/M 2.2 BDOS direct-call contract", () => {
   beforeAll(async () => {
-    const assembled = await assembleZ80WithLabelsForTest(replacementBdosSource);
+    const assembled = await assemblePortableCpmSource(repositoryRoot, "bdos");
     replacementBdos = assembled.bytes;
     replacementLabels = assembled.labels;
     expect(replacementBdos).toHaveLength(0x0e00);

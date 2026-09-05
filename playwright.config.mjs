@@ -17,7 +17,7 @@ export default defineConfig({
   },
   webServer: {
     command: "node tools/serve-wasm-browser.mjs",
-    env: { PORT: String(port) },
+    env: { PORT: String(port), TRIPTYCH_CPM22_IMAGE: "" },
     port,
     reuseExistingServer: false,
     timeout: 30_000,

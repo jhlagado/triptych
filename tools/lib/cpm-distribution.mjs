@@ -140,7 +140,7 @@ export async function buildCpmDistribution(
       install: component.install,
     });
   }
-  for (const name of ["HELLO.ASM", "INPUT.NU"]) {
+  for (const name of ["HELLO.ASM", "INPUT.NU", "LARGE.ASM"]) {
     const source = await readFile(
       join(repositoryRoot, "distribution/samples", name),
       "utf8",

@@ -217,8 +217,10 @@ overlay, and enters the BIOS cold-boot routine. Warm boot reloads the CCP and
 BDOS while retaining the resident BIOS. The BIOS alone converts CP/M track and
 sector requests into this profile's linear record numbers.
 
-The original Triptych CCP and BDOS are built from `roms/cpu/ccp/ccp.asm` and
-`roms/cpu/bdos/bdos.asm`. Retained third-party resident binaries are black-box
+CCP and BDOS are independently maintained in `jhlagado/portable-cpm` and selected
+by `distribution/components.lock.json`. Integration proofs assemble hash-checked
+source snapshots under `third_party/portable-cpm/src/` and verify release-byte
+identity. Retained historical resident binaries are black-box
 development oracles with provenance and grant recorded under `third_party/cpm22/`.
 The [CCP v0.1 contract](ccp-v0.1.md) and [BDOS v0.1 contract](bdos-v0.1.md)
 govern these replacements. The [Atom CCP roadmap](../plans/atom-ccp-roadmap.md)

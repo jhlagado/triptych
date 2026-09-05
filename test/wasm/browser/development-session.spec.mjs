@@ -1,4 +1,30 @@
 import { expect, test } from "@playwright/test";
+import { readFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
+
+test("HTTP serves the exact built release disk and configuration", async ({
+  request,
+}) => {
+  const manifest = JSON.parse(
+    await readFile(
+      new URL(
+        "../../../dist/wasm-browser/deployment-manifest.json",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+  );
+  for (const name of ["cpm22.img", "config.json"]) {
+    const response = await request.get(`/${name}`);
+    expect(response.ok()).toBe(true);
+    const bytes = await response.body();
+    const expected = manifest.assets.find((asset) => asset.path === name);
+    expect(bytes.length).toBe(expected.bytes);
+    expect(createHash("sha256").update(bytes).digest("hex")).toBe(
+      expected.sha256,
+    );
+  }
+});
 
 function terminalText(page) {
   return page.locator("#terminal").textContent();
