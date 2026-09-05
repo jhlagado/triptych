@@ -105,6 +105,198 @@ function fixture() {
   };
 }
 const enter = (f) => f.workspace.beginManagement({ savedAndExited: true });
+const recoverSaved = (f) =>
+  f.workspace.beginRecovery({ discardVolatile: true });
+
+test("explicit recovery uses the exact saved disk without inspecting an unsafe guest", async () => {
+  const f = fixture();
+  f.runtime.ready = f.runtime.checkpoint = () => {
+    assert.fail("Recovery must not inspect or export unsafe live guest state");
+  };
+  const token = await recoverSaved(f);
+  assert.equal(f.workspace.state, "managing");
+  assert.equal(f.workspace.canRun, false);
+  assert.deepEqual(f.workspace.inspect(token), {
+    ...disk(0),
+    revision: 1,
+    operationId: "change-1",
+  });
+  f.workspace.inspect(token).bytes.fill(9);
+  assert.equal(f.workspace.inspect(token).bytes[0], 0);
+  assert.deepEqual(f.events, ["pause"]);
+  f.workspace.stage(token, disk(2));
+  await f.workspace.commit(token);
+  assert.deepEqual(f.events, [
+    "pause",
+    "prepare:2",
+    "commit:2",
+    "activate:2",
+    "resume",
+  ]);
+  assert.equal(f.changes.get("change-1").before.bytes[0], 0);
+  assert.equal(f.workspace.revision, 2);
+});
+
+test("recovery requires exact discard consent and exclusive ownership before pausing", async () => {
+  const f = fixture();
+  for (const discardVolatile of [undefined, false, 1, "true"])
+    await assert.rejects(
+      f.workspace.beginRecovery({ discardVolatile }),
+      /discard/i,
+    );
+  f.writer.owned = false;
+  await assert.rejects(recoverSaved(f), /read-only/);
+  assert.deepEqual(f.events, []);
+  assert.equal(f.workspace.canRun, true);
+});
+
+test("recovery drains accepted autosaves before loading its durable baseline", async () => {
+  const f = fixture();
+  const wait = deferred();
+  const save = f.store.saveCheckpoint;
+  f.store.saveCheckpoint = async (...args) => {
+    await wait.promise;
+    return save(...args);
+  };
+  const load = f.store.load;
+  f.store.load = async () => {
+    f.events.push("load");
+    return load();
+  };
+  const one = f.workspace.saveCheckpoint(disk(2));
+  const two = f.workspace.saveCheckpoint(disk(3));
+  const beginning = recoverSaved(f);
+  assert.equal(f.workspace.canRun, false);
+  await assert.rejects(f.workspace.saveCheckpoint(disk(4)), /gates autosaves/);
+  assert.deepEqual(f.events, ["pause"]);
+  wait.resolve();
+  await Promise.all([one, two]);
+  const token = await beginning;
+  assert.deepEqual(f.events, ["pause", "save:2", "save:3", "load"]);
+  assert.equal(f.workspace.inspect(token).revision, 3);
+  assert.equal(f.workspace.inspect(token).bytes[0], 3);
+  f.workspace.cancel(token);
+  assert.equal(f.workspace.canRun, true);
+  assert.equal(f.head().revision, 3);
+  assert.equal(f.events.at(-1), "resume");
+});
+
+test("recovery clears failed pending autosaves so they cannot overwrite the saved baseline", async () => {
+  const f = fixture();
+  const save = f.store.saveCheckpoint;
+  f.store.saveCheckpoint = async () => {
+    throw new Error("quota");
+  };
+  await assert.rejects(f.workspace.saveCheckpoint(disk(9)), /quota/);
+  f.store.saveCheckpoint = save;
+  const token = await recoverSaved(f);
+  f.workspace.cancel(token);
+  await f.workspace.retryCheckpoint();
+  assert.equal(f.head().bytes[0], 0);
+  assert.equal(f.head().revision, 1);
+  assert.deepEqual(f.events, ["pause", "resume"]);
+});
+
+test("recovery adopts a durably saved revision after its autosave response was lost", async () => {
+  const f = fixture();
+  const save = f.store.saveCheckpoint;
+  f.store.saveCheckpoint = async (...args) => {
+    await save(...args);
+    throw new Error("lost acknowledgment");
+  };
+  await assert.rejects(
+    f.workspace.saveCheckpoint(disk(7)),
+    /lost acknowledgment/,
+  );
+  assert.equal(f.workspace.revision, 1);
+  const token = await recoverSaved(f);
+  assert.equal(f.workspace.inspect(token).revision, 2);
+  assert.equal(f.workspace.inspect(token).bytes[0], 7);
+  f.workspace.stage(token, disk(2));
+  await f.workspace.commit(token);
+  assert.equal(f.workspace.revision, 3);
+  assert.equal(f.changes.get("change-1").before.bytes[0], 7);
+  assert.equal(f.head().bytes[0], 2);
+});
+
+test("failed recovery load resumes intact and retains an earlier checkpoint for retry", async () => {
+  const f = fixture();
+  const save = f.store.saveCheckpoint;
+  f.store.saveCheckpoint = async () => {
+    throw new Error("quota");
+  };
+  await assert.rejects(f.workspace.saveCheckpoint(disk(9)), /quota/);
+  f.store.saveCheckpoint = save;
+  f.store.load = async () => {
+    throw new Error("read failed");
+  };
+  await assert.rejects(recoverSaved(f), /read failed/);
+  assert.equal(f.workspace.canRun, true);
+  assert.equal(f.workspace.revision, 1);
+  await f.workspace.retryCheckpoint();
+  assert.equal(f.head().bytes[0], 9);
+  assert.deepEqual(f.events, ["pause", "resume", "save:9"]);
+});
+
+test("recovery rejects missing or malformed saved heads and resumes without writing", async () => {
+  for (const head of [
+    undefined,
+    { ...disk(0), revision: 0 },
+    { ...disk(0), revision: 1.5 },
+    { ...disk(0), revision: Number.MAX_SAFE_INTEGER + 1 },
+    { ...disk(0), revision: 1, name: "" },
+    { ...disk(0), revision: 1, bytes: new Uint8Array(3) },
+  ]) {
+    const f = fixture();
+    f.setHead(head);
+    await assert.rejects(recoverSaved(f), /saved disk|snapshot/i);
+    assert.equal(f.workspace.canRun, true);
+    assert.deepEqual(f.events, ["pause", "resume"]);
+  }
+});
+
+test("recovery does not resume or create a session after close during saved-head loading", async () => {
+  const f = fixture();
+  const wait = deferred();
+  f.store.load = () => wait.promise;
+  const beginning = recoverSaved(f);
+  await Promise.resolve();
+  const closing = f.workspace.close();
+  wait.resolve(f.head());
+  await assert.rejects(beginning, /Superseded/);
+  await closing;
+  assert.equal(f.workspace.state, "closed");
+  assert.equal(f.workspace.canRun, false);
+  assert.deepEqual(f.events, ["pause", "pause"]);
+});
+
+test("recovery rechecks ownership after saved-head loading", async () => {
+  const f = fixture();
+  const wait = deferred();
+  f.store.load = () => wait.promise;
+  const beginning = recoverSaved(f);
+  await Promise.resolve();
+  f.writer.owned = false;
+  wait.resolve(f.head());
+  await assert.rejects(beginning, /read-only/);
+  assert.equal(f.workspace.canRun, true);
+  assert.deepEqual(f.events, ["pause", "resume"]);
+});
+
+test("saved-disk recovery cannot replace an active or uncertain publication session", async () => {
+  const f = fixture();
+  const token = await enter(f);
+  await assert.rejects(recoverSaved(f), /already active/);
+  f.workspace.stage(token, disk(2));
+  f.runtime.activate = () => {
+    throw new Error("activation failed");
+  };
+  await assert.rejects(f.workspace.commit(token), /activation failed/);
+  assert.equal(f.workspace.state, "recovery");
+  await assert.rejects(recoverSaved(f), /already active/);
+  assert.equal(f.workspace.state, "recovery");
+  assert.throws(() => f.workspace.cancel(token), /Stale/);
+});
 
 test("missing, rejected or unavailable exclusive locks yield read-only leases", async () => {
   const missing = await acquireDiskWriter({ locks: null });

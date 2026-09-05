@@ -89,7 +89,8 @@ function transact(database, stores, mode, action) {
 
 /** Transaction layer only. The caller must own the exclusive browser session
  * lock and serialize autosaves with manual changes. CAS is an additional guard,
- * not permission to replace a running guest's disk. No app uses this pilot yet.
+ * not permission to replace a running guest's disk. The workspace coordinator
+ * supplies the guest pause and fresh-machine activation boundary.
  */
 export async function openRevisionedDiskStore({
   indexedDB = globalThis.indexedDB,

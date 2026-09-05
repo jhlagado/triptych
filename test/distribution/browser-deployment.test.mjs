@@ -56,7 +56,10 @@ beforeEach(async () => {
     "terminal.js",
     "style.css",
     "config.json",
-    "working-disk-persistence.js",
+    "working-disk-revisions.js",
+    "disk-workspace.js",
+    "tool-catalog.js",
+    "tool-catalog.json",
     "working-disk-store.js",
     ".nojekyll",
     "triptych_host_wasm.js",
@@ -66,7 +69,7 @@ beforeEach(async () => {
   ]) {
     assets.set(name, Buffer.from(`synthetic ${name}\n`));
   }
-  expect(assets.size).toBe(17);
+  expect(assets.size).toBe(20);
   manifest = {
     schema: "triptych-browser-deployment-v1",
     distribution: {
@@ -101,7 +104,7 @@ describe("browser deployment verification CLI", () => {
       status: "passed",
       revision,
       dirty: false,
-      assets: 17,
+      assets: 20,
       diskSha256: manifest.distribution.disk.sha256,
     });
   });
@@ -121,7 +124,10 @@ describe("browser deployment verification CLI", () => {
 
   it.each([
     "working-disk-store.js",
-    "working-disk-persistence.js",
+    "working-disk-revisions.js",
+    "disk-workspace.js",
+    "tool-catalog.js",
+    "tool-catalog.json",
     ".nojekyll",
   ])(
     "rejects omitted required %s even when it is removed from the manifest",

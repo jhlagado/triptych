@@ -4,6 +4,10 @@ Date: 2026-09-06. Baseline: `04e78c24523781d9012fa3ecd4eb07ec1d70d105`.
 Branch: `browser-development-workspace`. Status: locally verified,
 independently reviewed; not published.
 
+This report records the earlier safety checkpoints. The subsequent
+[browser integration report](browser-workspace-integration.md) supersedes its
+remaining-work list and inactive-component status.
+
 ## Implemented boundary
 
 The WASM host now captures an independent disk checkpoint inside each

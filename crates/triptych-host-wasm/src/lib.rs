@@ -1,5 +1,8 @@
 //! Headless JavaScript boundary for the portable Triptych CPU machine.
 
+mod files;
+pub use files::CpmDisk;
+
 use std::collections::VecDeque;
 
 use triptych_cpu_core::{

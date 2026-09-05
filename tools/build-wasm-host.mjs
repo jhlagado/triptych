@@ -13,6 +13,7 @@ import {
 import { join, resolve } from "node:path";
 
 import { buildCpmDistribution } from "./lib/cpm-distribution.mjs";
+import { buildBrowserToolCatalog } from "./lib/browser-tool-catalog.mjs";
 
 const repositoryRoot = resolve(import.meta.dirname, "..");
 const browser = process.argv.includes("--browser");
@@ -96,6 +97,7 @@ try {
       allowDirty: !process.argv.includes("--release"),
     });
     const systemDisk = distribution.disk;
+    const tools = buildBrowserToolCatalog(distribution.manifest, systemDisk);
     const bootRom = distribution.bootstrap;
     const ccp = systemDisk.slice(0, 0x800);
     const bdos = systemDisk.slice(0x800, 0x1600);
@@ -106,9 +108,12 @@ try {
         join(stagedOutput, "index.html"),
       ),
       copyFile(join(sourceDirectory, "app.js"), join(stagedOutput, "app.js")),
-      copyFile(
-        join(sourceDirectory, "working-disk-persistence.js"),
-        join(stagedOutput, "working-disk-persistence.js"),
+      ...[
+        "disk-workspace.js",
+        "working-disk-revisions.js",
+        "tool-catalog.js",
+      ].map((path) =>
+        copyFile(join(sourceDirectory, path), join(stagedOutput, path)),
       ),
       copyFile(
         join(sourceDirectory, "working-disk-store.js"),
@@ -127,6 +132,13 @@ try {
       writeFile(join(stagedOutput, "bdos.bin"), bdos),
       writeFile(join(stagedOutput, "bios.bin"), bios),
       writeFile(join(stagedOutput, "cpm22.img"), systemDisk),
+      writeFile(
+        join(stagedOutput, "tool-catalog.json"),
+        `${JSON.stringify(tools.catalog, null, 2)}\n`,
+      ),
+      ...[...tools.assets].map(([path, bytes]) =>
+        writeFile(join(stagedOutput, path), bytes),
+      ),
       writeFile(
         join(stagedOutput, "config.json"),
         `${JSON.stringify(

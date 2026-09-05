@@ -1,7 +1,7 @@
 # Browser development workspace
 
-Date: 2026-09-06. Status: active goal; checkpoint, store, coordinator and shared
-filesystem components implemented; browser integration remains in progress. Baseline: Triptych
+Date: 2026-09-06. Status: active goal; Files, verified tool updates, recovery and
+mobile cursor support integrated locally; publication remains pending. Baseline: Triptych
 `04e78c24523781d9012fa3ecd4eb07ec1d70d105`.
 
 The [planning evidence](../reports/browser-workspace-planning.md) records
@@ -9,6 +9,8 @@ the independent reviews, complete baseline check and disposable application
 pilot. Those results do not constitute implemented browser features.
 The [disk-safety pilot](../reports/browser-disk-safety-pilot.md) records the
 subsequent implementation, regression tests and remaining integration work.
+The [browser integration report](../reports/browser-workspace-integration.md)
+records the current app wiring, review corrections and release gates.
 
 The next milestone is a browser session in which a user can import source,
 edit it, compile or assemble it, run it, update selected tools, and reopen
@@ -52,7 +54,7 @@ The latter already supplies immutable file installation, listing, reading
 and capacity checks. Reuse it in WASM, with stronger validation, rather than
 implementing another directory parser and allocator in JavaScript.
 
-## Proposed disk-change workflow
+## Disk-change workflow
 
 Files initially lists the latest saved checkpoint, its save status, user-0
 filenames, record-rounded sizes and free space. Downloads preserve CP/M record
@@ -76,6 +78,13 @@ An import or tool update has the following sequence:
 5. Adopt the prepared CPU only after the transaction succeeds. A later boot
    failure leaves the committed image and backup available for reload,
    download or explicit restore; it does not trigger a second automatic write.
+
+A separate **Recover from saved disk** entry handles a guest that cannot reach
+the ordinary readiness boundary. Explicit consent is required because applying
+a replacement discards volatile guest state. This entry pauses the CPU, drains
+already accepted saves and loads the durable store head. It never exports or
+saves the unsafe guest cache. The same staging, backup and fresh-CPU transaction
+then applies. Cancellation resumes the preceding CPU without publishing a change.
 
 Manual mutations and autosaves share a single write coordinator. A failed
 save remains retryable without waiting for another guest flush. Old queued
@@ -204,7 +213,7 @@ terminal helper and test files. The lead alone integrates changes to
 | Slice                   | Exclusive implementation scope                                                                              | Review emphasis                                                                                             |
 | ----------------------- | ----------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
 | Rust disk boundary      | `crates/triptych-cpm-image/`; checkpoint and new filesystem adapter within `crates/triptych-host-wasm/src/` | Corrupt extents, allocation overlap, read-only attributes, unrelated users, full disk and exact flush bytes |
-| Durable browser storage | `web/working-disk-store.js`, `web/working-disk-persistence.js`, dedicated storage tests                     | Abort/quota, retry, stale revision, old-client migration, backup retention and crash recovery               |
+| Durable browser storage | `web/working-disk-store.js`, `web/working-disk-revisions.js`, dedicated storage tests                       | Abort/quota, retry, stale revision, old-client migration, backup retention and crash recovery               |
 | Release catalog         | A new catalog helper and dedicated distribution tests; lead integrates existing builder changes             | Pinned provenance, complete padded identity, wrong target/hash, mixed deployment and selected-only changes  |
 | Mobile terminal         | `web/terminal.js` helper and a separate mobile browser test; lead integrates app/CSS hooks                  | Touch tap versus Keyboard, local cursor scrolling, reduced-height landscape, focus isolation                |
 | Sample program          | New sample directory and dedicated replay fixtures/tools                                                    | Released-compiler capacity, console CR/LF, win/quit/error paths, failed compile and cross-host parity       |
@@ -252,6 +261,18 @@ explicitly defer that part of the goal. It is not currently a released
 integration cost is measured. Compiler redesign is outside this plan, and
 the whole goal cannot be declared complete by relabelling a single-file demo.
 
+A subsequent private prototype passed with two maintained sources and an
+explicitly generated single-file input to released `NUC.COM`. The selected next
+step is a small host-side **Prepare build** action through the existing disk
+coordinator: read an ordered source list from a stable checkpoint, validate
+file boundaries, generate the bundle and source map, then publish with backup.
+It must preserve raw compiler diagnostics and identify mapped source positions
+only when the source hashes still match. It does not resolve import directives
+or change the CP/M compiler's single-input contract. Permanent boundary tests,
+Edit/repackage/recompile replay, a win condition and both-host qualification
+are still required; the [integration report](../reports/browser-workspace-integration.md)
+records the measured prototype.
+
 ## Final acceptance and next step
 
 Use a disposable copy of an existing saved disk and a fresh browser profile.
@@ -272,11 +293,12 @@ session is superseded and prove the CPU and disk head are unchanged; flush
 image A, perform later unflushed writes B, and prove recovery download still
 equals A byte-for-byte.
 
-The next implementation step is browser integration of the single-writer
-coordinator and a WASM wrapper for the strengthened shared Rust filesystem.
-The exact-flush checkpoint is integrated into autosave/download; the tested
-revisioned store and coordinator remain disconnected from the app until exact
-recovery and migration-safe activation are ready.
+The single-writer coordinator, revisioned store and shared Rust filesystem
+bindings are now connected to the app. Autosaves, file imports, selected tool
+updates and whole-disk restore use that boundary. The obsolete version-1 writer
+has been removed; its record decoder remains for migration. Local tests use
+disposable profiles. Publication still requires a retained and tested
+version-2-compatible recovery build.
 
 The sample's edit/recompile sequence passed on both hosts, but malformed
 `sub main(` source exposed a failure to return to CP/M after the compiler
@@ -291,12 +313,12 @@ until its release and recovery proofs pass.
 
 ### Next parallel wave
 
-| Owner           | Work                                                              | Gate before integration                                                                                 |
-| --------------- | ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| Lead            | Exact-image boot, coordinator wiring, Files and recovery controls | All input and whole-image paths use the same guarded lifecycle; migration and recovery-build tests pass |
-| Rust worker     | WASM bindings for validated listing, reading and batch import     | Actual WASM results match shared-library results and preserve original bytes on failure                 |
-| Artifact worker | Catalog of the pinned ATOM, NUC and Edit binaries                 | Downloaded artifacts and installed record-padded identities match exact hashes                          |
-| Mobile worker   | Local cursor reveal and keyboard/focus isolation                  | Touch and Keyboard paths pass reduced-height tests; physical-phone evidence remains separate            |
+| Owner             | Work                                                                           | Gate before integration                                                                           |
+| ----------------- | ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------- |
+| Lead              | Integration checks, compatible recovery archive and rollout test               | Reopen exact saved work after deployment replacement; no database downgrade or deletion           |
+| OS release worker | Release reviewed Portable CP/M correction and prepare verified consumer import | CI artifact, immutable source revision, raw manifest hash and ATOM source/binary identity match   |
+| Sample worker     | Qualify multi-source packaging and the complete adventure workflow             | Released NUC builds the packaged sources; edit, win, error and quit paths replay on both hosts    |
+| Reviewers         | Independently challenge each completed slice before integration                | Reproduced findings corrected and affected checks rerun; physical-phone evidence remains separate |
 
 When a worker finishes, use its slot for independent review or the sample
 packaging experiment. Publish and consume the reviewed CCP correction through

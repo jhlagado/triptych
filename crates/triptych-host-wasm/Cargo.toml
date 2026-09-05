@@ -14,5 +14,6 @@ conformance = ["triptych-cpu-core/conformance"]
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
+triptych-cpm-image = { path = "../triptych-cpm-image" }
 triptych-cpu-core = { path = "../triptych-cpu-core" }
 wasm-bindgen = "=0.2.127"

@@ -255,6 +255,48 @@ footer {
   font-size: 0.85rem;
 }
 
+dialog {
+  width: min(54rem, calc(100vw - 1rem));
+  max-height: calc(var(--visual-viewport-height) - 1rem);
+  overflow: auto;
+  overscroll-behavior: contain;
+  background: #111713;
+  color: #dce8de;
+  border: 1px solid #7fc58f;
+  border-radius: 0.6rem;
+}
+
+dialog::backdrop {
+  background: rgb(0 0 0 / 65%);
+}
+.dialog-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+dialog h2 {
+  margin: 0;
+}
+dialog label {
+  display: block;
+  margin: 0.75rem 0;
+}
+dialog ul {
+  padding: 0;
+  list-style: none;
+}
+dialog li {
+  margin: 0.45rem 0;
+  overflow-wrap: anywhere;
+}
+dialog li button {
+  margin: 0.15rem 0.3rem;
+}
+#files-status {
+  color: #e7ce8a;
+}
+
 @media (max-width: 44rem), (hover: none) and (pointer: coarse) {
   main {
     width: min(100% - 1rem, 72rem);

@@ -62,3 +62,27 @@ corpus, not every CP/M application. Desktop Chromium, macOS native and Linux
 CI have acceptance evidence. Physical mobile-keyboard behavior and ESP32
 storage/power-loss behavior remain unqualified. No board is needed for this
 browser session.
+
+## Local Files preview
+
+The `browser-development-workspace` branch adds **Files and recovery**. These
+controls are locally tested but have not yet replaced the hosted version
+described above.
+
+After saving and exiting Edit, open Files, acknowledge that the guest program
+has exited, and choose **Enter disk management**. File imports and selected
+ATOM, NUC or Edit updates are staged privately. **Apply and restart** preserves
+the preceding saved disk as a backup and restarts CP/M with the changed disk.
+Cancel resumes the original CPU. Files use CP/M 8.3 names; downloads include
+record padding. Empty imports and read-only replacements are rejected.
+
+**Download saved disk** exports the committed browser copy. **Download latest
+checkpoint** can retain newer guest-flushed data after a browser save failure;
+it excludes unsaved editor text and later unflushed writes. Keep downloaded
+copies outside browser storage.
+
+If a guest is stuck or an imported disk will not boot, the expandable recovery
+section permits **Recover from saved disk** after explicit consent to discard
+unsaved state when applying a replacement. A backup or downloaded image can then
+be staged and applied. Leave system adaptation unchecked for exact restoration.
+This recovery path does not require a healthy guest or clearing site data.

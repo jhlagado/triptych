@@ -27,16 +27,17 @@ test("autosave and recovery download exclude writes after the last guest flush",
   const savedBytes = () =>
     page.evaluate(async () => {
       const database = await new Promise((resolve, reject) => {
-        const request = indexedDB.open("triptych-cpu", 1);
+        const request = indexedDB.open("triptych-cpu", 2);
         request.onsuccess = () => resolve(request.result);
         request.onerror = () => reject(request.error);
       });
       try {
         return await new Promise((resolve, reject) => {
-          const transaction = database.transaction("working-disks", "readonly");
-          const request = transaction
-            .objectStore("working-disks")
-            .get("drive-a");
+          const transaction = database.transaction(
+            "disk-revisions",
+            "readonly",
+          );
+          const request = transaction.objectStore("disk-revisions").get("head");
           let bytes;
           request.onsuccess = () => {
             bytes = request.result?.bytes;

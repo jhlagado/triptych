@@ -79,6 +79,18 @@ async function waitForSavedDisk(page) {
   );
 }
 
+async function importDisk(page, path) {
+  await page.locator("#files").click();
+  await page.locator("#saved-and-exited").check();
+  await page.locator("#begin-management").click();
+  await expect(page.locator("#disk-input")).toBeEnabled();
+  await page.locator("#disk-input").setInputFiles(path);
+  await expect(page.locator("#commit-disk")).toBeEnabled();
+  await page.locator("#commit-disk").click();
+  await expect(page.locator("#files-status")).toContainText("Disk committed");
+  await page.locator("#close-files").click();
+}
+
 test("Edit, NUC, run, reload and reopen use the persisted working disk", async ({
   page,
 }) => {
@@ -116,8 +128,9 @@ test("Edit, NUC, run, reload and reopen use the persisted working disk", async (
   await waitForSavedDisk(page);
 
   await page.reload();
-  await expect(page.locator("#status")).toContainText(
-    "Running the restored working disk",
+  await expect(page.locator("#status")).toHaveAttribute(
+    "data-state",
+    "running",
   );
   await waitForSavedDisk(page);
   await waitForPrompt(page);
@@ -157,7 +170,7 @@ test("a downloaded working disk can be imported into a fresh browser session", a
   try {
     const cleanPage = await cleanContext.newPage();
     await boot(cleanPage);
-    await cleanPage.locator("#disk-input").setInputFiles(diskPath);
+    await importDisk(cleanPage, diskPath);
     await expect(cleanPage.locator("#status")).toContainText(
       "Running recovered-working-disk.img",
     );
@@ -212,7 +225,7 @@ test("a flushed disk remains downloadable after a controlled WASM fault", async 
   try {
     const cleanPage = await cleanContext.newPage();
     await boot(cleanPage);
-    await cleanPage.locator("#disk-input").setInputFiles(diskPath);
+    await importDisk(cleanPage, diskPath);
     await waitForPrompt(cleanPage);
     await runCommand(cleanPage, "DIR");
     await expect(cleanPage.locator("#terminal")).toContainText("FAULT    COM");
@@ -228,7 +241,7 @@ test("a failed IndexedDB transaction is reported and a later flush recovers", as
     const originalPut = IDBObjectStore.prototype.put;
     IDBObjectStore.prototype.put = function (...arguments_) {
       const request = originalPut.apply(this, arguments_);
-      if (sessionStorage.getItem("triptych-failed-put") !== "yes") {
+      if (sessionStorage.getItem("triptych-failed-put") === "armed") {
         sessionStorage.setItem("triptych-failed-put", "yes");
         queueMicrotask(() => this.transaction.abort());
       }
@@ -237,15 +250,20 @@ test("a failed IndexedDB transaction is reported and a later flush recovers", as
   });
 
   await boot(page);
+  await page.evaluate(() =>
+    sessionStorage.setItem("triptych-failed-put", "armed"),
+  );
+  await runCommand(page, "SAVE 1 RETRY.COM");
   await expect(page.locator("#save-status")).toContainText(
     "Browser storage failed:",
   );
-  await runCommand(page, "SAVE 1 RETRY.COM");
+  await page.locator("#retry-save").click();
   await waitForSavedDisk(page);
 
   await page.reload();
-  await expect(page.locator("#status")).toContainText(
-    "Running the restored working disk",
+  await expect(page.locator("#status")).toHaveAttribute(
+    "data-state",
+    "running",
   );
   await waitForSavedDisk(page);
   await waitForPrompt(page);

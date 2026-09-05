@@ -320,6 +320,29 @@ export function renderTerminal(element, snapshot) {
   element.dataset.bellCount = String(snapshot.bellCount);
 }
 
+// Reveal only inside the terminal's scrollport. scrollIntoView also moves
+// ancestor containers or the page, which can displace a mobile keyboard.
+// The caller decides when to follow output rather than interrupt manual scroll.
+export function revealTerminalCursor(element) {
+  const cursor = element.querySelector(".terminal-cursor");
+  if (
+    cursor === null ||
+    element.clientWidth === 0 ||
+    element.clientHeight === 0
+  )
+    return;
+  const bounds = element.getBoundingClientRect();
+  const cell = cursor.getBoundingClientRect();
+  const left = bounds.left + element.clientLeft;
+  const top = bounds.top + element.clientTop;
+  const right = left + element.clientWidth;
+  const bottom = top + element.clientHeight;
+  if (cell.left < left) element.scrollLeft += cell.left - left;
+  else if (cell.right > right) element.scrollLeft += cell.right - right;
+  if (cell.top < top) element.scrollTop += cell.top - top;
+  else if (cell.bottom > bottom) element.scrollTop += cell.bottom - bottom;
+}
+
 const NAMED_KEY_BYTES = new Map([
   ["Enter", [ASCII_CR]],
   ["Backspace", [ASCII_BS]],

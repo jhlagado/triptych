@@ -226,6 +226,7 @@ dependencies = [
 name = "triptych-host-wasm"
 version = "0.1.0"
 dependencies = [
+ "triptych-cpm-image",
  "triptych-cpu-core",
  "wasm-bindgen",
 ]

@@ -78,7 +78,8 @@ export async function acquireDiskWriter({
  * creates an unexecuted CPU from EXACT bytes, without resident-system overlays.
  * activate transfers ownership of that CPU; discard frees unadopted candidates.
  * The caller must route ALL disk writes through this object, and use canRun for
- * every scheduled slice and guest-input path. No app uses this module yet.
+ * every scheduled slice and guest-input path. Recovery uses only the durable
+ * head and requires explicit consent to discard volatile state on replacement.
  */
 export function createDiskWorkspace({
   store,
@@ -202,6 +203,54 @@ export function createDiskWorkspace({
           operationId: identity,
           baseline,
           revision: receipt.revision,
+        };
+        state = "managing";
+        return token;
+      } catch (error) {
+        if (state !== "closed") resume();
+        throw error;
+      }
+    },
+    async beginRecovery({ discardVolatile = false } = {}) {
+      owned();
+      if (state !== "running")
+        throw new Error("Disk management is already active.");
+      if (discardVolatile !== true)
+        throw new Error("Acknowledge discarding volatile guest state first.");
+      state = "entering";
+      const generation = epoch;
+      try {
+        runtime.pause();
+        const identity = operationId();
+        if (typeof identity !== "string" || !identity || identity.length > 256)
+          throw new Error("Invalid disk operation identity.");
+        // Accepted checkpoints finish first. Never export or save live state
+        // here: a faulted or nonbooting guest need not have an idle disk cache.
+        const head = await enqueue(async () => {
+          if (generation !== epoch)
+            throw new Error("Superseded recovery request.");
+          owned();
+          return store.load();
+        });
+        if (generation !== epoch)
+          throw new Error("Superseded recovery request.");
+        owned();
+        if (!Number.isSafeInteger(head?.revision) || head.revision < 1)
+          throw new Error(
+            "A valid saved disk revision is required for recovery.",
+          );
+        const baseline = copyDisk(head);
+        // An unacknowledged autosave may already have advanced the durable
+        // head. Its loaded revision, not the old CPU's revision, is authoritative.
+        revision = head.revision;
+        epoch += 1;
+        pending = undefined;
+        const token = Object.freeze({});
+        active = {
+          token,
+          operationId: identity,
+          baseline,
+          revision,
         };
         state = "managing";
         return token;

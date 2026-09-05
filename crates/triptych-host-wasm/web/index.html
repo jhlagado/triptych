@@ -27,17 +27,17 @@
       </header>
 
       <section class="controls" aria-label="Machine controls">
-        <label class="file-control">
-          <span>Open CP/M disk image</span>
-          <input
-            id="disk-input"
-            type="file"
-            accept=".img,.dsk,application/octet-stream"
-          />
-        </label>
+        <button id="files" type="button">Files and recovery</button>
         <button id="reset" type="button" disabled>Reset machine</button>
         <button id="download" type="button" disabled>
-          Download working disk
+          Download saved disk
+        </button>
+        <button id="download-recovery" type="button" disabled>
+          Download latest checkpoint
+        </button>
+        <button id="retry-save" type="button" hidden>Retry saving</button>
+        <button id="legacy-recovery" type="button" hidden>
+          Download legacy recovery data
         </button>
       </section>
 
@@ -88,11 +88,84 @@
         Click or tap the terminal before typing. On mobile, use the terminal
         keys for Ctrl, Esc, Tab, and arrows. Return sends CR; paste converts
         line endings for CP/M. A CP/M flush followed by “Working disk saved”
-        makes guest writes reload-safe. Download working disk copies the latest
-        guest-flushed image, even if browser saving has failed. Later unflushed
-        writes and unsaved editor text are excluded.
+        makes guest writes reload-safe. Download saved disk copies the committed
+        browser image. Download latest checkpoint can recover newer
+        guest-flushed data after a save failure; it may not be durably saved.
+        Later unflushed writes and unsaved editor text are excluded. Browser
+        storage may be cleared or evicted: keep downloaded backups too.
       </footer>
     </main>
+    <dialog id="files-dialog" aria-labelledby="files-title">
+      <div class="dialog-heading">
+        <h2 id="files-title">Files and recovery</h2>
+        <button id="close-files" type="button">Close</button>
+      </div>
+      <p id="files-status" role="status" aria-live="polite"></p>
+      <p id="disk-summary"></p>
+      <label
+        ><input id="saved-and-exited" type="checkbox" /> I have saved and exited
+        the guest program. Unsaved RAM cannot be recovered.</label
+      >
+      <div class="controls">
+        <button id="begin-management" type="button" disabled>
+          Enter disk management
+        </button>
+        <button id="cancel-management" type="button" disabled>
+          Cancel changes
+        </button>
+        <button id="commit-disk" type="button" disabled>
+          Apply and restart
+        </button>
+      </div>
+      <details>
+        <summary>Guest stuck or disk will not boot?</summary>
+        <p>
+          Recovery starts from the last saved disk without saving the running
+          guest. Download its latest checkpoint first if you need to keep it.
+          Applying a replacement preserves the saved disk as a backup, but
+          discards guest RAM and any changes not saved in browser storage.
+        </p>
+        <label
+          ><input id="discard-volatile" type="checkbox" /> I accept losing
+          unsaved guest state when I apply a replacement.</label
+        >
+        <button id="begin-recovery" type="button" disabled>
+          Recover from saved disk
+        </button>
+      </details>
+      <h3>Files on the committed disk (user 0)</h3>
+      <ul id="file-list"></ul>
+      <label class="file-control"
+        ><span>Stage file imports</span
+        ><input id="file-import" type="file" multiple disabled
+      /></label>
+      <p>
+        Use CP/M 8.3 filenames. Empty imports and read-only replacements are
+        rejected. A batch is applied in full or not at all. Downloads retain
+        128-byte record padding.
+      </p>
+      <h3>Development tools</h3>
+      <ul id="tool-list"></ul>
+      <h3>Whole-disk replacement</h3>
+      <label class="file-control"
+        ><span>Stage disk image</span
+        ><input
+          id="disk-input"
+          type="file"
+          accept=".img,.dsk,application/octet-stream"
+          disabled
+      /></label>
+      <label
+        ><input id="adapt-image" type="checkbox" /> Adapt external image with
+        this release's CCP/BDOS/BIOS (changes system bytes)</label
+      >
+      <p>
+        Leave adaptation unchecked for exact recovery. Applying a disk, files or
+        tools preserves the previous committed disk as a backup.
+      </p>
+      <h3>Recovery backups</h3>
+      <ul id="backup-list"></ul>
+    </dialog>
     <script type="module" src="app.js"></script>
   </body>
 </html>

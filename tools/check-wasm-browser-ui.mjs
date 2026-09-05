@@ -40,15 +40,15 @@ const [applicationSource, indexSource, persistenceSource, storeSource] =
   await Promise.all([
     readFile(resolve(webDirectory, "app.js"), "utf8"),
     readFile(resolve(webDirectory, "index.html"), "utf8"),
-    readFile(resolve(webDirectory, "working-disk-persistence.js"), "utf8"),
-    readFile(resolve(webDirectory, "working-disk-store.js"), "utf8"),
+    readFile(resolve(webDirectory, "disk-workspace.js"), "utf8"),
+    readFile(resolve(webDirectory, "working-disk-revisions.js"), "utf8"),
   ]);
 assert.ok(applicationSource.includes('"ccp.bin"'));
 assert.ok(applicationSource.includes("disk.set(ccp, CCP_SYSTEM_OFFSET)"));
 assert.ok(applicationSource.includes("machine.drive_flush_count(0)"));
-assert.ok(applicationSource.includes("persistence?.observeFlush"));
-assert.ok(persistenceSource.includes("class WorkingDiskPersistence"));
-assert.ok(storeSource.includes('const OBJECT_STORE = "working-disks"'));
+assert.ok(applicationSource.includes("workspace.saveCheckpoint"));
+assert.ok(persistenceSource.includes("createDiskWorkspace"));
+assert.ok(storeSource.includes('const STORE = "disk-revisions"'));
 assert.ok(indexSource.includes('id="save-status"'));
 
 {
