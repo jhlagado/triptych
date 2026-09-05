@@ -1,5 +1,8 @@
 # Triptych
 
+The [browser quick start](docs/browser-quick-start.md) covers a complete
+ATOM/Edit/NUC session, browser saving, backup and restore.
+
 Triptych is the working name for a modular 8-bit computer built from three
 cooperating ESP32-family modules:
 
