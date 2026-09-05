@@ -130,14 +130,14 @@
       "source": {
         "kind": "git",
         "repository": "https://github.com/jhlagado/nucleus.git",
-        "revision": "52cca195d1b557ebfbbc3a6d924ca3d6ea657829",
+        "revision": "b5276a85fd36600a10dbd65039f0af3afc033f0d",
         "path": "asm/vertical-slice/cpm22-native-compiler.asm"
       },
       "recipe": "verified-release",
       "artifact": {
         "path": "third_party/nucleus/NUC.COM",
-        "bytes": 21281,
-        "sha256": "7b3da3c0b595a88b4906537fe0f76c44f7abd412e248d35d927d1aefd8971ef1",
+        "bytes": 21271,
+        "sha256": "1c047ac1ed5ff1c4e914321b66476b842a1b28cc0dfef4cfdb86f691ca037334",
         "manifest": "third_party/nucleus/NUC.manifest.json",
         "provenance": "third_party/nucleus/PROVENANCE.json"
       },
