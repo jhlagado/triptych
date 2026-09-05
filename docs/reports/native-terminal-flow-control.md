@@ -16,6 +16,11 @@ The Python supervisor keeps the controlling session alive for that final check.
 Darwin's PENDIN status bit is excluded; all other termios fields and control
 characters are compared. No Linux PTY result is claimed by this local run.
 
+Subsequent [Linux CI run 33932944651](https://github.com/jhlagado/triptych/actions/runs/33932944651)
+passed the complete check, headless scenario replay and Pages deployment at
+`6f7c9141f65de3995ede1c21d6429e1f3bb565e6`. This adds Linux CI evidence for
+the two PTY exit paths; it does not establish physical terminal behavior.
+
 An independent reviewer inspected the fix and privately probed a signal during
 startup. No damaging restoration defect was demonstrated. The review suggested
 explicit IXOFF setup/assertions, which the final proof includes.

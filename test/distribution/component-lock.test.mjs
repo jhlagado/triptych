@@ -7,7 +7,12 @@ import {
 
 const revision = "1".repeat(40);
 const digest = "2".repeat(64);
-const trusted = new Set(["atom-binary", "edit-package", "verified-prebuilt"]);
+const trusted = new Set([
+  "atom-binary",
+  "edit-package",
+  "verified-prebuilt",
+  "verified-release",
+]);
 
 function fixture() {
   return {
@@ -65,6 +70,29 @@ function fixture() {
   };
 }
 
+function releasedFixture() {
+  const lock = fixture();
+  lock.components[2].recipe = "verified-release";
+  lock.components[2].artifact = {
+    path: "third_party/edit/EDIT.COM",
+    bytes: 3003,
+    sha256: digest,
+    manifest: "third_party/edit/manifest.json",
+    provenance: "third_party/edit/PROVENANCE.json",
+  };
+  return lock;
+}
+
+function historicalSource() {
+  return {
+    kind: "prebuilt",
+    path: "third_party/historical/EDIT.COM",
+    bytes: 3003,
+    sha256: digest,
+    provenance: "third_party/historical/PROVENANCE.md",
+  };
+}
+
 describe("Triptych component lock", () => {
   it("accepts immutable external sources and Triptych-owned BIOS source", () => {
     expect(validateComponentLock(fixture(), { recipes: trusted })).toEqual(
@@ -75,6 +103,114 @@ describe("Triptych component lock", () => {
   it("requires the caller's trusted recipe registry", () => {
     expect(() => validateComponentLock(fixture())).toThrow(/trusted recipe/);
   });
+
+  it("associates released bytes with an immutable Git source", () => {
+    const lock = releasedFixture();
+    expect(validateComponentLock(lock, { recipes: trusted })).toEqual(lock);
+  });
+
+  it("retains historical prebuilts without a fabricated Git identity", () => {
+    const lock = fixture();
+    lock.components[2].source = historicalSource();
+    lock.components[2].recipe = "verified-prebuilt";
+    expect(validateComponentLock(lock, { recipes: trusted })).toEqual(lock);
+  });
+
+  it("requires verified-release to be registered by local tooling", () => {
+    const recipes = new Set(trusted);
+    recipes.delete("verified-release");
+    expect(() => validateComponentLock(releasedFixture(), { recipes })).toThrow(
+      /recipe is not trusted/,
+    );
+  });
+
+  it.each([
+    ["missing artifact", (component) => delete component.artifact, /artifact/],
+    [
+      "Triptych source",
+      (component) =>
+        (component.source = { kind: "triptych", path: "tools/edit.asm" }),
+      /source.kind/,
+    ],
+    [
+      "historical prebuilt source",
+      (component) => (component.source = historicalSource()),
+      /recipe/,
+    ],
+    [
+      "source-build recipe",
+      (component) => (component.recipe = "edit-package"),
+      /artifact requires/,
+    ],
+    [
+      "historical prebuilt recipe",
+      (component) => {
+        component.source = historicalSource();
+        component.recipe = "verified-prebuilt";
+      },
+      /artifact requires/,
+    ],
+    [
+      "unknown artifact field",
+      (component) => (component.artifact.command = "npm run build"),
+      /unknown field command/,
+    ],
+    [
+      "missing digest",
+      (component) => delete component.artifact.sha256,
+      /missing sha256/,
+    ],
+    [
+      "malformed digest",
+      (component) => (component.artifact.sha256 = "f".repeat(63)),
+      /sha256/,
+    ],
+    [
+      "empty artifact",
+      (component) => (component.artifact.bytes = 0),
+      /bytes must be positive/,
+    ],
+    [
+      "fractional byte count",
+      (component) => (component.artifact.bytes = 1.5),
+      /bytes must be a non-negative safe integer/,
+    ],
+    [
+      "artifact beyond target capacity",
+      (component) => (component.artifact.bytes = component.target.capacity + 1),
+      /artifact exceeds target capacity/,
+    ],
+  ])("rejects released input with %s", (_description, mutate, diagnostic) => {
+    const lock = releasedFixture();
+    mutate(lock.components[2]);
+    expect(() => validateComponentLock(lock, { recipes: trusted })).toThrow(
+      diagnostic,
+    );
+  });
+
+  it.each(["path", "manifest", "provenance"])(
+    "requires a normalized local artifact %s",
+    (field) => {
+      for (const invalid of [
+        "../outside",
+        "third_party/../../outside",
+        "/outside",
+        "C:/outside",
+        "C:outside",
+        "third_party\\outside",
+        "third_party//outside",
+        "third_party/./outside",
+        "third_party/invalid\0path",
+        "",
+      ]) {
+        const lock = releasedFixture();
+        lock.components[2].artifact[field] = invalid;
+        expect(() => validateComponentLock(lock, { recipes: trusted })).toThrow(
+          `artifact.${field}`,
+        );
+      }
+    },
+  );
 
   it.each([
     [

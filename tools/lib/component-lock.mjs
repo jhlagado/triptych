@@ -42,7 +42,9 @@ function uint(value, label) {
 function relativePath(value, label) {
   text(value, label);
   assert.ok(!value.startsWith("/"), `${label} must be relative`);
+  assert.ok(!/^[A-Za-z]:/.test(value), `${label} must not use a drive prefix`);
   assert.ok(!value.includes("\\"), `${label} must use forward slashes`);
+  assert.ok(!value.includes("\0"), `${label} must not contain NUL`);
   assert.ok(
     !value
       .split("/")
@@ -93,6 +95,22 @@ function validateTarget(target, label) {
     target.origin + target.capacity <= 0x10000,
     `${label} exceeds the Z80 address space`,
   );
+}
+
+function validateReleaseArtifact(artifact, label) {
+  object(artifact, label);
+  exactKeys(
+    artifact,
+    ["path", "bytes", "sha256", "manifest", "provenance"],
+    [],
+    label,
+  );
+  for (const field of ["path", "manifest", "provenance"]) {
+    relativePath(artifact[field], `${label}.${field}`);
+  }
+  uint(artifact.bytes, `${label}.bytes`);
+  assert.ok(artifact.bytes > 0, `${label}.bytes must be positive`);
+  assert.match(artifact.sha256, SHA256, `${label}.sha256`);
 }
 
 function validateInstall(install, label) {
@@ -200,7 +218,7 @@ export function validateComponentLock(value, { recipes } = {}) {
     exactKeys(
       component,
       ["id", "role", "source", "recipe", "target", "install", "licence"],
-      [],
+      ["artifact"],
       label,
     );
     assert.match(component.id, ID, `${label}.id`);
@@ -218,7 +236,22 @@ export function validateComponentLock(value, { recipes } = {}) {
     } else {
       assert.notEqual(component.recipe, "verified-prebuilt", `${label}.recipe`);
     }
+    if (component.recipe === "verified-release") {
+      assert.equal(component.source.kind, "git", `${label}.source.kind`);
+      validateReleaseArtifact(component.artifact, `${label}.artifact`);
+    } else {
+      assert.ok(
+        !Object.hasOwn(component, "artifact"),
+        `${label}.artifact requires the verified-release recipe`,
+      );
+    }
     validateTarget(component.target, `${label}.target`);
+    if (component.recipe === "verified-release") {
+      assert.ok(
+        component.artifact.bytes <= component.target.capacity,
+        `${label}.artifact exceeds target capacity`,
+      );
+    }
     validateInstall(component.install, `${label}.install`);
     validateLicence(component.licence, `${label}.licence`);
 

@@ -11,6 +11,29 @@ const RECORDS_PER_EXTENT = 128;
 const BLOCKS_PER_EXTENT = 16;
 const DIRECTORY_OFFSET = SYSTEM_RECORDS * RECORD_BYTES;
 
+export const CPM22_LOGICAL_RECORDS = 2002;
+export const CPM22_LOGICAL_BYTES = CPM22_LOGICAL_RECORDS * RECORD_BYTES;
+export const CPM22_BACKING_SECTOR_BYTES = 512;
+export const CPM22_BACKING_BYTES =
+  Math.ceil(CPM22_LOGICAL_BYTES / CPM22_BACKING_SECTOR_BYTES) *
+  CPM22_BACKING_SECTOR_BYTES;
+
+/**
+ * Create fresh IBM-3740 media: 77 tracks of 26 logical 128-byte records.
+ * The returned 512-byte-aligned backing contains zeroed system tracks, data,
+ * and trailing padding, with all 64 directory entries erased to E5. It has
+ * no installed operating system or files and shares no storage with callers.
+ */
+export function createBlankCpm22Disk() {
+  const disk = new Uint8Array(CPM22_BACKING_BYTES);
+  disk.fill(
+    0xe5,
+    DIRECTORY_OFFSET,
+    DIRECTORY_OFFSET + DIRECTORY_ENTRIES * DIRECTORY_ENTRY_BYTES,
+  );
+  return disk;
+}
+
 function canonicalName(name) {
   assert.equal(typeof name, "string", "CP/M filename must be text");
   const match =

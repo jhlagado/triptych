@@ -4,8 +4,9 @@
 [component-lock v1 contract](../specifications/component-lock-v1.md) and its
 validator now define the input boundary. A populated production lock and the
 artifact pipeline remain work under S2–S4 of the
-[software stability roadmap](software-stability-roadmap.md); no new release
-manifest or standalone OS repository has been published yet.
+[software stability roadmap](software-stability-roadmap.md). Portable CP/M
+`v0.1.0` is published; Triptych's production distribution lock and consumer
+migration remain unfinished.
 
 ## Source ownership
 
@@ -18,10 +19,11 @@ revision `ac59b478b686b7cd1a3a340064e82d64fdc58589`. Triptych vendors and
 verifies that release artifact while the complete S4 distribution builder is
 developed.
 
-The portable CP/M-compatible operating system will have a separate repository
-and release lifecycle. CCP and BDOS move together with their interface
-contracts, source history and component tests. The OS name and remote are
-still undecided. Triptych becomes a consumer and retains machine integration
+The portable CP/M-compatible operating system has a separate repository,
+[`jhlagado/portable-cpm`](https://github.com/jhlagado/portable-cpm), and release
+lifecycle. CCP and BDOS were extracted together with interface contracts,
+source history and component tests. Release `v0.1.0` pins commit
+`579657f9177b31e1fccf0c05f72ba2ee76f3d052`. Triptych becomes a consumer and retains machine integration
 tests against the pinned OS release. The
 [extraction manifest](os-extraction-manifest.md) lists the exact first source,
 contract and proof boundaries.
@@ -34,7 +36,7 @@ ports. Supporting a second real machine does not require moving Triptych BIOS.
 
 CCP, BDOS and the BIOS are loaded from disk into RAM. The Triptych BIOS is at
 `system/cpm/bios.asm`; the actual bootstrap stays under `roms/cpu/`. The CCP and
-BDOS paths under `roms/cpu/` remain transitional until OS extraction. There is
+BDOS paths under `roms/cpu/` remain transitional until the release-input migration passes. There is
 one maintained BIOS source, shared by the image builders and machine proofs.
 
 ## Two dependency mechanisms
@@ -76,7 +78,9 @@ identified. A remote manifest cannot supply arbitrary shell commands to run.
 
 Current historical disk fixtures remain separately identified until their
 replacement artifacts reproduce. Do not invent source pins for inherited
-binaries or publish the dirty Nucleus reconciliation as a verified release.
+binaries. Nucleus's reconciled `nucleus-v0.3.0` release is published at
+`52cca195d1b557ebfbbc3a6d924ca3d6ea657829`; consuming it remains an explicit
+pin-and-digest update, not permission to use an arbitrary local worktree.
 
 ## Build sequence and output manifest
 

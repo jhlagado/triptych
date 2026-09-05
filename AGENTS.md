@@ -19,11 +19,12 @@ Triptych owns:
 - ESP32 firmware, ROMs, hardware notes, and module-transport work;
 - tests and proof reports for those contracts.
 
-The portable CP/M-compatible OS (CCP and BDOS) is to become an independently
-released project. Its current Triptych paths are transitional. The Triptych
+The portable CP/M-compatible OS (CCP and BDOS) is independently maintained at
+`https://github.com/jhlagado/portable-cpm`. Its current Triptych source copies
+are transitional until the pinned-release consumer migration is verified. The Triptych
 BIOS stays here as machine-interface code; it must not move into the portable
 OS repository. See `docs/plans/component-releases.md` for extraction and release
-boundaries. The OS repository name and remote are still undecided.
+boundaries. Do not develop a second authoritative CCP or BDOS copy here.
 
 Do not add Triptych source, exports, ROMs, scripts, specifications, or UI entries
 to the Debug80 repository. ATOM is the required assembler for normal builds,

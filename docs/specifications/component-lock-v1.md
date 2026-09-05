@@ -7,8 +7,9 @@ distribution. It complements `Cargo.lock` and `package-lock.json`: those files
 select Rust and JavaScript dependencies, while this file selects independently
 released guest software and the ATOM toolchain used to build it.
 
-The lock is build input. It contains no output digests and no commands supplied
-by a remote repository. A successful distribution build writes a separate
+The lock is build input. Its artifact digests identify external inputs, not
+Triptych build outputs. It contains no commands supplied by a remote repository.
+A successful distribution build writes a separate
 artifact manifest containing the resolved Triptych revision and the digest of
 every output.
 
@@ -52,15 +53,16 @@ the release evidence.
 
 Each component has these fields:
 
-| Field     | Meaning                                                          |
-| --------- | ---------------------------------------------------------------- |
-| `id`      | Unique stable component identifier.                              |
-| `role`    | `resident` or `application`.                                     |
-| `source`  | One of the source forms below.                                   |
-| `recipe`  | A trusted recipe name implemented by Triptych tooling.           |
-| `target`  | Z80 load origin and maximum capacity.                            |
-| `install` | System-record range or CP/M filename.                            |
-| `licence` | SPDX expression or project `LicenseRef`, plus a provenance path. |
+| Field      | Meaning                                                          |
+| ---------- | ---------------------------------------------------------------- |
+| `id`       | Unique stable component identifier.                              |
+| `role`     | `resident` or `application`.                                     |
+| `source`   | One of the source forms below.                                   |
+| `recipe`   | A trusted recipe name implemented by Triptych tooling.           |
+| `artifact` | Required for `verified-release`; forbidden for other recipes.    |
+| `target`   | Z80 load origin and maximum capacity.                            |
+| `install`  | System-record range or CP/M filename.                            |
+| `licence`  | SPDX expression or project `LicenseRef`, plus a provenance path. |
 
 The list order is deterministic build order. Component identifiers, disk
 filenames and resident ranges must be unique. Resident memory ranges must not
@@ -84,7 +86,38 @@ reviewed historical fixture without inventing a source revision. It does not
 qualify that fixture as an independently reproducible component.
 
 Paths are normalized, relative and use forward slashes. Empty segments, `.` and
-`..` are invalid.
+`..`, drive prefixes, backslashes and NUL characters are invalid.
+
+### Released artifacts
+
+A Git component may select a reviewed release artifact with the
+`verified-release` recipe. Its `source` identifies the upstream repository,
+immutable revision and source path. Its separate `artifact` object identifies
+the local input bytes and supporting records:
+
+| Field        | Meaning                                                            |
+| ------------ | ------------------------------------------------------------------ |
+| `path`       | Artifact path relative to the Triptych repository root.            |
+| `bytes`      | Exact positive byte length before CP/M record padding.             |
+| `sha256`     | SHA-256 of those artifact bytes.                                   |
+| `manifest`   | Upstream manifest path relative to the Triptych repository root.   |
+| `provenance` | Reviewed provenance path relative to the Triptych repository root. |
+
+All five fields are required; unknown fields are invalid. The byte length must
+fit `target.capacity`. `source.path` remains relative to the upstream Git
+checkout, while the three artifact paths refer to Triptych's reviewed local
+inputs. This form associates a released binary with its source revision;
+historical `prebuilt` inputs retain their separate form and cannot contain an
+`artifact` object.
+
+The trusted recipe must verify the actual artifact length and digest before
+installation, check the upstream manifest against the selected target, and
+check the provenance association with `source.repository` and
+`source.revision`. Provenance must identify the release asset or CI artifact
+and the immutable source revision that produced it. A version or tag alone is
+insufficient. Structural validation checks field shapes and recipe selection;
+it does not read these files or establish their provenance. File resolution
+must also keep the inputs inside the repository, including through symlinks.
 
 ### Trusted recipes
 
@@ -92,7 +125,9 @@ Recipe names select code already present in the Triptych release builder. The
 builder rejects names outside its local registry. A lock therefore cannot add
 a shell command, lifecycle script or executable path. A source-built component
 cannot use `verified-prebuilt`, and a prebuilt component cannot select a build
-recipe.
+recipe. `verified-release` is valid only for a Git source with an `artifact`
+object, and it must appear in the caller's trusted registry like every other
+recipe. A source-build recipe cannot accept release artifact metadata.
 
 ### Targets and installation
 
@@ -125,11 +160,11 @@ CP/M text EOF byte `$1A`.
 
 `tools/lib/component-lock.mjs` validates this structure and the cross-field
 rules. Structural validation is only the first release gate. The distribution
-builder must also fetch each immutable source, reject dirty overrides in release
-mode, run the registered recipe, check the emitted size and install a fresh
-image without changing a user's working disk.
+builder must also obtain each selected source or release artifact, reject dirty
+overrides in release mode, run the registered recipe, check the emitted size
+and install a fresh image without changing a user's working disk.
 
-No production component lock exists yet. The portable OS and Edit need verified
-standalone revisions before Triptych can create one without false provenance.
-Until then, this specification and its executable validation tests define the
-input boundary but do not claim a reproducible distribution.
+No production component lock or distribution builder is supplied by this
+contract. Its executable validation tests define the input structure; a
+reproducible distribution also requires the artifact verification and build
+steps above.
