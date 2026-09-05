@@ -156,7 +156,9 @@ test("adventure edit/build/update/reload/download/reopen preserves its separate 
   await page.keyboard.type("W");
   await expect(page.locator("#terminal")).toContainText("You win!");
   await command(page, "EDIT MAIN.NU");
-  await expect(page.locator("#terminal")).toContainText("EDIT MAIN");
+  await expect(page.locator("#terminal")).toContainText(
+    "EDIT MAIN    .NU       ^S Save  ^Q Quit",
+  );
   await page.keyboard.press("Control+f");
   await page.keyboard.type("CAVE");
   await page.keyboard.press("Enter");
@@ -310,14 +312,16 @@ test("a failed project compile maps to its maintained source and preserves the r
     "GAME.COM",
   );
   await command(page, "EDIT MAIN.NU");
-  await expect(page.locator("#terminal")).toContainText("EDIT MAIN");
+  await expect(page.locator("#terminal")).toContainText(
+    "EDIT MAIN    .NU       ^S Save  ^Q Quit",
+  );
   await page.keyboard.press("Control+f");
   await page.keyboard.type("sub main()");
   await page.keyboard.press("Enter");
   await page.keyboard.press("Control+r");
   await page.keyboard.type("sub main(,)");
   await page.keyboard.press("Enter");
-  await expect(page.locator("#terminal")).toContainText("sub main(,)");
+  await expect(page.locator("#terminal")).toContainText("sub main(,) fails");
   await page.keyboard.press("Control+s");
   await page.keyboard.press("Control+q");
   await expect

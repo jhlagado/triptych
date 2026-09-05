@@ -1,8 +1,8 @@
 # Browser disk and deployment recovery
 
-Release status: the version-2 recovery build is still being qualified locally.
-The archive and redeployment instructions below become usable once the
-integration report records the released tag, archive and verified identity.
+Release status: version-2 recovery is qualified at `wasm-0f7f077`. The
+integration report records the clean CI archive, source revision, hashes and
+actual hosted acceptance. These instructions apply to that retained release.
 
 Browser storage is not a substitute for an external backup. Download important
 working disks and keep them outside the browser profile before upgrading tools,
@@ -26,9 +26,8 @@ disk can also be inspected in a separate browser profile or the native host.
 
 ## Retained website files
 
-The [integration report](reports/browser-workspace-integration.md) tracks
-qualification and will identify the released archive and full source revision.
-Each recovery archive
+The [integration report](reports/browser-workspace-integration.md) identifies
+the released archive and full source revision. Each recovery archive
 contains `site/` with the exact served files and `recovery-archive.json` outside
 that directory. The manifest records every asset's length and SHA-256 digest.
 The external receipt records the manifest digest and intended storage schema.
@@ -50,7 +49,19 @@ preview has a different origin and cannot open the production site's storage.
 ## Redeploy a compatible release
 
 For a supported source redeployment, use the retained release tag from the
-integration report:
+integration report. The `github-pages` environment currently allows only the
+`main` branch. An administrator must first allow that exact retained tag in the
+environment's deployment rules; do not remove the main-branch rule or add a
+wildcard. The API command returns the temporary rule's ID:
+
+GitHub documents the [deployment-policy API](https://docs.github.com/en/rest/deployments/branch-policies#create-a-deployment-branch-policy)
+and its required administrator permissions.
+
+```sh
+gh api --method POST repos/jhlagado/triptych/environments/github-pages/deployment-branch-policies -f name=RETAINED_RELEASE_TAG -f type=tag
+```
+
+Then dispatch the checked workflow at that tag:
 
 ```sh
 gh workflow run wasm-pages.yml --repo jhlagado/triptych --ref RETAINED_RELEASE_TAG
@@ -63,6 +74,13 @@ run's recovery artifact and verify the new hosted deployment against it:
 
 ```sh
 node tools/prove-hosted-browser.mjs https://jhlagado.github.io/triptych/ /absolute/path/to/downloaded/site FULL_SOURCE_REVISION
+```
+
+After a successful redeployment and hosted verification, remove only the
+temporary rule created above, using its returned ID:
+
+```sh
+gh api --method DELETE repos/jhlagado/triptych/environments/github-pages/deployment-branch-policies/TEMPORARY_RULE_ID
 ```
 
 An exact-archive restoration instead needs a Pages workflow that uploads the

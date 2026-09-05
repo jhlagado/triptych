@@ -1,8 +1,10 @@
 # Browser development workspace
 
-Date: 2026-09-06. Status: active goal; Files, verified tool updates, recovery and
-mobile cursor support and multi-source adventure integrated locally; Triptych
-publication remains pending. Portable CP/M v0.1.1 is published and pinned. Baseline: Triptych
+Date: 2026-09-06. Status: milestone completed and published at runtime revision
+`0f7f077b982e47811c4cf4325f0a07815df147e6`. Files, verified tool updates, recovery,
+mobile cursor support and the multi-source adventure passed local and Linux CI
+checks and hosted acceptance. Physical-phone qualification remains separate.
+Portable CP/M v0.1.1 is published and pinned. Baseline: Triptych
 `04e78c24523781d9012fa3ecd4eb07ec1d70d105`.
 
 The [planning evidence](../reports/browser-workspace-planning.md) records
@@ -13,7 +15,7 @@ subsequent implementation, regression tests and remaining integration work.
 The [browser integration report](../reports/browser-workspace-integration.md)
 records the current app wiring, review corrections and release gates.
 
-The next milestone is a browser session in which a user can import source,
+The completed milestone is a browser session in which a user can import source,
 edit it, compile or assemble it, run it, update selected tools, and reopen
 the saved work. File changes need recoverable disk backups. The mobile
 terminal needs a visible cursor while the keyboard is open.
@@ -277,8 +279,8 @@ records the measured prototype.
 The adapter and adventure are now implemented. The permanent 31-checkpoint
 native/WASM replay and complete browser edit/build/update/download/reopen tests
 pass. See the integration report for source-map, naming and asynchronous review
-corrections. The remaining application gate is clean-release CI and hosted
-verification, not further compiler or sample feature development.
+corrections. Clean-release CI and hosted verification have also passed; no
+further compiler or sample feature development is required for this milestone.
 
 ## Final acceptance and next step
 
@@ -304,8 +306,8 @@ The single-writer coordinator, revisioned store and shared Rust filesystem
 bindings are now connected to the app. Autosaves, file imports, selected tool
 updates and whole-disk restore use that boundary. The obsolete version-1 writer
 has been removed; its record decoder remains for migration. Local tests use
-disposable profiles. Publication still requires a retained and tested
-version-2-compatible recovery build.
+disposable profiles. A retained and tested version-2-compatible recovery build
+was published before the storage migration; the exact CI build is also retained.
 
 The sample's edit/recompile sequence passed on both hosts, but malformed
 `sub main(` source exposed a failure to return to CP/M after the compiler
@@ -316,8 +318,8 @@ Triptych must consume a reviewed upstream release rather than patch its snapshot
 The reviewed upstream correction now passes the invalid-source return and
 preserved-program replay on both hosts. Portable CP/M v0.1.1 has been published
 from passing CI and imported with verified provenance. All 21 affected scenario
-fixtures passed after measured digest updates. The full browser milestone
-remains active until Triptych's release and hosted verification pass.
+fixtures passed after measured digest updates. Triptych's release and actual
+hosted verification have now passed, completing the browser milestone.
 
 ### Release wave
 
@@ -328,7 +330,30 @@ remains active until Triptych's release and hosted verification pass.
 | Reviewers       | Independently check release artifacts and coverage against the goal   | No missing source, failure, rollback or publication gates; hardware claims remain separate |
 
 Implementation and local workflow qualification passed the final combined
-check. The compatible archive helper and same-origin migration/reopen
-test pass locally. Retain the clean recovery build before publishing version-2
-storage, then verify CI and the actual hosted assets. CI's expiring artifact
-alone is not the durable release archive.
+check. The compatible archive helper and same-origin migration/reopen test
+also passed in clean Linux CI. The clean recovery build was retained before
+publication; all 27 hosted assets match the downloaded CI build. The exact CI
+archive and its 48-test runtime report are retained in the public release,
+beyond the 90-day CI storage limit. See the integration report for hashes
+and the qualified fresh, downloaded-disk and migrated-profile workflows.
+
+## Proposed next milestone
+
+After release qualification, make projects easier to move between browser
+sessions. These are follow-up proposals, not additional gates for this release:
+
+1. **Project export and reopening.** Download `BUILD.JSN` and its maintained
+   source files together. Import the edited adventure into a fresh profile,
+   prepare and compile it, and reproduce `BASE>` with identical source bytes.
+2. **Pending-change preview.** Show added and replaced files before Apply,
+   including a mixed file import and selected tool update. The preview must
+   match the staged candidate; cancellation must preserve the whole original
+   disk. Keep staging and publication on the existing coordinator.
+3. **Physical-phone acceptance.** Replay Edit on actual Android/iOS devices:
+   terminal tap versus Keyboard, cursor visibility, rotation, special keys and
+   keyboard dismissal. Record device/browser versions and fix reproduced
+   problems. Automated viewport results cannot substitute for this check.
+
+Project-transfer work and phone qualification can proceed independently. Give
+each implementation its own tests and a separate reviewer; the lead retains
+ownership of shared Files UI integration and release publication.

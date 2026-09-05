@@ -36,15 +36,17 @@ choose a different output character for another trial.
 
 ## Backup and restore
 
-**Download working disk** exports the whole disk, including source and compiled
+**Download saved disk** exports the whole disk, including source and compiled
 programs. Keep that file outside browser storage. Guest Ctrl-S saves into the
 emulated disk; the browser save-status message confirms the separate persistent
 storage operation. A storage-error message means reload-safe saving has not
 been confirmed; download a recovery copy before leaving the page.
 
-To test a backup, open Triptych in a separate browser profile and select the
-download using **Open CP/M disk image**. Wait for `A>`, then inspect the source
-with `TYPE INPUT.NU` or `EDIT INPUT.NU` and run `INPUT`. Back up the current disk
+To test a backup, open Triptych in a separate browser profile. Open **Files and
+recovery**, acknowledge that the guest program has exited, and enter disk
+management. Use **Stage disk image**, leave adaptation unchecked, then choose
+**Apply and restart** and close Files. Wait for `A>`, inspect the source
+with `TYPE INPUT.NU` or `EDIT INPUT.NU`, and run `INPUT`. Back up the current disk
 before selecting another image. Importing a disk selects that disk's files;
 it is not a merge. Clearing browser site data can remove the browser's saved
 copy. **Reset machine** is a machine reset, not a backup operation.
@@ -63,11 +65,11 @@ CI have acceptance evidence. Physical mobile-keyboard behavior and ESP32
 storage/power-loss behavior remain unqualified. No board is needed for this
 browser session.
 
-## Local Files preview
+## Files and verified tool updates
 
-The `browser-development-workspace` branch adds **Files and recovery**. These
-controls are locally tested but have not yet replaced the hosted version
-described above.
+The hosted version includes **Files and recovery**. Its fresh-profile and
+migrated-profile workflows are qualified in the
+[integration report](reports/browser-workspace-integration.md).
 
 After saving and exiting Edit, open Files, acknowledge that the guest program
 has exited, and choose **Enter disk management**. File imports and selected

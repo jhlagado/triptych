@@ -1,8 +1,9 @@
 # Browser workspace integration
 
 Date: 2026-09-06. Branch: `browser-development-workspace`.
-Status: integrated locally; not published. The active goal and release gates
-remain in the [roadmap](../plans/browser-development-workspace.md).
+Status: completed and published at runtime revision `0f7f077`. The
+[roadmap](../plans/browser-development-workspace.md) records the completed
+milestone and proposed follow-up work.
 
 ## Implemented surface
 
@@ -156,8 +157,89 @@ The [recovery guide](../browser-recovery.md) distinguishes disk restoration,
 source redeployment and exact-archive restoration. Source redeployment uses
 the normal checked Pages workflow. Exact-archive upload is not automated.
 
-Triptych's clean-release build, CI, durable recovery archive and hosted-asset
-verification remain release gates. The old version-1 website cannot open an
-upgraded profile; rollback must use a compatible archive, never downgrade or
-delete browser storage. Triptych's hosted assets and production browser profiles
-remain unchanged so far. Physical-phone and ESP32 qualification remain separate.
+The old version-1 website cannot open an upgraded profile; rollback must use
+a compatible archive, never downgrade or delete browser storage. Physical-phone
+and ESP32 qualification remain separate.
+
+## Release checkpoint
+
+The clean candidate is `0f7f077b982e47811c4cf4325f0a07815df147e6`.
+The expanded hosted verifier passed against its local HTTP build in three
+disposable profiles: fresh, downloaded-disk reopening and version-1 migration.
+It verified all 27 assets, actual browser response bodies, the adventure's
+edit/build/win workflow, twelve preserved files across selected NUC installation,
+and exact disk and backup reopening. The selected installation reinstalls the
+current NUC release; it does not claim an old-to-new compiler-version migration.
+A fresh reviewer found no blocking defects in the verifier.
+
+Before publishing the storage migration, the clean local recovery build and
+passing same-origin runtime report were retained in
+[wasm-0f7f077](https://github.com/jhlagado/triptych/releases/tag/wasm-0f7f077).
+An independent worker downloaded the public asset, checked its inventory,
+verified its digest and all retained assets, and confirmed one passing rollback
+test with no retries or skipped cases.
+
+| Retained local evidence         | Identity                                                           |
+| ------------------------------- | ------------------------------------------------------------------ |
+| Archive                         | `local-browser-recovery-0f7f077.tar.gz`                            |
+| Archive SHA-256                 | `f0c013ad4639f7c79c88d0aa00e3c7b967a09b9fc97e94010e242a5c2b758686` |
+| Deployment manifest SHA-256     | `0b6937180a285111a48673ef6f680cd67c01bc9487a1d6b9b91b14eea3865dbf` |
+| Clean distribution disk SHA-256 | `890ee54910d745a3e2ebdfb31705cd7b6b6f160199a00e3209deea6f4f34e5ab` |
+
+[Linux CI run 33998498157](https://github.com/jhlagado/triptych/actions/runs/33998498157)
+passed and deployed that exact revision. Both the full check's browser run and
+the final clean-deployment browser run passed all 48 tests. The retained final
+JSON report records zero failed, skipped or flaky tests.
+
+The downloaded CI archive passed byte verification. Its exact served files and
+runtime report are also retained in the public release, outside CI's 90-day
+artifact lifetime. An independent worker downloaded the public CI archive and
+reverified its inventory, digest, manifest, 27 assets and 48-test runtime report.
+
+| Retained CI evidence        | Identity                                                           |
+| --------------------------- | ------------------------------------------------------------------ |
+| Archive                     | `ci-browser-recovery-0f7f077.tar.gz`                               |
+| Archive SHA-256             | `27abd8deac81701236ee748459760928d42478df12eb1390332c47929a796b84` |
+| Deployment manifest SHA-256 | `dd004a66c9f5e5d194a1ead7c595c29069acb26c92bef6991d4c63aef3dba70d` |
+| WASM SHA-256                | `5a7c3d9791c169c496a75a67904d36c8af983547ac8d45dc1d2b8a9f528bdece` |
+
+The local and CI WASM files have different hashes. An independent binary
+comparison localized every differing byte to embedded Cargo source paths and
+custom symbol-name crate hashes; the executable code section is identical.
+The cause of the symbol-hash differences was not independently established.
+All other asset manifest entries match. The archives remain separately
+identified; the local build is not substituted for the published CI artifact.
+
+The lead ran `tools/prove-hosted-browser.mjs` against
+[the actual public site](https://jhlagado.github.io/triptych/) and the downloaded
+CI directory. All 27 hosted assets and observed browser responses matched CI.
+The fresh, downloaded-disk and migrated-profile workflows passed. The adventure
+disk digest was `3e8ee6c513c4837b09ecb9c7826c04d2a50cdc69f90f27bb48d381a9627132b9`;
+the migrated disk was `deff785f3b1dec832f24dacb242887c0472373cc3420cf61c33ffb19d157e921`,
+with backup `b95289a279aff874a8a16aa8a76e088ffb1dc8d8b86883701a098524158771db`.
+These match the local workflow's complete final images.
+
+The final local rerun exposed another test-readiness race. `EDIT MAIN` matched
+the CCP command echo before Edit had started, so find/replace keystrokes were
+inserted into the source instead. The trace showed the original declaration
+unchanged and extra lines before the source header, explaining error 25 rather
+than the intended error 86. Both editor-entry checks now wait for the full
+filename and Save/Quit status line. The malformed-source assertion also requires
+`sub main(,) fails`, not text that could appear in the replacement prompt.
+Ten targeted repetitions and all four nearby browser/native-reopen tests passed.
+Independent review confirmed the trace and
+that all error, source-map, previous-executable and temporary-file assertions
+remain intact. No compiler or browser-runtime change was needed.
+
+The runtime release stays pinned to `wasm-0f7f077`. The completion documentation
+and test-readiness corrections do not change the runtime and are qualified
+separately from deployment. The retained tag, release CI run and hosted manifest
+identify the tested runtime independently of those follow-up commits.
+
+Physical Android/iOS keyboard behavior and ESP32 hardware remain unqualified.
+Exact-archive upload is not automated; supported source redeployment requires
+temporarily allowing the exact retained tag in the Pages environment, which
+currently allows only `main`. Existing browser disks are never silently adapted
+to a newer operating system. Development-tool security maintenance remains a
+separate follow-up; CI also reports the pinned upload action's Node runtime
+deprecation warning, without a failed check.
