@@ -86,3 +86,30 @@ section permits **Recover from saved disk** after explicit consent to discard
 unsaved state when applying a replacement. A backup or downloaded image can then
 be staged and applied. Leave system adaptation unchecked for exact restoration.
 This recovery path does not require a healthy guest or clearing site data.
+The [recovery guide](browser-recovery.md) distinguishes disk restoration from
+website redeployment and explains the retained recovery archive.
+
+Existing saved disks keep their original CCP, BDOS and BIOS bytes: opening the
+new website does not silently upgrade their operating system. A fresh profile
+uses the current distribution. To adapt an existing disk deliberately, download
+it first, stage that image in Files with **Adapt external image with this release's
+CCP/BDOS/BIOS** selected, then apply.
+That replaces its resident system area and preserves its file area; the displaced
+disk is backed up. Leave adaptation unchecked when exact restoration is intended.
+
+### Multi-source adventure
+
+Inside disk management, **Stage adventure starter** stages `IO.NU`, `MAIN.NU`
+and `BUILD.JSN`. **Prepare build** creates the generated `GAME.NU` input and
+`GAME.MAP` source map. **Apply and restart**, close Files, then run
+`NUC GAME.NU` and `GAME`. The winning keys are `E`, `T`, `W`; `Q` quits.
+
+To change the program, use `EDIT MAIN.NU`, find `CAVE` with Ctrl-F and replace
+it with `BASE` using Ctrl-R. Save with Ctrl-S and quit with Ctrl-Q. Enter disk
+management again, prepare the build, apply, and recompile. The game now prints
+`BASE>`. Edit the maintained sources, not the generated build file.
+
+If compilation reports an error, paste the full Nucleus diagnostic into Files
+and choose **Locate in saved sources**. Mapping is available only while source
+records and the generated build match the saved map. It does not identify an
+older diagnostic's build automatically or include unsaved editor RAM.

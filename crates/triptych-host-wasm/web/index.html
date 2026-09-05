@@ -146,6 +146,40 @@
       </p>
       <h3>Development tools</h3>
       <ul id="tool-list"></ul>
+      <h3>Nucleus source project</h3>
+      <p>
+        Edit the separate source files, save and exit, then prepare their
+        single-file build input here. Apply and restart before running
+        <code>NUC GAME.NU</code>, then <code>GAME</code>. This is host-assisted
+        packaging; the released CP/M compiler still reads one input file.
+      </p>
+      <label
+        >Project file <input id="project-file" value="BUILD.JSN" maxlength="12"
+      /></label>
+      <div class="controls">
+        <button id="stage-adventure" type="button" disabled>
+          Stage adventure starter
+        </button>
+        <button id="prepare-build" type="button" disabled>Prepare build</button>
+      </div>
+      <p>
+        Preparation stages the generated source and its source map together.
+        Source order comes from the project file; import comments are not
+        resolved.
+      </p>
+      <label
+        >Nucleus diagnostic
+        <input
+          id="nucleus-diagnostic"
+          placeholder="Nucleus error 86 P=01 O=00E6 L=0009 C=000A"
+      /></label>
+      <button id="locate-diagnostic" type="button">
+        Locate in saved sources
+      </button>
+      <p>
+        The original diagnostic is preserved. Mapping requires unchanged saved
+        source and build bytes; it does not describe unsaved editor text.
+      </p>
       <h3>Whole-disk replacement</h3>
       <label class="file-control"
         ><span>Stage disk image</span

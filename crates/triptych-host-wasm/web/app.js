@@ -9,6 +9,7 @@ import {
 } from "./terminal.js";
 import { acquireDiskWriter, createDiskWorkspace } from "./disk-workspace.js";
 import { openRevisionedDiskStore } from "./working-disk-revisions.js";
+import { prepareSourceBundle, mapSourceBundleOffset } from "./source-bundle.js";
 import {
   validateToolCatalog,
   identifyInstalledTools,
@@ -54,6 +55,7 @@ let stagedDisk;
 let panelGeneration = 0;
 let stageGeneration = 0;
 let managementAttempt = 0;
+let diagnosticAttempt = 0;
 let catalog;
 let deployment;
 const filesDialog = document.querySelector("#files-dialog");
@@ -71,6 +73,8 @@ const recoveryButton = document.querySelector("#begin-recovery");
 const discardAcknowledgment = document.querySelector("#discard-volatile");
 const recoveryDownload = document.querySelector("#download-recovery");
 const retrySave = document.querySelector("#retry-save");
+const prepareBuildButton = document.querySelector("#prepare-build");
+const starterButton = document.querySelector("#stage-adventure");
 
 function message(error) {
   return error instanceof Error ? error.message : String(error);
@@ -89,6 +93,8 @@ function controls() {
     !discardAcknowledgment.checked;
   importInput.disabled = !managing;
   diskInput.disabled = !managing;
+  prepareBuildButton.disabled = !managing;
+  starterButton.disabled = !managing || !deployment;
   commitButton.disabled =
     !managementToken ||
     !stagedDisk ||
@@ -763,6 +769,190 @@ async function stageTool(id, name, status) {
   request.check();
   await stageImports(imports, request.token);
 }
+
+function readJsonFile(disk, name) {
+  const bytes = disk.read_file(name);
+  let end = bytes.length;
+  while (end > 0 && bytes[end - 1] === 26) end--;
+  return JSON.parse(
+    new TextDecoder("utf-8", { fatal: true }).decode(bytes.subarray(0, end)),
+  );
+}
+
+function readProject(disk) {
+  const manifestName = CpmDisk.canonical_name(
+    document.querySelector("#project-file").value,
+  );
+  const project = readJsonFile(disk, manifestName);
+  if (
+    project.schema !== "triptych-nucleus-project-v1" ||
+    !Array.isArray(project.sources) ||
+    !project.sources.length ||
+    project.sources.length > 16
+  )
+    throw new Error("Project requires an ordered list of 1–16 source files.");
+  const names = [...project.sources, project.output, project.sourceMap];
+  if (
+    names.some((name) => CpmDisk.canonical_name(name) !== name) ||
+    new Set([...names, manifestName]).size !== names.length + 1
+  )
+    throw new Error(
+      "Project names must be distinct, uppercase CP/M filenames.",
+    );
+  if (!project.output.endsWith(".NU"))
+    throw new Error("The generated Nucleus input must have a .NU extension.");
+  const stem = project.output.slice(0, -3);
+  const compilerNames = ["COM", "$$$", "BAK"].map(
+    (extension) => `${stem}.${extension}`,
+  );
+  if ([...names, manifestName].some((name) => compilerNames.includes(name)))
+    throw new Error(
+      "A project file collides with a compiler output or scratch file.",
+    );
+  return {
+    outputName: project.output,
+    mapName: project.sourceMap,
+    sources: project.sources.map((name) => ({
+      name,
+      bytes: disk.read_file(name),
+    })),
+  };
+}
+
+prepareBuildButton.addEventListener("click", async () => {
+  let disk;
+  try {
+    const request = stagingRequest();
+    const baseline = currentToken(request.token);
+    disk = new CpmDisk((stagedDisk ?? baseline).bytes);
+    const project = readProject(disk);
+    const bundle = await prepareSourceBundle(project, {
+      canonicalName: CpmDisk.canonical_name,
+    });
+    request.check();
+    await stageImports(
+      [
+        { name: bundle.name, bytes: bundle.bytes },
+        {
+          name: project.mapName,
+          bytes: new TextEncoder().encode(JSON.stringify(bundle.map)),
+        },
+      ],
+      request.token,
+    );
+  } catch (error) {
+    panelError(error);
+  } finally {
+    disk?.free();
+  }
+});
+
+function projectSnapshot() {
+  return managementToken
+    ? (stagedDisk ?? currentToken(managementToken)).bytes
+    : machine
+      ? machine.export_drive_checkpoint(0)
+      : committed?.bytes;
+}
+
+document
+  .querySelector("#locate-diagnostic")
+  .addEventListener("click", async () => {
+    let disk;
+    const attempt = ++diagnosticAttempt;
+    const panel = panelGeneration;
+    const stage = stageGeneration;
+    const token = managementToken;
+    const projectName = document.querySelector("#project-file").value;
+    const diagnostic = document.querySelector("#nucleus-diagnostic").value;
+    let snapshot;
+    const current = () => {
+      if (
+        !filesDialog.open ||
+        attempt !== diagnosticAttempt ||
+        panel !== panelGeneration ||
+        stage !== stageGeneration ||
+        token !== managementToken ||
+        projectName !== document.querySelector("#project-file").value ||
+        diagnostic !== document.querySelector("#nucleus-diagnostic").value
+      )
+        return false;
+      const now = projectSnapshot();
+      return (
+        snapshot?.length === now?.length &&
+        snapshot?.every((byte, index) => byte === now[index])
+      );
+    };
+    try {
+      const raw = diagnostic.trim();
+      const match =
+        /^Nucleus error [0-9A-F]{2} P=01 O=([0-9A-F]{4}) L=[0-9A-F]{4} C=[0-9A-F]{4}$/i.exec(
+          raw,
+        );
+      if (!match)
+        throw new Error(
+          "Paste the complete single-input Nucleus diagnostic, including P=01 and O=....",
+        );
+      // Mapping describes disk sources, never unsaved editor RAM. Revalidate
+      // against the latest complete guest checkpoint when the CPU is running.
+      snapshot = projectSnapshot()?.slice();
+      if (!snapshot)
+        throw new Error("No disk is available for source mapping.");
+      disk = new CpmDisk(snapshot);
+      const project = readProject(disk);
+      const map = readJsonFile(disk, project.mapName);
+      const result = await mapSourceBundleOffset(
+        {
+          sources: project.sources,
+          bundle: {
+            name: project.outputName,
+            bytes: disk.read_file(project.outputName),
+          },
+          map,
+          offset: Number.parseInt(match[1], 16),
+        },
+        { canonicalName: CpmDisk.canonical_name },
+      );
+      if (current())
+        filesStatus.textContent = `${raw} → ${result.name}, line ${result.line}, column ${result.column} (saved source${result.synthetic ? ", inserted boundary newline" : ""}).`;
+    } catch (error) {
+      if (!snapshot || current()) panelError(error);
+    } finally {
+      disk?.free();
+    }
+  });
+
+starterButton.addEventListener("click", async () => {
+  try {
+    const request = stagingRequest();
+    const imports = await Promise.all(
+      ["IO.NU", "MAIN.NU", "BUILD.JSN"].map(async (name) => {
+        const path = `adventure-${name}`;
+        const asset = deployment.assets.find((item) => item.path === path);
+        if (!asset)
+          throw new Error("Adventure asset missing from deployment manifest.");
+        const response = await fetch(path, {
+          cache: "no-store",
+          redirect: "error",
+        });
+        if (!response.ok) throw new Error(`Could not load ${path}.`);
+        const bytes = new Uint8Array(await response.arrayBuffer());
+        const digest = [
+          ...new Uint8Array(await crypto.subtle.digest("SHA-256", bytes)),
+        ]
+          .map((byte) => byte.toString(16).padStart(2, "0"))
+          .join("");
+        if (bytes.length !== asset.bytes || digest !== asset.sha256)
+          throw new Error(`Adventure asset verification failed: ${name}.`);
+        return { name, bytes };
+      }),
+    );
+    request.check();
+    await stageImports(imports, request.token);
+  } catch (error) {
+    panelError(error);
+  }
+});
 
 commitButton.addEventListener("click", async () => {
   const token = managementToken;

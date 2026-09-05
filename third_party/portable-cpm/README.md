@@ -1,15 +1,18 @@
 # Portable CP/M release inputs
 
 CCP and BDOS are from
-[`jhlagado/portable-cpm` v0.1.0](https://github.com/jhlagado/portable-cpm/releases/tag/v0.1.0),
-commit `579657f9177b31e1fccf0c05f72ba2ee76f3d052`.
+[`jhlagado/portable-cpm` v0.1.1](https://github.com/jhlagado/portable-cpm/releases/tag/v0.1.1),
+commit `b07dad632e7ef3be6528289a5a35308983964b05`.
 The source and build tools are available at that immutable upstream revision.
 The copied licence is GPL-3.0-or-later, as declared by the upstream package.
 
 The two provenance JSON files bind each downloaded executable to the revision,
 release asset URL and exact upstream manifest bytes. The artifacts were
-published from passing Linux CI run 33932175767 and downloaded again for
+published from passing Linux CI run 33996896372 and downloaded again for
 verification. Neither executable contains the Triptych BIOS.
 
-These inputs prepare the distribution migration. Until that migration passes,
-their presence here does not mean the current host builder consumes them.
+The host distribution builder consumes these pinned inputs. Version 0.1.1
+moves the transient entry stack outside default disk DMA; BDOS bytes are
+unchanged. Source snapshots were copied from the exact upstream commit and
+verified against the raw release manifest, then assembled with ATOM to check
+source/binary identity. Triptych does not maintain a second authoritative copy.

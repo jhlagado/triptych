@@ -1,0 +1,6 @@
+{
+  "schema": "triptych-nucleus-project-v1",
+  "sources": ["IO.NU", "MAIN.NU"],
+  "output": "GAME.NU",
+  "sourceMap": "GAME.MAP"
+}

@@ -4,7 +4,7 @@
   "description": "Require successful REN, ERA, and SAVE behavior to match the public oracle transcript and exported file",
   "systemCcp": "triptych",
   "systemBdos": "triptych",
-  "expectedInitialDriveSha256": "a153918c0a6804e3448e76e8d83360bdecab4ccfe445416038b63a68385c11cc",
+  "expectedInitialDriveSha256": "0c47991c45afa35892998a4cf8e43bf31c4268c20b3285a6a84961460de65e00",
   "expectedFinalFiles": [
     {
       "name": "PAGE.COM",
@@ -66,7 +66,7 @@
         "wrapPending": false,
         "bellCount": 0
       },
-      "expectedDriveSha256": "ee0dd95110ea7f279c3d99247028dee9e3f6f4c0d89e18a02161162341081666"
+      "expectedDriveSha256": "c4a2188fafc313bf34926837e415372520531b83a6c6d97145270bb500fb65a2"
     }
   ]
 }

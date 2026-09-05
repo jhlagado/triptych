@@ -47,7 +47,21 @@ jobs:
       - name: Verify exact release files
         run: node tools/check-browser-deployment.mjs dist/wasm-browser "$GITHUB_SHA" --release
       - name: Exercise final browser release
-        run: npx playwright test --config=playwright.config.mjs
+        env:
+          PLAYWRIGHT_JSON_OUTPUT_FILE: ${{ runner.temp }}/browser-runtime-acceptance.json
+        run: npx playwright test --config=playwright.config.mjs --reporter=github,json
+      - name: Retain exact recovery deployment
+        run: node tools/archive-browser-recovery.mjs create dist/wasm-browser "$RUNNER_TEMP/browser-recovery" "$GITHUB_SHA"
+      - name: Upload recovery deployment and runtime evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: browser-recovery-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/browser-recovery
+            ${{ runner.temp }}/browser-runtime-acceptance.json
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 90
       - name: Configure GitHub Pages
         if: github.event_name != 'pull_request'
         uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0

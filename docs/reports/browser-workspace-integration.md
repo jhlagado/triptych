@@ -61,23 +61,33 @@ migration, second-tab read-only behavior, transaction abort and retry, exact
 backup restore, stale reads, corrupt legacy retention and boot-download failure.
 Injected quota errors exercise transaction failure, not physical storage limits.
 
-The lead's complete `npm run check` passed after integration: 43 actual browser
+At the earlier `d975cae` integration checkpoint, the lead's complete
+`npm run check` passed: 43 actual browser
 tests, 274 TypeScript/JavaScript tests, the 28 coordinator and 10 catalog Node
 tests, CP/M/ATOM proofs, native terminal and cross-host parity, Rust formatting,
 lint and workspace tests, and the WASM release build. The deployment checker
 also verified all 23 emitted assets in the local dirty development build.
 Documentation formatting was checked again after the report update.
 
-## Release work still required
+## Released CCP and permanent application proof
 
-The corrected CCP is committed in Portable CP/M as `6dc1269`; Triptych still
-consumes v0.1.0. A v0.1.1 release needs a package-version update, passing CI and
-publication of those exact artifacts. Triptych needs a verified release import,
-updated provenance and replayed scenario digests. The retained snapshots must
-be copied from the immutable upstream revision, not edited as a second source.
+Portable CP/M v0.1.1 is published at commit
+`b07dad632e7ef3be6528289a5a35308983964b05`. Its 278 tests passed locally and Linux
+CI run `33996896372` passed. The release artifacts were downloaded from that CI
+run, published unchanged, downloaded again and compared byte-for-byte. Triptych
+now consumes them with updated lock and provenance records. The source snapshots
+were copied from the immutable upstream commit; ATOM assembly matches the
+downloaded binaries. BDOS bytes are unchanged. The raw manifest SHA-256 is
+`c94b77512a61855deba8e49da96d0fc0596f2bc0032a124516a942a783042824`.
 
-The multi-file adventure remains a separate qualification step. A worker's
-private prototype maintains `IO.NU` and `MAIN.NU` separately, then generates a
+An independent worker refreshed 47 measured hashes in 21 replacement-CCP
+scenarios and the feature matrix. All 21 fixtures then passed through the
+unmodified headless runner with their transcript, terminal and file assertions
+intact. Oracle scenarios were untouched. Capture images and before/after values
+are retained in `/tmp/triptych-ccp-fixtures.DaFKR9/`.
+
+Before permanent application integration, a worker's
+private prototype maintained `IO.NU` and `MAIN.NU` separately, then generated a
 689-byte `GAME.NU` for the released single-input CP/M compiler. The lead reran
 the proof: actual NUC 0.3.1 compiled the bundle in WASM with the corrected CCP;
 the game started, moved east/west and quit. A deliberate syntax error mapped
@@ -87,13 +97,67 @@ released Node multipart diagnostic. The preceding executable survived.
 Evidence is in `/tmp/triptych-multipart-pilot.hUZvdy/pilot.mjs` and `result.json`.
 The generated source SHA-256 is
 `154a230a351179959cbb35115859b10eef512c7220c4ad442b545eccf10cb7ae`.
-This proves one host-assisted source bundle, not CP/M import resolution or
-native multipart transport. The prototype is not installed in the browser.
-It still needs boundary/EOF/CRLF tests, stale source-map protection, a game win
-condition, actual Edit/repackage replay and native-host qualification.
+That prototype informed the implemented `source-bundle.js` helper and the
+original `samples/nucleus-adventure/` starter. The starter maintains `IO.NU`
+and `MAIN.NU` separately; `BUILD.JSN` declares their order. Prepare build stages
+generated `GAME.NU` and `GAME.MAP` together through the disk coordinator.
+There is no CP/M import resolver or compiler change. Ten Node tests cover
+padding, CRLF, literal/delimiter boundaries, copied inputs and stale maps.
 
-Before publishing database version 2, retain and test a compatible recovery
-deployment. The old version-1 website cannot open an upgraded profile. Then run
-the combined edit/build/run/update/reopen proof, CI and exact hosted-asset
-verification. No production browser profiles or hosted assets were changed
-during this integration wave.
+Two reviewers independently found compiler-output filename collisions and
+asynchronous stale diagnostic results. Both were reproduced by browser tests
+before correction. Project validation now protects NUC's derived `.COM`,
+`.$$$` and `.BAK` names, and diagnostic publication checks the request, panel,
+project and exact current snapshot. Fix readback found no remaining issues.
+
+The permanent `tools/prove-nucleus-adventure.mjs` uses the product bundler,
+current distribution and actual NUC/Edit. Thirty-one checkpoints and three
+complete final disks match between WASM and native macOS. It covers winning,
+quitting, invalid input, CR/LF, real Edit replacement, repackaging, rebuilding
+and a failed compile. Error 86 maps to `MAIN.NU`, offset 130, line 3, column 10.
+The complete failed-build disk is unchanged and the previous game remains
+runnable. This proof is wired into `npm run check` after both host builds.
+
+Four new browser tests pass, including the complete starter/import/prepare/
+compile/win/Edit/rebuild/selected-NUC-update/reload/download workflow. Sources,
+map, executable and unselected tools are compared across the update. The
+download reopens in another browser profile and the native host. A separate
+actual-Edit syntax-error test proves diagnostic mapping and preservation of
+the prior executable; naming and stale-result regressions also pass.
+
+## Recovery deployment and remaining publication gates
+
+The archive helper retains exact served assets and an external identity receipt.
+Its nine tests pass; independent review found no actionable defects. Its receipt
+explicitly does not claim runtime qualification. The separate browser rollback
+test seeds a version-1 disk, migrates it, adds a file and backup, then serves all
+HTTP assets from the retained directory at the same origin. Saved revision,
+complete disk and backups match; the guest reads the retained user file, and
+the distribution image is never fetched over the saved disk. That test passes.
+
+The Pages workflow now retains a clean recovery deployment and the final browser
+acceptance report before allowing deployment. CI artifact retention is 90 days;
+the release handoff must also retain a durable copy and record its identity.
+
+The combined local `npm run check` passed on 2026-09-06: 48 browser tests,
+287 TypeScript/JavaScript tests, 48 coordinator/catalog/bundler Node tests,
+the CP/M/ATOM proofs, native terminal and cross-host parity, permanent adventure
+replay, Rust formatting, lint and workspace tests, and the WASM release build.
+The complete headless CP/M scenario replay also passed separately.
+
+One combined-run failure was a test-readiness race: Playwright's file setter
+selected a file before asynchronous management entry enabled the input. An
+enabled-input assertion corrected the test; all disk and backup comparisons
+were preserved. Ten targeted repetitions and the subsequent complete check
+passed. A fresh independent reviewer confirmed the readiness boundary and
+archive-only same-origin proof. No product change was needed for that failure.
+
+The [recovery guide](../browser-recovery.md) distinguishes disk restoration,
+source redeployment and exact-archive restoration. Source redeployment uses
+the normal checked Pages workflow. Exact-archive upload is not automated.
+
+Triptych's clean-release build, CI, durable recovery archive and hosted-asset
+verification remain release gates. The old version-1 website cannot open an
+upgraded profile; rollback must use a compatible archive, never downgrade or
+delete browser storage. Triptych's hosted assets and production browser profiles
+remain unchanged so far. Physical-phone and ESP32 qualification remain separate.

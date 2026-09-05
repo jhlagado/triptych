@@ -112,6 +112,7 @@ try {
         "disk-workspace.js",
         "working-disk-revisions.js",
         "tool-catalog.js",
+        "source-bundle.js",
       ].map((path) =>
         copyFile(join(sourceDirectory, path), join(stagedOutput, path)),
       ),
@@ -138,6 +139,12 @@ try {
       ),
       ...[...tools.assets].map(([path, bytes]) =>
         writeFile(join(stagedOutput, path), bytes),
+      ),
+      ...["IO.NU", "MAIN.NU", "BUILD.JSN"].map((name) =>
+        copyFile(
+          join(repositoryRoot, "samples/nucleus-adventure", name),
+          join(stagedOutput, `adventure-${name}`),
+        ),
       ),
       writeFile(
         join(stagedOutput, "config.json"),

@@ -1,7 +1,8 @@
 # Browser development workspace
 
 Date: 2026-09-06. Status: active goal; Files, verified tool updates, recovery and
-mobile cursor support integrated locally; publication remains pending. Baseline: Triptych
+mobile cursor support and multi-source adventure integrated locally; Triptych
+publication remains pending. Portable CP/M v0.1.1 is published and pinned. Baseline: Triptych
 `04e78c24523781d9012fa3ecd4eb07ec1d70d105`.
 
 The [planning evidence](../reports/browser-workspace-planning.md) records
@@ -273,6 +274,12 @@ Edit/repackage/recompile replay, a win condition and both-host qualification
 are still required; the [integration report](../reports/browser-workspace-integration.md)
 records the measured prototype.
 
+The adapter and adventure are now implemented. The permanent 31-checkpoint
+native/WASM replay and complete browser edit/build/update/download/reopen tests
+pass. See the integration report for source-map, naming and asynchronous review
+corrections. The remaining application gate is clean-release CI and hosted
+verification, not further compiler or sample feature development.
+
 ## Final acceptance and next step
 
 Use a disposable copy of an existing saved disk and a fresh browser profile.
@@ -307,20 +314,21 @@ The diagnosis identified a CCP transient return address inside the default
 disk DMA buffer. Correction and regression tests belong in Portable CP/M;
 Triptych must consume a reviewed upstream release rather than patch its snapshot.
 The reviewed upstream correction now passes the invalid-source return and
-preserved-program replay on both hosts. Publication and the consumer pin update
-can proceed independently of storage. The full browser milestone remains active
-until its release and recovery proofs pass.
+preserved-program replay on both hosts. Portable CP/M v0.1.1 has been published
+from passing CI and imported with verified provenance. All 21 affected scenario
+fixtures passed after measured digest updates. The full browser milestone
+remains active until Triptych's release and hosted verification pass.
 
-### Next parallel wave
+### Release wave
 
-| Owner             | Work                                                                           | Gate before integration                                                                           |
-| ----------------- | ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------- |
-| Lead              | Integration checks, compatible recovery archive and rollout test               | Reopen exact saved work after deployment replacement; no database downgrade or deletion           |
-| OS release worker | Release reviewed Portable CP/M correction and prepare verified consumer import | CI artifact, immutable source revision, raw manifest hash and ATOM source/binary identity match   |
-| Sample worker     | Qualify multi-source packaging and the complete adventure workflow             | Released NUC builds the packaged sources; edit, win, error and quit paths replay on both hosts    |
-| Reviewers         | Independently challenge each completed slice before integration                | Reproduced findings corrected and affected checks rerun; physical-phone evidence remains separate |
+| Owner           | Work                                                                  | Gate before integration                                                                    |
+| --------------- | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| Lead            | Full checks, clean commit and release build, CI and Pages publication | Exact hosted manifest and fresh/migrated profile acceptance                                |
+| Recovery worker | Retain durable recovery archive and tested restore instructions       | Archive identity verified; same-origin migrated files and backups reopen unchanged         |
+| Reviewers       | Independently check release artifacts and coverage against the goal   | No missing source, failure, rollback or publication gates; hardware claims remain separate |
 
-When a worker finishes, use its slot for independent review or the sample
-packaging experiment. Publish and consume the reviewed CCP correction through
-the existing component-release process. Then replay the whole browser workflow,
-including a failed compile, before CI and Pages publication.
+Implementation and local workflow qualification passed the final combined
+check. The compatible archive helper and same-origin migration/reopen
+test pass locally. Retain the clean recovery build before publishing version-2
+storage, then verify CI and the actual hosted assets. CI's expiring artifact
+alone is not the durable release archive.

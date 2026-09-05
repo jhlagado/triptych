@@ -60,6 +60,10 @@ beforeEach(async () => {
     "disk-workspace.js",
     "tool-catalog.js",
     "tool-catalog.json",
+    "source-bundle.js",
+    "adventure-IO.NU",
+    "adventure-MAIN.NU",
+    "adventure-BUILD.JSN",
     "working-disk-store.js",
     ".nojekyll",
     "triptych_host_wasm.js",
@@ -69,7 +73,7 @@ beforeEach(async () => {
   ]) {
     assets.set(name, Buffer.from(`synthetic ${name}\n`));
   }
-  expect(assets.size).toBe(20);
+  expect(assets.size).toBe(24);
   manifest = {
     schema: "triptych-browser-deployment-v1",
     distribution: {
@@ -104,7 +108,7 @@ describe("browser deployment verification CLI", () => {
       status: "passed",
       revision,
       dirty: false,
-      assets: 20,
+      assets: 24,
       diskSha256: manifest.distribution.disk.sha256,
     });
   });
@@ -128,6 +132,10 @@ describe("browser deployment verification CLI", () => {
     "disk-workspace.js",
     "tool-catalog.js",
     "tool-catalog.json",
+    "source-bundle.js",
+    "adventure-IO.NU",
+    "adventure-MAIN.NU",
+    "adventure-BUILD.JSN",
     ".nojekyll",
   ])(
     "rejects omitted required %s even when it is removed from the manifest",

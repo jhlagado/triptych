@@ -141,7 +141,9 @@ NOTDRIVE:
         CALL    LOADCOM
         JR      C,BADCMD
         CALL    PREPPAGE
-        LD      SP,TPA
+        ; Keep the return word outside default DMA ($0080..$00FF). The
+        ; resident stack supplies 46 free bytes beneath this two-byte word.
+        LD      SP,STKTOP
         LD      HL,WBOOT
         PUSH    HL
         JP      TPA
