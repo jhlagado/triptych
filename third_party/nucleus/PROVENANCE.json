@@ -1,0 +1,12 @@
+{
+  "schema": "triptych-release-provenance-v1",
+  "repository": "https://github.com/jhlagado/nucleus.git",
+  "revision": "52cca195d1b557ebfbbc3a6d924ca3d6ea657829",
+  "bytes": 21281,
+  "sha256": "7b3da3c0b595a88b4906537fe0f76c44f7abd412e248d35d927d1aefd8971ef1",
+  "manifestSha256": "2a1e1bca236fb644aea7344573376d960ea27fe12e80e047b3c2aa3a363d535a",
+  "origin": {
+    "kind": "release-asset",
+    "url": "https://github.com/jhlagado/nucleus/releases/download/nucleus-v0.3.0/NUC.COM"
+  }
+}

@@ -1,0 +1,190 @@
+{
+  "schema": "triptych-component-lock-v1",
+  "targetProfile": "triptych-cpu-v0.1",
+  "disk": {
+    "bytes": 256512,
+    "recordBytes": 128,
+    "systemRecords": 52
+  },
+  "atom": {
+    "repository": "https://github.com/jhlagado/atom.git",
+    "revision": "802b5c2d320bec777f427755ff2d7338e3b80a05",
+    "package": "atom-z80",
+    "seed": {
+      "bytes": 64236,
+      "sha256": "fdea19fbd8aeb6211469f043491610455a71547902cf451c3e684e49a8fa0fd6"
+    }
+  },
+  "components": [
+    {
+      "id": "ccp",
+      "role": "resident",
+      "source": {
+        "kind": "git",
+        "repository": "https://github.com/jhlagado/portable-cpm.git",
+        "revision": "579657f9177b31e1fccf0c05f72ba2ee76f3d052",
+        "path": "src/ccp.asm"
+      },
+      "recipe": "verified-release",
+      "artifact": {
+        "path": "third_party/portable-cpm/ccp.bin",
+        "bytes": 2048,
+        "sha256": "d5f90f3c7cac8ad902ab4224e9f09ba344a8d30bee63dc7622d7fd1db65b2476",
+        "manifest": "third_party/portable-cpm/manifest.json",
+        "provenance": "third_party/portable-cpm/ccp.provenance.json"
+      },
+      "target": {
+        "origin": 58368,
+        "capacity": 2048
+      },
+      "install": {
+        "kind": "system-records",
+        "firstRecord": 0,
+        "recordCount": 16
+      },
+      "licence": {
+        "spdx": "GPL-3.0-or-later",
+        "provenance": "third_party/portable-cpm/README.md"
+      }
+    },
+    {
+      "id": "bdos",
+      "role": "resident",
+      "source": {
+        "kind": "git",
+        "repository": "https://github.com/jhlagado/portable-cpm.git",
+        "revision": "579657f9177b31e1fccf0c05f72ba2ee76f3d052",
+        "path": "src/bdos.asm"
+      },
+      "recipe": "verified-release",
+      "artifact": {
+        "path": "third_party/portable-cpm/bdos.bin",
+        "bytes": 3584,
+        "sha256": "c5fc4d7dd29bf8914c4735165747e3b35dca3b8999a9f70035d972ff602718fc",
+        "manifest": "third_party/portable-cpm/manifest.json",
+        "provenance": "third_party/portable-cpm/bdos.provenance.json"
+      },
+      "target": {
+        "origin": 60416,
+        "capacity": 3584
+      },
+      "install": {
+        "kind": "system-records",
+        "firstRecord": 16,
+        "recordCount": 28
+      },
+      "licence": {
+        "spdx": "GPL-3.0-or-later",
+        "provenance": "third_party/portable-cpm/README.md"
+      }
+    },
+    {
+      "id": "bios",
+      "role": "resident",
+      "source": {
+        "kind": "triptych",
+        "path": "system/cpm/bios.asm"
+      },
+      "recipe": "atom-binary",
+      "target": {
+        "origin": 64000,
+        "capacity": 1024
+      },
+      "install": {
+        "kind": "system-records",
+        "firstRecord": 44,
+        "recordCount": 8
+      },
+      "licence": {
+        "spdx": "GPL-3.0-or-later",
+        "provenance": "NOTICE.md"
+      }
+    },
+    {
+      "id": "atom",
+      "role": "application",
+      "source": {
+        "kind": "git",
+        "repository": "https://github.com/jhlagado/atom.git",
+        "revision": "802b5c2d320bec777f427755ff2d7338e3b80a05",
+        "path": "assets/atom-cpm22.com"
+      },
+      "recipe": "atom-cpm22",
+      "target": {
+        "origin": 256,
+        "capacity": 58112
+      },
+      "install": {
+        "kind": "file",
+        "name": "ATOM.COM",
+        "padByte": 26
+      },
+      "licence": {
+        "spdx": "GPL-3.0-only",
+        "provenance": "NOTICE.md"
+      }
+    },
+    {
+      "id": "nucleus",
+      "role": "application",
+      "source": {
+        "kind": "git",
+        "repository": "https://github.com/jhlagado/nucleus.git",
+        "revision": "52cca195d1b557ebfbbc3a6d924ca3d6ea657829",
+        "path": "asm/vertical-slice/cpm22-native-compiler.asm"
+      },
+      "recipe": "verified-release",
+      "artifact": {
+        "path": "third_party/nucleus/NUC.COM",
+        "bytes": 21281,
+        "sha256": "7b3da3c0b595a88b4906537fe0f76c44f7abd412e248d35d927d1aefd8971ef1",
+        "manifest": "third_party/nucleus/NUC.manifest.json",
+        "provenance": "third_party/nucleus/PROVENANCE.json"
+      },
+      "target": {
+        "origin": 256,
+        "capacity": 58112
+      },
+      "install": {
+        "kind": "file",
+        "name": "NUC.COM",
+        "padByte": 26
+      },
+      "licence": {
+        "spdx": "GPL-3.0-only",
+        "provenance": "third_party/nucleus/README.md"
+      }
+    },
+    {
+      "id": "edit",
+      "role": "application",
+      "source": {
+        "kind": "git",
+        "repository": "https://github.com/jhlagado/edit.git",
+        "revision": "2427501773e8d158d556631b8a4ba1cb972fcb4a",
+        "path": "src/editor.asm"
+      },
+      "recipe": "verified-release",
+      "artifact": {
+        "path": "third_party/edit/EDIT.COM",
+        "bytes": 3107,
+        "sha256": "73265438a4f2df9a3f507f1bdcd49c48ebabe46cbcdb96e58dc0ee39f8b6a905",
+        "manifest": "third_party/edit/manifest.json",
+        "provenance": "third_party/edit/release.provenance.json"
+      },
+      "target": {
+        "origin": 256,
+        "capacity": 58112
+      },
+      "install": {
+        "kind": "file",
+        "name": "EDIT.COM",
+        "padByte": 26
+      },
+      "licence": {
+        "spdx": "GPL-3.0-or-later",
+        "provenance": "third_party/edit/README.md"
+      }
+    }
+  ]
+}

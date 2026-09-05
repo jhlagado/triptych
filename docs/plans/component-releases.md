@@ -2,11 +2,12 @@
 
 2026-09-05. Ownership decisions are settled as described below. The
 [component-lock v1 contract](../specifications/component-lock-v1.md) and its
-validator now define the input boundary. A populated production lock and the
-artifact pipeline remain work under S2–S4 of the
+validator define the input boundary. The populated lock and private fresh-disk
+builder now pass a headless workflow; consumer migration and publication
+remain work under S2–S4 of the
 [software stability roadmap](software-stability-roadmap.md). Portable CP/M
-`v0.1.0` is published; Triptych's production distribution lock and consumer
-migration remain unfinished.
+`v0.1.0` is published and selected by the distribution lock; the browser/native
+default migration remains unfinished.
 
 ## Source ownership
 

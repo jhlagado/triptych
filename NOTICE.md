@@ -6,8 +6,9 @@ models, tests, ROM sources, and proof report moved into this repository on
 2026-08-26. Debug80 retained none of the machine-specific files or exports.
 
 The project-owned code is distributed under GPL-3.0-or-later. The optional
-tests use `@jhlagado/debug80-runtime` and `@jhlagado/azm` as development tools;
-those packages remain separately maintained dependencies. CP/M and CP/Mish
+tests use `@jhlagado/debug80-runtime` and `atom-z80` as development tools;
+those packages remain separately maintained dependencies. AZM is not a normal
+build or test dependency. CP/M and CP/Mish
 artifacts require their own provenance and licence records before they are
 vendored or distributed here.
 
@@ -22,3 +23,8 @@ The optional native working-disk proof accepts Atom's external
 SHA-256 digests. Atom is GPL-3.0-only and remains outside this repository; the
 proof reports its repository, licence, and artifact digest rather than
 silently copying it into Triptych.
+
+The independently released CCP/BDOS and NUC inputs under
+`third_party/portable-cpm/` and `third_party/nucleus/` include their upstream
+manifests, licences and immutable source provenance. They prepare the fresh
+distribution migration; the retained demonstration fixture is unchanged.

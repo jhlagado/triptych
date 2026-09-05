@@ -1,0 +1,12 @@
+{
+  "schema": "triptych-release-provenance-v1",
+  "repository": "https://github.com/jhlagado/edit.git",
+  "revision": "2427501773e8d158d556631b8a4ba1cb972fcb4a",
+  "bytes": 3107,
+  "sha256": "73265438a4f2df9a3f507f1bdcd49c48ebabe46cbcdb96e58dc0ee39f8b6a905",
+  "manifestSha256": "0a3a1f3d3ed18f480ebeadc167942aaf4ce533323c04d83c97591c9289f36b41",
+  "origin": {
+    "kind": "release-asset",
+    "url": "https://github.com/jhlagado/edit/releases/download/v0.1.1/EDIT.COM"
+  }
+}

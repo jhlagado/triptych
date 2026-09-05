@@ -192,7 +192,9 @@ builder must also obtain each selected source or release artifact, reject dirty
 overrides in release mode, run the registered recipe, check the emitted size
 and install a fresh image without changing a user's working disk.
 
-No production component lock or distribution builder is supplied by this
-contract. Its executable validation tests define the input structure; a
-reproducible distribution also requires the artifact verification and build
-steps above.
+`distribution/components.lock.json` now selects the current inputs, and
+`tools/lib/cpm-distribution.mjs` constructs private fresh media from them.
+Its output records the Triptych revision and dirty state; release mode rejects
+a dirty checkout. The browser/native default builders and publication pipeline
+remain to be migrated. The initial execution evidence is recorded in the
+[first-boot report](../reports/pinned-distribution-first-boot.md).

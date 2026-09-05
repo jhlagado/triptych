@@ -220,6 +220,13 @@ against Triptych's current BDOS, not only the historical fixture.
 
 ### S4 — reproducible system and application distribution
 
+Status: the populated lock, private fresh-disk builder and released-component
+headless workflow are implemented. The
+[first-boot checkpoint](../reports/pinned-distribution-first-boot.md) records
+the verified inputs and remaining browser/native default migration. S4 is not
+complete until those consumers use the same distribution and clean-release
+publication passes.
+
 Use the input-lockfile/output-manifest distinction and the verified build
 sequence in the [component release plan](component-releases.md). Cargo manages
 Rust code dependencies; guest OS/application artifacts remain a separate
