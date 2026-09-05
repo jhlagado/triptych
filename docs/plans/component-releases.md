@@ -14,8 +14,8 @@ ATOM, Nucleus and Edit are independently maintained development tools. They
 may have CP/M builds without being restricted to CP/M. All three now have
 standalone repositories. The
 [Edit extraction manifest](edit-extraction-manifest.md) records the exact
-source, proof and adapter boundary. Edit `v0.1.0` is published at immutable
-revision `ac59b478b686b7cd1a3a340064e82d64fdc58589`. Triptych vendors and
+source, proof and adapter boundary. Edit `v0.1.1` is published at immutable
+revision `2427501773e8d158d556631b8a4ba1cb972fcb4a`. Triptych vendors and
 verifies that release artifact while the complete S4 distribution builder is
 developed.
 

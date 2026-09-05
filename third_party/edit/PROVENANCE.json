@@ -1,11 +1,12 @@
 {
-  "name": "Edit 0.1.0",
+  "name": "Edit 0.1.1",
   "repository": "https://github.com/jhlagado/edit.git",
-  "revision": "ac59b478b686b7cd1a3a340064e82d64fdc58589",
-  "release": "https://github.com/jhlagado/edit/releases/tag/v0.1.0",
+  "revision": "2427501773e8d158d556631b8a4ba1cb972fcb4a",
+  "release": "https://github.com/jhlagado/edit/releases/tag/v0.1.1",
+  "ci": "https://github.com/jhlagado/edit/actions/runs/33933433991",
   "artifact": "EDIT.COM",
-  "bytes": 3003,
-  "sha256": "bbe4ac2b6236d178089fcd01822d0d7fa3c6159f0d2da3655eba1212dda5aa02",
+  "bytes": 3107,
+  "sha256": "73265438a4f2df9a3f507f1bdcd49c48ebabe46cbcdb96e58dc0ee39f8b6a905",
   "license": "GPL-3.0-or-later",
   "imported": "2026-09-05"
 }

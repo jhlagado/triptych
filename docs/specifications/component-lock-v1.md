@@ -119,6 +119,34 @@ insufficient. Structural validation checks field shapes and recipe selection;
 it does not read these files or establish their provenance. File resolution
 must also keep the inputs inside the repository, including through symlinks.
 
+### Reviewed release provenance
+
+`tools/lib/verified-release.mjs` checks local release files for an already
+validated component. Its provenance object has exactly these fields:
+
+| Field            | Required value                                          |
+| ---------------- | ------------------------------------------------------- |
+| `schema`         | `triptych-release-provenance-v1`                        |
+| `repository`     | The component's exact source repository URL.            |
+| `revision`       | The component's exact immutable source revision.        |
+| `bytes`          | The component's exact artifact byte count.              |
+| `sha256`         | The component's artifact digest.                        |
+| `manifestSha256` | SHA-256 of the unmodified upstream manifest file bytes. |
+| `origin`         | Closed object with `kind` and `url`.                    |
+
+The origin kind is `release-asset` or `ci-artifact`; its URL is HTTPS without
+credentials. It records the reviewed acquisition source and is not fetched
+or executed. Review of the committed provenance supplies the source
+association; this is not a signature verification scheme.
+
+The verifier requires regular files, resolves internal symlinks, rejects paths
+outside the repository, and checks the artifact and raw manifest hashes before
+returning bytes and parsed manifest data. It assumes a trusted local checkout
+without concurrent hostile filesystem mutation; it is not a filesystem sandbox.
+Component-specific callers must still validate upstream manifest format,
+target placement, entry addresses and assembler identity. The generic verifier
+does not interpret those different upstream formats or install disk contents.
+
 ### Trusted recipes
 
 Recipe names select code already present in the Triptych release builder. The

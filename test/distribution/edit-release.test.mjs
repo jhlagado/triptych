@@ -1,5 +1,4 @@
 import { createHash } from "node:crypto";
-import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
@@ -8,8 +7,12 @@ import {
   EDIT_BYTES,
   EDIT_SHA256,
   readVerifiedEditRelease,
+  installVerifiedEditRelease,
 } from "../../tools/lib/edit-release.mjs";
-import { readCpm22File } from "../../tools/lib/cpm22-disk.mjs";
+import {
+  createBlankCpm22Disk,
+  readCpm22File,
+} from "../../tools/lib/cpm22-disk.mjs";
 
 const repositoryRoot = resolve(import.meta.dirname, "../..");
 
@@ -18,11 +21,11 @@ function sha256(bytes) {
 }
 
 describe("standalone Edit release", () => {
-  it("verifies the pinned release asset and the program in the base disk", async () => {
+  it("verifies and installs the pinned release without changing the input disk", async () => {
     const release = await readVerifiedEditRelease(repositoryRoot);
-    const disk = new Uint8Array(
-      await readFile(resolve(repositoryRoot, "third_party/cpm22/cpm22.img")),
-    );
+    const blank = createBlankCpm22Disk();
+    const disk = await installVerifiedEditRelease(blank, repositoryRoot);
+    expect(blank).toEqual(createBlankCpm22Disk());
     const installed = readCpm22File(disk, "EDIT.COM");
 
     expect(release).toHaveLength(EDIT_BYTES);
