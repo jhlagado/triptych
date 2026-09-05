@@ -6,6 +6,10 @@ pub(crate) struct Serial {
 }
 
 impl Serial {
+    pub(crate) fn input_pending(&self) -> bool {
+        self.lookahead.is_some()
+    }
+
     pub(crate) fn reset(&mut self) {
         self.lookahead = None;
     }

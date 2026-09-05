@@ -88,8 +88,9 @@
         Click or tap the terminal before typing. On mobile, use the terminal
         keys for Ctrl, Esc, Tab, and arrows. Return sends CR; paste converts
         line endings for CP/M. A CP/M flush followed by “Working disk saved”
-        makes guest writes reload-safe. Download working disk creates a separate
-        recoverable image.
+        makes guest writes reload-safe. Download working disk copies the latest
+        guest-flushed image, even if browser saving has failed. Later unflushed
+        writes and unsaved editor text are excluded.
       </footer>
     </main>
     <script type="module" src="app.js"></script>

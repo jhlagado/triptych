@@ -116,6 +116,13 @@ impl Machine {
         self.disk.state()
     }
 
+    /// Whether serial input has been prefetched into the controller but has not
+    /// been consumed by a guest data read. Does not poll or consume host input;
+    /// hosts must inspect their own input queue separately.
+    pub fn console_input_pending(&self) -> bool {
+        self.serial.input_pending()
+    }
+
     /// Install architectural fields immediately before a conformance reset.
     /// Private engine latches are deliberately not part of this test boundary.
     #[cfg(feature = "conformance")]
@@ -208,5 +215,44 @@ impl EngineBus for MachineBus<'_, '_, '_> {
             .tstates
             .checked_add(tstates)
             .expect("one Z80 instruction exceeded u32 T-states");
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::Console;
+
+    struct Input(Option<u8>);
+
+    impl Console for Input {
+        fn receive(&mut self) -> Option<u8> {
+            self.0.take()
+        }
+
+        fn transmit(&mut self, _: u8) {}
+
+        fn reset(&mut self) {
+            self.0 = None;
+        }
+    }
+
+    #[test]
+    fn pending_console_diagnostic_observes_without_consuming_prefetched_input() {
+        let mut machine = Machine::new();
+        let mut console = Input(Some(65));
+        assert!(!machine.console_input_pending());
+        assert_eq!(console.0, Some(65));
+        assert_eq!(machine.serial.read_status(&mut console), 3);
+        assert_eq!(console.0, None);
+        assert!(machine.console_input_pending());
+        assert!(machine.console_input_pending());
+        assert_eq!(machine.serial.read_data(&mut console), 65);
+        assert!(!machine.console_input_pending());
+        console.0 = Some(0);
+        assert_eq!(machine.serial.read_status(&mut console), 3);
+        assert!(machine.console_input_pending());
+        machine.serial.reset();
+        assert!(!machine.console_input_pending());
     }
 }

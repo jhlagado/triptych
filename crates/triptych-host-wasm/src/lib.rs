@@ -3,9 +3,9 @@
 use std::collections::VecDeque;
 
 use triptych_cpu_core::{
-    Console, CpuFlags, CpuState, Devices, DriveInfo, InterruptRequest, IoDirection, IoObserver,
-    IoOperation, Machine, MachineMemory, RunBudget, RunReason, SectorStore, StorageFault,
-    BOOT_ROM_BYTES, RAM_BYTES, SECTOR_BYTES,
+    Console, CpuFlags, CpuState, Devices, DiskState, DriveInfo, InterruptRequest, IoDirection,
+    IoObserver, IoOperation, Machine, MachineMemory, RunBudget, RunReason, SectorStore,
+    StorageFault, BOOT_ROM_BYTES, RAM_BYTES, SECTOR_BYTES,
 };
 use wasm_bindgen::prelude::*;
 
@@ -69,6 +69,9 @@ impl TriptychCpu {
         self.sectors.install(drive, image, writable)
     }
 
+    /// Export live backing sectors, which can include writes after the last flush.
+    /// This is not a consistent durability checkpoint; it also excludes dirty
+    /// controller cache data that has not reached the backing store.
     pub fn export_drive(&self, drive: u8) -> Result<Vec<u8>, JsError> {
         self.sectors
             .drive(drive)
@@ -76,10 +79,38 @@ impl TriptychCpu {
             .ok_or_else(|| JsError::new("drive is not installed"))
     }
 
+    /// Export an independent copy of the initial image or the exact image at the
+    /// last successful guest flush. Later writes cannot change this checkpoint.
+    /// A guest flush does not imply that browser storage has saved these bytes.
+    pub fn export_drive_checkpoint(&self, drive: u8) -> Result<Vec<u8>, JsError> {
+        self.sectors
+            .drive(drive)
+            .map(|drive| drive.checkpoint.clone())
+            .ok_or_else(|| JsError::new("drive is not installed"))
+    }
+
+    /// Whether storage and terminal input are quiescent at this instruction boundary.
+    ///
+    /// The host must stop scheduling execution and accepting input before testing
+    /// this guard. It does not prove that an application has saved its RAM, exited,
+    /// or finished a logical multi-command filesystem update. Obtain explicit
+    /// save-and-exit confirmation before replacing the CPU. No state is changed.
+    pub fn disk_management_ready(&self) -> bool {
+        controller_allows_disk_management(self.machine.disk_state())
+            && self.console.input.is_empty()
+            && !self.machine.console_input_pending()
+            && self
+                .sectors
+                .drives
+                .iter()
+                .flatten()
+                .all(|drive| !drive.writes_since_flush)
+    }
+
     /// Count successful guest flush commands for one installed drive.
     ///
-    /// Browser storage uses this edge to persist only disk states that have
-    /// crossed the guest-visible durability boundary.
+    /// Browser storage uses this edge with `export_drive_checkpoint`, never the
+    /// live backing export, to obtain bytes at the guest flush boundary.
     pub fn drive_flush_count(&self, drive: u8) -> Result<u32, JsError> {
         self.sectors
             .drive(drive)
@@ -231,6 +262,10 @@ impl TriptychCpu {
     }
 }
 
+fn controller_allows_disk_management(state: DiskState) -> bool {
+    !state.cache_dirty && state.transfer_position.is_none() && state.error == 0
+}
+
 fn checked_range(address: u32, length: u32) -> Result<std::ops::Range<usize>, JsError> {
     let end = address
         .checked_add(length)
@@ -262,8 +297,10 @@ impl Console for WasmConsole {
 
 struct WasmDrive {
     bytes: Vec<u8>,
+    checkpoint: Vec<u8>,
     writable: bool,
     flush_count: u32,
+    writes_since_flush: bool,
 }
 
 #[derive(Default)]
@@ -289,8 +326,10 @@ impl WasmSectorStore {
         }
         self.drives[index] = Some(WasmDrive {
             bytes: image.to_vec(),
+            checkpoint: image.to_vec(),
             writable,
             flush_count: 0,
+            writes_since_flush: false,
         });
         Ok(())
     }
@@ -352,11 +391,14 @@ impl SectorStore for WasmSectorStore {
             .get_mut(start..start + SECTOR_BYTES)
             .ok_or(StorageFault)?
             .copy_from_slice(input);
+        drive.writes_since_flush = true;
         Ok(())
     }
 
     fn flush(&mut self, drive: u8) -> Result<(), StorageFault> {
         let drive = self.drive_mut(drive).ok_or(StorageFault)?;
+        drive.checkpoint.copy_from_slice(&drive.bytes);
+        drive.writes_since_flush = false;
         drive.flush_count = drive.flush_count.wrapping_add(1);
         Ok(())
     }
@@ -425,6 +467,207 @@ mod tests {
         assert_eq!(sectors.drive(0).unwrap().flush_count, 2);
         assert_eq!(sectors.drive(1).unwrap().flush_count, 1);
         assert!(SectorStore::flush(&mut sectors, 2).is_err());
+    }
+
+    #[test]
+    fn checkpoint_excludes_writes_after_the_last_successful_flush() {
+        let mut machine = TriptychCpu::new(&[0; BOOT_ROM_BYTES]).unwrap();
+        machine.install_drive(0, &[0; SECTOR_BYTES], true).unwrap();
+        machine
+            .sectors
+            .write_sector(0, 0, &[1; SECTOR_BYTES])
+            .unwrap();
+        machine.sectors.flush(0).unwrap();
+        machine
+            .sectors
+            .write_sector(0, 0, &[2; SECTOR_BYTES])
+            .unwrap();
+
+        assert_eq!(machine.drive_flush_count(0).unwrap(), 1);
+        assert_eq!(machine.export_drive(0).unwrap(), [2; SECTOR_BYTES]);
+        assert_eq!(
+            machine.export_drive_checkpoint(0).unwrap(),
+            [1; SECTOR_BYTES]
+        );
+    }
+
+    #[test]
+    fn checkpoints_are_initialized_independent_copies_and_per_drive() {
+        let mut machine = TriptychCpu::new(&[0; BOOT_ROM_BYTES]).unwrap();
+        machine.install_drive(0, &[3; SECTOR_BYTES], true).unwrap();
+        machine
+            .install_drive(255, &[4; SECTOR_BYTES], true)
+            .unwrap();
+        assert_eq!(
+            machine.export_drive_checkpoint(0).unwrap(),
+            [3; SECTOR_BYTES]
+        );
+        assert_eq!(
+            machine.export_drive_checkpoint(255).unwrap(),
+            [4; SECTOR_BYTES]
+        );
+        let mut exported = machine.export_drive_checkpoint(0).unwrap();
+        exported.fill(9);
+        assert_eq!(
+            machine.export_drive_checkpoint(0).unwrap(),
+            [3; SECTOR_BYTES]
+        );
+
+        machine
+            .sectors
+            .write_sector(0, 0, &[5; SECTOR_BYTES])
+            .unwrap();
+        machine
+            .sectors
+            .write_sector(255, 0, &[6; SECTOR_BYTES])
+            .unwrap();
+        machine.sectors.flush(0).unwrap();
+        assert_eq!(
+            machine.export_drive_checkpoint(0).unwrap(),
+            [5; SECTOR_BYTES]
+        );
+        assert_eq!(
+            machine.export_drive_checkpoint(255).unwrap(),
+            [4; SECTOR_BYTES]
+        );
+        machine.sectors.flush(255).unwrap();
+        assert_eq!(
+            machine.export_drive_checkpoint(255).unwrap(),
+            [6; SECTOR_BYTES]
+        );
+        assert_eq!(machine.drive_flush_count(0).unwrap(), 1);
+        assert_eq!(machine.drive_flush_count(255).unwrap(), 1);
+
+        // Reinstallation is still permitted only before execution and resets all
+        // checkpoint bookkeeping together with the backing image.
+        machine.install_drive(0, &[7; SECTOR_BYTES], true).unwrap();
+        assert_eq!(
+            machine.export_drive_checkpoint(0).unwrap(),
+            [7; SECTOR_BYTES]
+        );
+        assert_eq!(machine.drive_flush_count(0).unwrap(), 0);
+        assert!(machine.disk_management_ready());
+    }
+
+    #[test]
+    fn failed_sector_operations_do_not_publish_or_dirty_a_checkpoint() {
+        let mut machine = TriptychCpu::new(&[0; BOOT_ROM_BYTES]).unwrap();
+        machine.install_drive(0, &[1; SECTOR_BYTES], true).unwrap();
+        machine.install_drive(1, &[2; SECTOR_BYTES], false).unwrap();
+        assert!(machine
+            .sectors
+            .write_sector(0, 1, &[3; SECTOR_BYTES])
+            .is_err());
+        assert!(machine
+            .sectors
+            .write_sector(1, 0, &[3; SECTOR_BYTES])
+            .is_err());
+        assert!(machine
+            .sectors
+            .write_sector(2, 0, &[3; SECTOR_BYTES])
+            .is_err());
+        assert!(machine.sectors.flush(2).is_err());
+        assert!(machine.disk_management_ready());
+        for (drive, value) in [(0, 1), (1, 2)] {
+            assert_eq!(machine.export_drive(drive).unwrap(), [value; SECTOR_BYTES]);
+            assert_eq!(
+                machine.export_drive_checkpoint(drive).unwrap(),
+                [value; SECTOR_BYTES]
+            );
+            assert_eq!(machine.drive_flush_count(drive).unwrap(), 0);
+        }
+
+        machine
+            .sectors
+            .write_sector(0, 0, &[4; SECTOR_BYTES])
+            .unwrap();
+        assert!(machine
+            .sectors
+            .write_sector(0, 1, &[5; SECTOR_BYTES])
+            .is_err());
+        assert!(machine.sectors.flush(2).is_err());
+        assert!(!machine.disk_management_ready());
+        assert_eq!(
+            machine.export_drive_checkpoint(0).unwrap(),
+            [1; SECTOR_BYTES]
+        );
+        machine.sectors.flush(0).unwrap();
+        assert_eq!(
+            machine.export_drive_checkpoint(0).unwrap(),
+            [4; SECTOR_BYTES]
+        );
+        assert!(machine.disk_management_ready());
+    }
+
+    #[test]
+    fn readiness_requires_every_drive_flushed_even_after_an_identical_write() {
+        let mut machine = TriptychCpu::new(&[0; BOOT_ROM_BYTES]).unwrap();
+        machine.install_drive(0, &[0; SECTOR_BYTES], true).unwrap();
+        machine.install_drive(1, &[0; SECTOR_BYTES], true).unwrap();
+        assert!(machine.disk_management_ready());
+        machine
+            .sectors
+            .write_sector(0, 0, &[0; SECTOR_BYTES])
+            .unwrap();
+        machine
+            .sectors
+            .write_sector(1, 0, &[0; SECTOR_BYTES])
+            .unwrap();
+        assert!(!machine.disk_management_ready());
+        machine.sectors.flush(0).unwrap();
+        assert!(!machine.disk_management_ready());
+        machine.reset();
+        assert!(!machine.disk_management_ready());
+        machine.sectors.flush(1).unwrap();
+        assert!(machine.disk_management_ready());
+    }
+
+    #[test]
+    fn readiness_rejects_each_controller_hazard_without_mutating_state() {
+        let clean = DiskState {
+            drive: 0,
+            record: 0,
+            error: 0,
+            transfer_position: None,
+            cache_drive: Some(0),
+            cache_sector: Some(0),
+            cache_dirty: false,
+        };
+        assert!(controller_allows_disk_management(clean));
+        assert!(!controller_allows_disk_management(DiskState {
+            cache_dirty: true,
+            ..clean
+        }));
+        for position in [0, 1, 127] {
+            assert!(!controller_allows_disk_management(DiskState {
+                transfer_position: Some(position),
+                ..clean
+            }));
+        }
+        for error in 1..=u8::MAX {
+            assert!(!controller_allows_disk_management(DiskState {
+                error,
+                ..clean
+            }));
+        }
+        assert!(controller_allows_disk_management(clean));
+    }
+
+    #[test]
+    fn readiness_rejects_queued_input_until_consumption_or_reset() {
+        let mut machine = TriptychCpu::new(&[0; BOOT_ROM_BYTES]).unwrap();
+        machine.install_drive(0, &[0; SECTOR_BYTES], true).unwrap();
+        assert!(machine.enqueue_serial_input(&[65]));
+        assert!(!machine.disk_management_ready());
+        machine.set_io_trace_enabled(true);
+        machine.set_io_trace_enabled(false);
+        assert!(!machine.disk_management_ready());
+        assert_eq!(machine.console.receive(), Some(65));
+        assert!(machine.disk_management_ready());
+        assert!(machine.enqueue_serial_input(&[0]));
+        assert!(!machine.disk_management_ready());
+        machine.reset();
+        assert!(machine.disk_management_ready());
     }
 
     #[test]

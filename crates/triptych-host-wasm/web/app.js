@@ -169,7 +169,7 @@ function runMachine(generation) {
     if (outputChanged) renderTerminal(terminalElement, terminal.snapshot());
     const flushCount = machine.drive_flush_count(0);
     persistence?.observeFlush(flushCount, diskName, () =>
-      machine.export_drive(0),
+      machine.export_drive_checkpoint(0),
     );
   } catch (error) {
     stopMachine(error);
@@ -331,7 +331,7 @@ resetButton.addEventListener("click", () => {
 });
 
 downloadButton.addEventListener("click", () => {
-  const bytes = machine.export_drive(0);
+  const bytes = machine.export_drive_checkpoint(0);
   const link = document.createElement("a");
   link.href = URL.createObjectURL(
     new Blob([bytes], { type: "application/octet-stream" }),

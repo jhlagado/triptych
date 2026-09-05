@@ -52,7 +52,7 @@ pub struct CpmName {
 
 impl CpmName {
     pub fn parse(source: &str) -> Result<Self> {
-        let canonical = source.trim().to_ascii_uppercase();
+        let canonical = source.to_ascii_uppercase();
         let mut parts = canonical.split('.');
         let name = parts.next().unwrap_or_default();
         let extension = parts.next().unwrap_or_default();
@@ -94,6 +94,7 @@ fn valid_filename_byte(byte: u8) -> bool {
 pub struct DirectoryFile {
     pub name: String,
     pub records: usize,
+    pub read_only: bool,
 }
 
 impl DirectoryFile {
@@ -114,6 +115,12 @@ pub struct StoredFile {
     pub name: String,
     pub records: usize,
     pub bytes: Vec<u8>,
+}
+
+/// One user-0 file in an immutable, all-or-none installation batch.
+pub struct FileImport<'a> {
+    pub name: &'a str,
+    pub bytes: &'a [u8],
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -150,12 +157,13 @@ impl CpmImage {
 
     pub fn files(&self) -> Result<Vec<DirectoryFile>> {
         let scan = self.scan_directory()?;
-        validate_extent_sequences(&scan.files)?;
         scan.files
             .iter()
+            .filter(|file| file.user == 0)
             .map(|file| {
                 Ok(DirectoryFile {
                     name: file.name.clone(),
+                    read_only: file.read_only,
                     records: file.extents.iter().try_fold(0_usize, |total, extent| {
                         total.checked_add(extent.records).ok_or_else(|| {
                             CpmError::new(format!("{} record count overflows", file.name))
@@ -168,7 +176,6 @@ impl CpmImage {
 
     pub fn free_space(&self) -> Result<FreeSpace> {
         let scan = self.scan_directory()?;
-        validate_extent_sequences(&scan.files)?;
         let allocation_blocks = (RESERVED_BLOCKS..BLOCK_COUNT)
             .filter(|block| !scan.used_blocks[*block])
             .count();
@@ -181,35 +188,94 @@ impl CpmImage {
 
     /// Returns a replacement image. `self` is unchanged on every failure.
     pub fn install(&self, filename_source: &str, contents: &[u8]) -> Result<Self> {
-        if contents.is_empty() {
-            return Err(CpmError::new("files must contain at least one byte"));
+        self.install_batch(&[FileImport {
+            name: filename_source,
+            bytes: contents,
+        }])
+    }
+
+    /// Validates every occupied entry, including other users, before use.
+    /// Sparse files and non-contiguous extent sequences are unsupported and
+    /// rejected rather than shortened or repaired. Raw image loading itself
+    /// checks only geometry, so malformed images remain exportable for recovery.
+    pub fn validate(&self) -> Result<()> {
+        self.scan_directory().map(|_| ())
+    }
+
+    /// Returns a private replacement image, never a partly installed batch.
+    /// Canonically duplicate names, empty files and read-only replacements
+    /// are errors. All replaced files release their capacity before allocation,
+    /// so batch success does not depend on whether growing files come first.
+    pub fn install_batch(&self, imports: &[FileImport<'_>]) -> Result<Self> {
+        let mut scan = self.scan_directory()?;
+        if imports.len() > DIRECTORY_ENTRIES {
+            return Err(CpmError::new("batch has more files than directory entries"));
         }
-        let filename = CpmName::parse(filename_source)?;
+        let mut names = Vec::with_capacity(imports.len());
+        for import in imports {
+            let name = CpmName::parse(import.name)?;
+            if import.bytes.is_empty() {
+                return Err(CpmError::new("files must contain at least one byte"));
+            }
+            if names.contains(&name) {
+                return Err(CpmError::new(format!(
+                    "duplicate import {}",
+                    name.canonical
+                )));
+            }
+            names.push(name);
+        }
+        let mut image = self.clone();
+        for file in scan
+            .files
+            .iter()
+            .filter(|file| file.user == 0 && names.iter().any(|name| name.canonical == file.name))
+        {
+            if file.read_only {
+                return Err(CpmError::new(format!("{} is read-only", file.name)));
+            }
+            for extent in &file.extents {
+                image.clear_entry(extent.entry_index);
+                scan.free_entries.push(extent.entry_index);
+                for &block in &extent.blocks {
+                    image.clear_block(block);
+                    scan.used_blocks[block] = false;
+                }
+            }
+        }
+        scan.free_entries.sort_unstable();
+        for (name, import) in names.iter().zip(imports) {
+            let mut attributed = name.clone();
+            if let Some(previous) = scan
+                .files
+                .iter()
+                .find(|file| file.user == 0 && file.name == name.canonical)
+            {
+                // Preserve existing CP/M attribute bits when replacing bytes.
+                // Read-only was checked across all extents above.
+                let entry = entry_offset(previous.extents[0].entry_index);
+                for (index, byte) in attributed.name.iter_mut().enumerate() {
+                    *byte |= self.bytes[entry + 1 + index] & 0x80;
+                }
+                for (index, byte) in attributed.extension.iter_mut().enumerate() {
+                    *byte |= self.bytes[entry + 9 + index] & 0x80;
+                }
+            }
+            image.install_new(&attributed, import.bytes, &mut scan)?;
+        }
+        Ok(image)
+    }
+
+    fn install_new(
+        &mut self,
+        filename: &CpmName,
+        contents: &[u8],
+        scan: &mut DirectoryScan,
+    ) -> Result<()> {
         let records = contents.len().div_ceil(RECORD_BYTES);
         let extent_count = records.div_ceil(RECORDS_PER_EXTENT);
         let block_count = records.div_ceil(BLOCK_BYTES / RECORD_BYTES);
-        let mut scan = self.scan_directory()?;
-        validate_extent_sequences(&scan.files)?;
-        let replaced = scan
-            .files
-            .iter()
-            .find(|file| file.name == filename.canonical)
-            .map(|file| file.extents.clone())
-            .unwrap_or_default();
-        let mut image = self.clone();
-
-        for extent in &replaced {
-            image.clear_entry(extent.entry_index);
-            for &block in &extent.blocks {
-                image.clear_block(block);
-                scan.used_blocks[block] = false;
-            }
-        }
-
-        let mut available_entries: Vec<_> =
-            replaced.iter().map(|extent| extent.entry_index).collect();
-        available_entries.extend(scan.free_entries.iter().copied());
-        if available_entries.len() < extent_count {
+        if scan.free_entries.len() < extent_count {
             return Err(CpmError::new(format!(
                 "directory has no room for {}",
                 filename.canonical
@@ -229,7 +295,8 @@ impl CpmImage {
         padded[..contents.len()].copy_from_slice(contents);
         let mut record_cursor = 0;
         let mut block_cursor = 0;
-        for (extent_index, entry_index) in available_entries
+        for (extent_index, entry_index) in scan
+            .free_entries
             .iter()
             .copied()
             .take(extent_count)
@@ -238,30 +305,31 @@ impl CpmImage {
             let extent_records = RECORDS_PER_EXTENT.min(records.saturating_sub(record_cursor));
             let extent_blocks = extent_records.div_ceil(BLOCK_BYTES / RECORD_BYTES);
             let blocks = &available_blocks[block_cursor..block_cursor + extent_blocks];
-            image.write_extent(entry_index, &filename, extent_index, extent_records, blocks)?;
+            self.write_extent(entry_index, filename, extent_index, extent_records, blocks)?;
             for &block in blocks {
                 let offset = block_offset(block);
-                image.bytes[offset..offset + BLOCK_BYTES].fill(DIRECTORY_FREE);
+                self.bytes[offset..offset + BLOCK_BYTES].fill(DIRECTORY_FREE);
                 let source_offset = record_cursor * RECORD_BYTES;
                 let length = BLOCK_BYTES.min(padded.len() - source_offset);
-                image.bytes[offset..offset + length]
+                self.bytes[offset..offset + length]
                     .copy_from_slice(&padded[source_offset..source_offset + length]);
+                scan.used_blocks[block] = true;
                 record_cursor += length / RECORD_BYTES;
             }
             block_cursor += extent_blocks;
         }
-        Ok(image)
+        scan.free_entries.drain(..extent_count);
+        Ok(())
     }
 
     /// Reads the record-padded bytes of one user-0 file.
     pub fn read(&self, filename_source: &str) -> Result<Option<StoredFile>> {
         let filename = CpmName::parse(filename_source)?;
         let scan = self.scan_directory()?;
-        validate_extent_sequences(&scan.files)?;
         let Some(file) = scan
             .files
             .iter()
-            .find(|file| file.name == filename.canonical)
+            .find(|file| file.user == 0 && file.name == filename.canonical)
         else {
             return Ok(None);
         };
@@ -310,18 +378,24 @@ impl CpmImage {
                 }
                 used_blocks[block] = true;
             }
-            if user == 0 {
-                let name = self.entry_filename(entry);
-                if let Some(file) = files.iter_mut().find(|file| file.name == name) {
-                    file.extents.push(extent);
-                } else {
-                    files.push(ScannedFile {
-                        name,
-                        extents: vec![extent],
-                    });
-                }
+            let name = self.entry_filename(entry)?;
+            let read_only = self.bytes[entry + 9] & 0x80 != 0;
+            if let Some(file) = files
+                .iter_mut()
+                .find(|file| file.user == user && file.name == name)
+            {
+                file.extents.push(extent);
+                file.read_only |= read_only;
+            } else {
+                files.push(ScannedFile {
+                    user,
+                    name,
+                    read_only,
+                    extents: vec![extent],
+                });
             }
         }
+        validate_extent_sequences(&files)?;
         Ok(DirectoryScan {
             free_entries,
             used_blocks,
@@ -337,12 +411,25 @@ impl CpmImage {
                 "directory entry {entry_index} has invalid record count {records}"
             )));
         }
+        if self.bytes[entry + 12] > 0x1f || self.bytes[entry + 14] > 0x0f {
+            return Err(CpmError::new(format!(
+                "directory entry {entry_index} has invalid extent bits"
+            )));
+        }
         let extent =
-            usize::from(self.bytes[entry + 12] & 0x1f) | (usize::from(self.bytes[entry + 14]) << 5);
+            usize::from(self.bytes[entry + 12]) | (usize::from(self.bytes[entry + 14]) << 5);
         let block_count = records.div_ceil(BLOCK_BYTES / RECORD_BYTES);
-        let mut blocks = Vec::with_capacity(block_count);
-        for index in 0..block_count {
+        let mut blocks = Vec::with_capacity(BLOCKS_PER_EXTENT);
+        for index in 0..BLOCKS_PER_EXTENT {
             let block = usize::from(self.bytes[entry + 16 + index]);
+            if block == 0 {
+                if index >= block_count {
+                    continue;
+                }
+                return Err(CpmError::new(format!(
+                    "directory entry {entry_index} has an unsupported sparse allocation"
+                )));
+            }
             if !(RESERVED_BLOCKS..BLOCK_COUNT).contains(&block) {
                 return Err(CpmError::new(format!(
                     "directory entry {entry_index} references invalid block {block}"
@@ -358,7 +445,7 @@ impl CpmImage {
         })
     }
 
-    fn entry_filename(&self, entry: usize) -> String {
+    fn entry_filename(&self, entry: usize) -> Result<String> {
         fn decode(bytes: &[u8]) -> String {
             let mut decoded: Vec<_> = bytes.iter().map(|byte| byte & 0x7f).collect();
             while decoded.last() == Some(&b' ') {
@@ -368,11 +455,27 @@ impl CpmImage {
         }
         let name = decode(&self.bytes[entry + 1..entry + 9]);
         let extension = decode(&self.bytes[entry + 9..entry + 12]);
-        if extension.is_empty() {
+        let decoded = if extension.is_empty() {
             name
         } else {
             format!("{name}.{extension}")
+        };
+        let parsed = CpmName::parse(&decoded)?;
+        if parsed.canonical != decoded
+            || self.bytes[entry + 1..entry + 9]
+                .iter()
+                .zip(parsed.name)
+                .any(|(actual, expected)| actual & 0x7f != expected)
+            || self.bytes[entry + 9..entry + 12]
+                .iter()
+                .zip(parsed.extension)
+                .any(|(actual, expected)| actual & 0x7f != expected)
+        {
+            return Err(CpmError::new(format!(
+                "non-canonical directory filename {decoded:?}"
+            )));
         }
+        Ok(decoded)
     }
 
     fn clear_entry(&mut self, entry_index: usize) {
@@ -421,7 +524,9 @@ struct DirectoryExtent {
 
 #[derive(Debug)]
 struct ScannedFile {
+    user: u8,
     name: String,
+    read_only: bool,
     extents: Vec<DirectoryExtent>,
 }
 
@@ -434,12 +539,18 @@ struct DirectoryScan {
 
 fn validate_extent_sequences(files: &[ScannedFile]) -> Result<()> {
     for file in files {
-        let mut extents: Vec<_> = file.extents.iter().map(|extent| extent.extent).collect();
-        extents.sort_unstable();
-        for (expected, actual) in extents.into_iter().enumerate() {
-            if actual != expected {
+        let mut extents: Vec<_> = file.extents.iter().collect();
+        extents.sort_unstable_by_key(|extent| extent.extent);
+        for (expected, actual) in extents.iter().enumerate() {
+            if actual.extent != expected {
                 return Err(CpmError::new(format!(
-                    "{} has a missing or duplicate extent",
+                    "{} has a missing or duplicate extent (sparse files are unsupported)",
+                    file.name
+                )));
+            }
+            if expected + 1 < extents.len() && actual.records != RECORDS_PER_EXTENT {
+                return Err(CpmError::new(format!(
+                    "{} has an unsupported short non-final extent",
                     file.name
                 )));
             }
@@ -481,6 +592,13 @@ mod tests {
             "A/B.COM",
             ".COM",
             "MAIN.",
+            " MAIN.COM",
+            "MAIN.COM ",
+            "A B.COM",
+            "*.COM",
+            "A?.COM",
+            "A:MAIN.COM",
+            "£.COM",
         ] {
             assert!(CpmName::parse(invalid).is_err(), "accepted {invalid}");
         }
@@ -604,5 +722,269 @@ mod tests {
             .unwrap_err()
             .to_string()
             .contains("allocation block 2 is referenced more than once"));
+    }
+
+    #[test]
+    fn rejects_read_only_replacement() {
+        let mut image = blank_image().install("ONE.BIN", &[1]).unwrap();
+        image.bytes[entry_offset(0) + 9] |= 0x80;
+        let before = image.clone();
+        assert!(image.install("ONE.BIN", &[2]).is_err());
+        assert_eq!(image, before);
+        assert_eq!(image.read("ONE.BIN").unwrap().unwrap().bytes[0], 1);
+        assert!(image.files().unwrap()[0].read_only);
+    }
+
+    #[test]
+    fn reserves_all_allocation_pointers_in_other_users() {
+        let mut image = blank_image().install("OTHER.BIN", &[1]).unwrap();
+        image.bytes[entry_offset(0)] = 7;
+        image.bytes[entry_offset(0) + 17] = 3;
+        image.bytes[block_offset(3)..block_offset(4)].fill(0x7a);
+        let before = image.clone();
+        let installed = image.install("NEW.BIN", &[2]).unwrap();
+        assert_eq!(
+            &installed.bytes[block_offset(3)..block_offset(4)],
+            &before.bytes[block_offset(3)..block_offset(4)]
+        );
+        assert_eq!(installed.bytes[entry_offset(1) + 16], 4);
+    }
+
+    #[test]
+    fn rejects_malformed_other_user_extents_and_names() {
+        let base = blank_image().install("OTHER.BIN", &[1]).unwrap();
+        for (field, value) in [(12, 1), (1, b'?'), (2, b' ')] {
+            let mut image = base.clone();
+            image.bytes[entry_offset(0)] = 7;
+            image.bytes[entry_offset(0) + field] = value;
+            assert!(image.files().is_err(), "accepted field {field}");
+            assert!(image.read("MISSING.BIN").is_err());
+            assert!(image.install("NEW.BIN", &[2]).is_err());
+        }
+    }
+
+    fn assert_rejected_everywhere(image: &CpmImage) {
+        let before = image.clone();
+        assert!(image.validate().is_err());
+        assert!(image.files().is_err());
+        assert!(image.free_space().is_err());
+        assert!(image.read("MISSING.BIN").is_err());
+        assert!(image.install("NEW.BIN", &[1]).is_err());
+        assert_eq!(image, &before);
+    }
+
+    #[test]
+    fn rejects_allocation_corruption_even_outside_record_count() {
+        let base = blank_image().install("ONE.BIN", &[1]).unwrap();
+        for (field, value) in [
+            (16, 0),
+            (16, 1),
+            (16, 243),
+            (17, 1),
+            (31, 243),
+            (31, 2),
+            (15, 129),
+        ] {
+            let mut image = base.clone();
+            image.bytes[entry_offset(0) + field] = value;
+            assert_rejected_everywhere(&image);
+        }
+        let mut image = base.install("TWO.BIN", &[2]).unwrap();
+        image.bytes[entry_offset(1)] = 8;
+        image.bytes[entry_offset(1) + 31] = 2;
+        assert_rejected_everywhere(&image);
+    }
+
+    #[test]
+    fn rejects_duplicate_missing_and_short_non_final_extents_for_every_user() {
+        let base = blank_image().install("BIG.BIN", &bytes(17_000, 3)).unwrap();
+        for user in [0, 15] {
+            for (entry, field, value) in [
+                (1, 12, 0),
+                (1, 12, 2),
+                (0, 15, 127),
+                (0, 12, 0x20),
+                (0, 14, 0x80),
+            ] {
+                let mut image = base.clone();
+                image.bytes[entry_offset(0)] = user;
+                image.bytes[entry_offset(1)] = user;
+                image.bytes[entry_offset(entry) + field] = value;
+                assert_rejected_everywhere(&image);
+            }
+        }
+    }
+
+    #[test]
+    fn read_only_on_later_extent_blocks_replacement() {
+        let mut image = blank_image().install("BIG.BIN", &bytes(17_000, 3)).unwrap();
+        image.bytes[entry_offset(1) + 9] |= 0x80;
+        assert!(image.files().unwrap()[0].read_only);
+        assert!(image
+            .install("BIG.BIN", &[2])
+            .unwrap_err()
+            .to_string()
+            .contains("read-only"));
+    }
+
+    #[test]
+    fn preserves_other_users_system_tracks_padding_and_file_attributes() {
+        let mut image = blank_image()
+            .install("SAME.BIN", &bytes(1700, 0x30))
+            .unwrap();
+        image.bytes[entry_offset(0)] = 15;
+        image.bytes[..SYSTEM_BYTES].fill(0x75);
+        image.bytes.resize(WORKING_IMAGE_BYTES, 0x69);
+        let mut image = image.install("SAME.BIN", &[1]).unwrap();
+        image.bytes[entry_offset(1) + 10] |= 0x80;
+        image.bytes[entry_offset(1) + 1] |= 0x80;
+        let before = image.clone();
+        let result = image.install("same.bin", &[7]).unwrap();
+        assert_eq!(image, before);
+        assert_eq!(
+            &result.bytes[..entry_offset(1)],
+            &before.bytes[..entry_offset(1)]
+        );
+        assert_eq!(
+            &result.bytes[block_offset(2)..block_offset(4)],
+            &before.bytes[block_offset(2)..block_offset(4)]
+        );
+        assert_eq!(
+            &result.bytes[DISK_IMAGE_BYTES..],
+            &before.bytes[DISK_IMAGE_BYTES..]
+        );
+        assert_eq!(result.bytes[entry_offset(1) + 10] & 0x80, 0x80);
+        assert_eq!(result.bytes[entry_offset(1) + 1] & 0x80, 0x80);
+        assert_eq!(result.files().unwrap().len(), 1);
+        assert_eq!(result.read("SAME.BIN").unwrap().unwrap().bytes[0], 7);
+    }
+
+    #[test]
+    fn supports_existing_empty_files_but_rejects_empty_imports() {
+        let mut image = blank_image().install("EMPTY.TXT", &[1]).unwrap();
+        image.bytes[entry_offset(0) + 15] = 0;
+        image.bytes[entry_offset(0) + 16] = 0;
+        assert_eq!(image.read("EMPTY.TXT").unwrap().unwrap().bytes, []);
+        assert_eq!(image.files().unwrap()[0].records, 0);
+        assert!(image.install("NEW.TXT", &[]).is_err());
+    }
+
+    #[test]
+    fn batch_failures_never_publish_earlier_imports() {
+        let image = blank_image().install("KEEP.BIN", &[9]).unwrap();
+        let large = bytes(BLOCK_COUNT * BLOCK_BYTES, 1);
+        for (name, contents) in [
+            ("TOO-LONG9.BIN", &[1][..]),
+            ("EMPTY.BIN", &[][..]),
+            ("BIG.BIN", large.as_slice()),
+            ("first.bin", &[2][..]),
+        ] {
+            let before = image.clone();
+            let result = image.install_batch(&[
+                FileImport {
+                    name: "FIRST.BIN",
+                    bytes: &[3],
+                },
+                FileImport {
+                    name,
+                    bytes: contents,
+                },
+            ]);
+            assert!(result.is_err(), "accepted {name}");
+            assert_eq!(image, before);
+            assert!(image.read("FIRST.BIN").unwrap().is_none());
+        }
+    }
+
+    #[test]
+    fn batch_releases_all_replacements_before_allocating() {
+        let image = blank_image()
+            .install("GROW.BIN", &bytes(BLOCK_BYTES, 1))
+            .unwrap()
+            .install("SHRINK.BIN", &bytes(240 * BLOCK_BYTES, 2))
+            .unwrap();
+        assert_eq!(image.free_space().unwrap().allocation_blocks, 0);
+        assert!(image
+            .install("GROW.BIN", &bytes(240 * BLOCK_BYTES, 3))
+            .is_err());
+        let before = image.clone();
+        let grow = bytes(240 * BLOCK_BYTES, 3);
+        let shrink = bytes(BLOCK_BYTES, 4);
+        let result = image
+            .install_batch(&[
+                FileImport {
+                    name: "GROW.BIN",
+                    bytes: &grow,
+                },
+                FileImport {
+                    name: "SHRINK.BIN",
+                    bytes: &shrink,
+                },
+            ])
+            .unwrap();
+        assert_eq!(image, before);
+        assert_eq!(result.read("GROW.BIN").unwrap().unwrap().bytes, grow);
+        assert_eq!(result.read("SHRINK.BIN").unwrap().unwrap().bytes, shrink);
+        assert_eq!(result.free_space().unwrap().allocation_blocks, 0);
+    }
+
+    #[test]
+    fn batch_directory_and_read_only_failures_leave_source_identical() {
+        let mut image = blank_image();
+        for index in 0..DIRECTORY_ENTRIES - 1 {
+            image = image.install(&format!("F{index}.BIN"), &[1]).unwrap();
+        }
+        let before = image.clone();
+        let full = image
+            .install_batch(&[
+                FileImport {
+                    name: "FIRST.BIN",
+                    bytes: &[2],
+                },
+                FileImport {
+                    name: "SECOND.BIN",
+                    bytes: &[3],
+                },
+            ])
+            .unwrap_err();
+        assert!(full.to_string().contains("directory has no room"));
+        assert_eq!(image, before);
+
+        image.bytes[entry_offset(1) + 9] |= 0x80;
+        let before = image.clone();
+        let read_only = image
+            .install_batch(&[
+                FileImport {
+                    name: "F0.BIN",
+                    bytes: &[4],
+                },
+                FileImport {
+                    name: "F1.BIN",
+                    bytes: &[5],
+                },
+            ])
+            .unwrap_err();
+        assert!(read_only.to_string().contains("read-only"));
+        assert_eq!(image, before);
+    }
+
+    #[test]
+    fn accepts_last_block_and_ignores_deleted_entry_contents() {
+        let mut image = blank_image().install("LAST.BIN", &[1]).unwrap();
+        image.bytes[entry_offset(0) + 16] = (BLOCK_COUNT - 1) as u8;
+        image.bytes[block_offset(BLOCK_COUNT - 1)] = 0x67;
+        image.bytes[entry_offset(1)..entry_offset(2)].fill(0xff);
+        image.bytes[entry_offset(1)] = DIRECTORY_FREE;
+        assert_eq!(image.read("LAST.BIN").unwrap().unwrap().bytes[0], 0x67);
+        let result = image.install("NEW.BIN", &[2]).unwrap();
+        assert_eq!(result.bytes[block_offset(BLOCK_COUNT - 1)], 0x67);
+    }
+
+    #[test]
+    fn rejects_dot_inside_physical_name_field() {
+        let mut image = blank_image().install("A", &[1]).unwrap();
+        image.bytes[entry_offset(0) + 2] = b'.';
+        image.bytes[entry_offset(0) + 3] = b'B';
+        assert_rejected_everywhere(&image);
     }
 }
