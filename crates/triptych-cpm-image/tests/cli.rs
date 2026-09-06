@@ -4,7 +4,7 @@ use std::process::Command;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use triptych_cpm_image::{DISK_IMAGE_BYTES, WORKING_IMAGE_BYTES};
+use triptych_cpm_image::{CpmGeometry, CpmImage, DISK_IMAGE_BYTES, WORKING_IMAGE_BYTES};
 
 struct TemporaryDirectory(PathBuf);
 
@@ -119,4 +119,85 @@ fn failed_import_does_not_publish_a_partial_image() {
     ]);
     assert!(!output.status.success());
     assert_eq!(fs::read(&image).unwrap(), original);
+}
+
+#[test]
+fn formats_and_migrates_large_images_without_overwriting_sources_or_destinations() {
+    let temporary = TemporaryDirectory::new();
+    let source = temporary.join("legacy.img");
+    let system = temporary.join("system.bin");
+    let blank = temporary.join("blank.img");
+    let migrated = temporary.join("migrated.img");
+    let before = CpmImage::blank(CpmGeometry::Ibm3740)
+        .install("SOURCE.NU", b"sub main()\r\nend\r\n")
+        .unwrap();
+    fs::write(&source, before.as_bytes()).unwrap();
+    let system_bytes = vec![0x52; CpmGeometry::Triptych8M.system_bytes()];
+    fs::write(&system, &system_bytes).unwrap();
+    let format = run(&[
+        Path::new("format"),
+        Path::new("triptych-cpm-8m-v1"),
+        &system,
+        &blank,
+    ]);
+    assert!(
+        format.status.success(),
+        "{}",
+        String::from_utf8_lossy(&format.stderr)
+    );
+    let blank_bytes = fs::read(&blank).unwrap();
+    assert_eq!(blank_bytes.len(), 8 * 1024 * 1024);
+    assert_eq!(&blank_bytes[..system_bytes.len()], &system_bytes);
+    let migrate = run(&[
+        Path::new("migrate"),
+        Path::new("triptych-cpm-8m-v1"),
+        &source,
+        &system,
+        &migrated,
+    ]);
+    assert!(
+        migrate.status.success(),
+        "{}",
+        String::from_utf8_lossy(&migrate.stderr)
+    );
+    let after = CpmImage::from_bytes(fs::read(&migrated).unwrap()).unwrap();
+    assert_eq!(after.geometry(), CpmGeometry::Triptych8M);
+    assert_eq!(
+        after.read("SOURCE.NU").unwrap().unwrap().bytes,
+        before.read("SOURCE.NU").unwrap().unwrap().bytes
+    );
+    assert_eq!(fs::read(&source).unwrap(), before.as_bytes());
+
+    let repeated = run(&[
+        Path::new("migrate"),
+        Path::new("triptych-cpm-8m-v1"),
+        &source,
+        &system,
+        &migrated,
+    ]);
+    assert!(!repeated.status.success());
+    assert_eq!(fs::read(&migrated).unwrap(), after.as_bytes());
+    let same_path = run(&[
+        Path::new("migrate"),
+        Path::new("triptych-cpm-8m-v1"),
+        &source,
+        &system,
+        &source,
+    ]);
+    assert!(!same_path.status.success());
+    assert_eq!(fs::read(&source).unwrap(), before.as_bytes());
+}
+
+#[test]
+fn rejected_geometry_or_system_area_does_not_create_a_destination() {
+    let temporary = TemporaryDirectory::new();
+    let system = temporary.join("short-system.bin");
+    let target = temporary.join("disk.img");
+    fs::write(&system, [0; 128]).unwrap();
+    for format in ["triptych-cpm-8m-v1", "unknown"] {
+        let rejected = run(&[Path::new("format"), Path::new(format), &system, &target]);
+        assert!(!rejected.status.success());
+        assert!(!target.exists());
+        assert_eq!(fs::read(&system).unwrap(), [0; 128]);
+    }
 }

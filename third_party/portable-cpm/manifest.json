@@ -1,6 +1,6 @@
 {
   "schema": "portable-cpm-artifacts-v1",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "targetProfile": "triptych-cpu-v0.1",
   "atom": {
     "repository": "https://github.com/jhlagado/atom",
@@ -28,9 +28,9 @@
       "origin": 60416,
       "entry": 60422,
       "bytes": 3584,
-      "sourceSha256": "3c16827a4dd044cc1a155c98871f55984f98b3043721faf406dd703ab4f8099b",
-      "preparedSourceSha256": "051ebd90817320e105bb9cc9f2504088a11cf351eb3203b834cf5f22daf79072",
-      "sha256": "c5fc4d7dd29bf8914c4735165747e3b35dca3b8999a9f70035d972ff602718fc"
+      "sourceSha256": "d809810bc63dbcf732fae129152d3f978d53ac6dfbd043103ed59af18fda4fd2",
+      "preparedSourceSha256": "6a7451529be64607f4cb460e16797dd26589a8525fa9007ffe351dd189ec7945",
+      "sha256": "02956431e3af849d99eecbffbb89a0c7a29487f91301575d1dd511127ab4d43b"
     }
   ]
 }

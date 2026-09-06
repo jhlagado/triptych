@@ -304,6 +304,13 @@ struct WasmDrive {
     writable: bool,
     flush_count: u32,
     writes_since_flush: bool,
+    // One membership bit and at most one queued index per backing sector.
+    // Both buffers are allocated at installation, so writes/flushes allocate
+    // nothing and repeated writes cannot grow the pending list.
+    dirty_sector_bits: Vec<u8>,
+    dirty_sectors: Vec<u32>,
+    #[cfg(test)]
+    checkpoint_copied_bytes: u64,
 }
 
 #[derive(Default)]
@@ -333,6 +340,10 @@ impl WasmSectorStore {
             writable,
             flush_count: 0,
             writes_since_flush: false,
+            dirty_sector_bits: vec![0; (image.len() / SECTOR_BYTES).div_ceil(8)],
+            dirty_sectors: Vec::with_capacity(image.len() / SECTOR_BYTES),
+            #[cfg(test)]
+            checkpoint_copied_bytes: 0,
         });
         Ok(())
     }
@@ -369,7 +380,8 @@ impl SectorStore for WasmSectorStore {
         output.copy_from_slice(
             drive
                 .bytes
-                .get(start..start + SECTOR_BYTES)
+                .get(start..)
+                .and_then(|bytes| bytes.get(..SECTOR_BYTES))
                 .ok_or(StorageFault)?,
         );
         Ok(())
@@ -391,16 +403,34 @@ impl SectorStore for WasmSectorStore {
             .ok_or(StorageFault)?;
         drive
             .bytes
-            .get_mut(start..start + SECTOR_BYTES)
+            .get_mut(start..)
+            .and_then(|bytes| bytes.get_mut(..SECTOR_BYTES))
             .ok_or(StorageFault)?
             .copy_from_slice(input);
+        let sector = start / SECTOR_BYTES;
+        let mask = 1 << (sector % 8);
+        if drive.dirty_sector_bits[sector / 8] & mask == 0 {
+            drive.dirty_sector_bits[sector / 8] |= mask;
+            drive.dirty_sectors.push(lba);
+        }
         drive.writes_since_flush = true;
         Ok(())
     }
 
     fn flush(&mut self, drive: u8) -> Result<(), StorageFault> {
         let drive = self.drive_mut(drive).ok_or(StorageFault)?;
-        drive.checkpoint.copy_from_slice(&drive.bytes);
+        for lba in drive.dirty_sectors.drain(..) {
+            // Only successful, bounds-checked writes enqueue sector indices.
+            let sector = lba as usize;
+            let start = sector * SECTOR_BYTES;
+            let range = start..start + SECTOR_BYTES;
+            drive.checkpoint[range.clone()].copy_from_slice(&drive.bytes[range]);
+            drive.dirty_sector_bits[sector / 8] &= !(1 << (sector % 8));
+            #[cfg(test)]
+            {
+                drive.checkpoint_copied_bytes += SECTOR_BYTES as u64;
+            }
+        }
         drive.writes_since_flush = false;
         drive.flush_count = drive.flush_count.wrapping_add(1);
         Ok(())
@@ -427,6 +457,9 @@ impl IoObserver for WasmObserver {
         }
     }
 }
+
+#[cfg(test)]
+mod checkpoint_benchmark;
 
 #[cfg(test)]
 mod tests {
@@ -495,6 +528,95 @@ mod tests {
     }
 
     #[test]
+    fn checkpoint_flush_copies_each_written_sector_once_and_reuses_tracking() {
+        let mut store = WasmSectorStore::default();
+        let original = vec![3; 17 * SECTOR_BYTES];
+        store.install(0, &original, true).unwrap();
+        let mut expected = original.clone();
+        for (lba, value) in [(16, 4), (0, 5), (7, 6), (8, 7), (16, 8)] {
+            store.write_sector(0, lba, &[value; SECTOR_BYTES]).unwrap();
+            let start = lba as usize * SECTOR_BYTES;
+            expected[start..start + SECTOR_BYTES].fill(value);
+        }
+        assert_eq!(store.drive(0).unwrap().checkpoint, original);
+        store.flush(0).unwrap();
+        assert_eq!(store.drive(0).unwrap().checkpoint, expected);
+        assert_eq!(store.drive(0).unwrap().checkpoint_copied_bytes, 4 * 512);
+
+        // An identical write still crosses a new durability boundary. The old
+        // membership bit must have been cleared so the sector is copied again.
+        store.write_sector(0, 7, &[6; SECTOR_BYTES]).unwrap();
+        assert!(store.drive(0).unwrap().writes_since_flush);
+        store.flush(0).unwrap();
+        assert_eq!(store.drive(0).unwrap().checkpoint, expected);
+        assert_eq!(store.drive(0).unwrap().checkpoint_copied_bytes, 5 * 512);
+        store.flush(0).unwrap();
+        assert_eq!(store.drive(0).unwrap().checkpoint_copied_bytes, 5 * 512);
+        assert_eq!(store.drive(0).unwrap().flush_count, 3);
+        assert!(!store.drive(0).unwrap().writes_since_flush);
+    }
+
+    #[test]
+    fn checkpoint_tracks_every_sector_when_all_are_written_and_replaced() {
+        let mut store = WasmSectorStore::default();
+        let sector_count = 33;
+        store
+            .install(0, &vec![0; sector_count * SECTOR_BYTES], true)
+            .unwrap();
+        for value in [1, 2] {
+            for lba in 0..sector_count as u32 {
+                store.write_sector(0, lba, &[value; SECTOR_BYTES]).unwrap();
+                store.write_sector(0, lba, &[value; SECTOR_BYTES]).unwrap();
+            }
+            store.flush(0).unwrap();
+            assert_eq!(
+                store.drive(0).unwrap().checkpoint,
+                vec![value; sector_count * SECTOR_BYTES]
+            );
+            assert_eq!(
+                store.drive(0).unwrap().checkpoint_copied_bytes,
+                u64::from(value) * (sector_count * SECTOR_BYTES) as u64
+            );
+        }
+        store.install(0, &[9; SECTOR_BYTES], true).unwrap();
+        store.flush(0).unwrap();
+        assert_eq!(store.drive(0).unwrap().checkpoint, [9; SECTOR_BYTES]);
+        assert_eq!(store.drive(0).unwrap().checkpoint_copied_bytes, 0);
+        assert_eq!(store.drive(0).unwrap().flush_count, 1);
+    }
+
+    #[test]
+    fn eight_mib_checkpoint_tail_and_rejected_writes_preserve_other_sectors() {
+        let mut store = WasmSectorStore::default();
+        let image_bytes = 8 * 1024 * 1024;
+        let sectors = (image_bytes / SECTOR_BYTES) as u32;
+        store.install(0, &vec![0; image_bytes], true).unwrap();
+        store
+            .write_sector(0, sectors - 1, &[7; SECTOR_BYTES])
+            .unwrap();
+        assert!(store.write_sector(0, sectors, &[9; SECTOR_BYTES]).is_err());
+        assert!(store.write_sector(0, u32::MAX, &[9; SECTOR_BYTES]).is_err());
+        assert!(store
+            .drive(0)
+            .unwrap()
+            .checkpoint
+            .iter()
+            .all(|byte| *byte == 0));
+        store.flush(0).unwrap();
+        let drive = store.drive(0).unwrap();
+        assert!(drive.checkpoint[..image_bytes - SECTOR_BYTES]
+            .iter()
+            .all(|byte| *byte == 0));
+        assert_eq!(
+            drive.checkpoint[image_bytes - SECTOR_BYTES..],
+            [7; SECTOR_BYTES]
+        );
+        assert_eq!(drive.checkpoint, drive.bytes);
+        assert_eq!(drive.checkpoint_copied_bytes, SECTOR_BYTES as u64);
+        assert!(!drive.writes_since_flush);
+    }
+
+    #[test]
     fn checkpoints_are_initialized_independent_copies_and_per_drive() {
         let mut machine = TriptychCpu::new(&[0; BOOT_ROM_BYTES]).unwrap();
         machine.install_drive(0, &[3; SECTOR_BYTES], true).unwrap();
@@ -557,6 +679,11 @@ mod tests {
         let mut machine = TriptychCpu::new(&[0; BOOT_ROM_BYTES]).unwrap();
         machine.install_drive(0, &[1; SECTOR_BYTES], true).unwrap();
         machine.install_drive(1, &[2; SECTOR_BYTES], false).unwrap();
+        for lba in [1, 0x7f_ffff, u32::MAX] {
+            let mut output = [9; SECTOR_BYTES];
+            assert!(machine.sectors.read_sector(0, lba, &mut output).is_err());
+            assert_eq!(output, [9; SECTOR_BYTES]);
+        }
         assert!(machine
             .sectors
             .write_sector(0, 1, &[3; SECTOR_BYTES])

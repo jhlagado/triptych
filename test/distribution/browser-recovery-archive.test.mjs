@@ -18,6 +18,7 @@ import {
 } from "../../tools/archive-browser-recovery.mjs";
 
 const revision = "a".repeat(40);
+const systemAsset = "system-triptych-cpm-8m-v1.bin";
 const sha256 = (bytes) => createHash("sha256").update(bytes).digest("hex");
 let root, source, archive, manifest;
 const options = () => ({
@@ -35,12 +36,16 @@ beforeEach(async () => {
   await mkdir(source);
   const disk = Buffer.alloc(256512, 0xe5);
   const bootstrap = Buffer.alloc(256, 0xc3);
+  const largeSystem = Buffer.alloc(16384);
+  disk.copy(largeSystem, 0, 0, 0x1600);
+  largeSystem.fill(0x44, 0x1600, 0x1a00);
   const assets = new Map([
     ["bootstrap.bin", bootstrap],
     ["ccp.bin", disk.subarray(0, 0x800)],
     ["bdos.bin", disk.subarray(0x800, 0x1600)],
     ["bios.bin", disk.subarray(0x1600, 0x1a00)],
     ["cpm22.img", disk],
+    [systemAsset, largeSystem],
   ]);
   for (const name of [
     "index.html",
@@ -50,6 +55,7 @@ beforeEach(async () => {
     "config.json",
     "working-disk-revisions.js",
     "disk-workspace.js",
+    "disk-profile.js",
     "tool-catalog.js",
     "tool-catalog.json",
     "source-bundle.js",
@@ -70,6 +76,24 @@ beforeEach(async () => {
       disk: { bytes: disk.length, sha256: sha256(disk) },
       bootstrap: { bytes: bootstrap.length, sha256: sha256(bootstrap) },
     },
+    diskProfiles: [
+      {
+        id: "triptych-cpm-8m-v1",
+        residentProfile: "triptych-cpu-v0.1-8m-a",
+        imageBytes: 8388608,
+        systemBytes: 16384,
+        drives: 1,
+        systemAsset,
+        bootstrapSha256: sha256(bootstrap),
+        ccpSha256: sha256(disk.subarray(0, 0x800)),
+        bdosSha256: sha256(disk.subarray(0x800, 0x1600)),
+        bios: {
+          source: "system/cpm/bios-8m.asm",
+          sourceSha256: "b".repeat(64),
+          sha256: sha256(largeSystem.subarray(0x1600, 0x1a00)),
+        },
+      },
+    ],
     assets: [...assets].map(([path, bytes]) => ({
       path,
       bytes: bytes.length,
@@ -214,6 +238,19 @@ describe("exact browser recovery archive", () => {
     await saveManifest();
     await expect(archiveBrowserRecovery(options())).rejects.toThrow(
       /ccp.bin differs/,
+    );
+    expect(await readdir(root)).toEqual(["source"]);
+  });
+
+  it("rejects a nonzero large-system tail before reserving an archive", async () => {
+    const bytes = await readFile(join(source, systemAsset));
+    bytes[0x1a00] = 1;
+    await writeFile(join(source, systemAsset), bytes);
+    manifest.assets.find((asset) => asset.path === systemAsset).sha256 =
+      sha256(bytes);
+    await saveManifest();
+    await expect(archiveBrowserRecovery(options())).rejects.toThrow(
+      /large system reserved tail must be zero/,
     );
     expect(await readdir(root)).toEqual(["source"]);
   });

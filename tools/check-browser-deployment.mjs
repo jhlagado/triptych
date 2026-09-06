@@ -5,6 +5,8 @@ import { resolve, join } from "node:path";
 
 const directory = resolve(process.argv[2] ?? "dist/wasm-browser");
 const expectedRevision = process.argv[3];
+const sha256 = (bytes) => createHash("sha256").update(bytes).digest("hex");
+const systemAsset = "system-triptych-cpm-8m-v1.bin";
 const manifest = JSON.parse(
   await readFile(join(directory, "deployment-manifest.json"), "utf8"),
 );
@@ -57,6 +59,7 @@ for (const name of [
   "working-disk-store.js",
   "working-disk-revisions.js",
   "disk-workspace.js",
+  "disk-profile.js",
   "tool-catalog.js",
   "tool-catalog.json",
   "source-bundle.js",
@@ -73,6 +76,7 @@ for (const name of [
   "bdos.bin",
   "bios.bin",
   "cpm22.img",
+  systemAsset,
 ]) {
   assert.ok(names.has(name), `missing required asset ${name}`);
 }
@@ -99,6 +103,91 @@ assert.equal(boot.length, manifest.distribution.bootstrap.bytes);
 assert.equal(
   createHash("sha256").update(boot).digest("hex"),
   manifest.distribution.bootstrap.sha256,
+);
+// This verifier targets new builds. Qualify pre-profile archived deployments
+// with their release's verification contract, not inferred new metadata.
+assert.ok(
+  Array.isArray(manifest.diskProfiles) && manifest.diskProfiles.length === 1,
+  "one supported disk profile is required",
+);
+const profile = manifest.diskProfiles[0];
+assert.ok(profile && typeof profile === "object", "disk profile object");
+assert.deepEqual(
+  Object.keys(profile).sort(),
+  [
+    "id",
+    "residentProfile",
+    "imageBytes",
+    "systemBytes",
+    "drives",
+    "systemAsset",
+    "bootstrapSha256",
+    "ccpSha256",
+    "bdosSha256",
+    "bios",
+  ].sort(),
+  "disk profile fields",
+);
+for (const [field, value] of Object.entries({
+  id: "triptych-cpm-8m-v1",
+  residentProfile: "triptych-cpu-v0.1-8m-a",
+  imageBytes: 8388608,
+  systemBytes: 16384,
+  drives: 1,
+  systemAsset,
+})) {
+  assert.equal(profile[field], value, `disk profile ${field}`);
+}
+assert.ok(
+  profile.bios && typeof profile.bios === "object",
+  "disk profile BIOS",
+);
+assert.deepEqual(
+  Object.keys(profile.bios).sort(),
+  ["source", "sourceSha256", "sha256"].sort(),
+  "disk profile BIOS fields",
+);
+assert.equal(
+  profile.bios.source,
+  "system/cpm/bios-8m.asm",
+  "disk profile BIOS source",
+);
+for (const [field, value] of Object.entries({
+  bootstrapSha256: profile.bootstrapSha256,
+  ccpSha256: profile.ccpSha256,
+  bdosSha256: profile.bdosSha256,
+  biosSha256: profile.bios.sha256,
+  biosSourceSha256: profile.bios.sourceSha256,
+})) {
+  assert.match(value, /^[0-9a-f]{64}$/, `disk profile ${field} syntax`);
+}
+assert.equal(
+  profile.bootstrapSha256,
+  sha256(boot),
+  "disk profile bootstrap identity",
+);
+const system = await readFile(join(directory, systemAsset));
+assert.equal(system.length, 16384, "large system asset length");
+for (const [file, first, end, digest] of [
+  ["ccp.bin", 0, 0x800, profile.ccpSha256],
+  ["bdos.bin", 0x800, 0x1600, profile.bdosSha256],
+]) {
+  const resident = await readFile(join(directory, file));
+  assert.equal(digest, sha256(resident), `disk profile ${file} identity`);
+  assert.deepEqual(
+    system.subarray(first, end),
+    resident,
+    `large system ${file} slot`,
+  );
+}
+assert.equal(
+  sha256(system.subarray(0x1600, 0x1a00)),
+  profile.bios.sha256,
+  "large system BIOS identity",
+);
+assert.ok(
+  system.subarray(0x1a00).every((byte) => byte === 0),
+  "large system reserved tail must be zero",
 );
 console.log(
   JSON.stringify({

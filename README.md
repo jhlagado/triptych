@@ -16,10 +16,12 @@ cooperating ESP32-family modules:
 The name is provisional. It describes the three-part architecture without
 fixing the eventual product name in source identifiers or electrical designs.
 
-The current goal is the
-[browser development workspace](docs/plans/browser-development-workspace.md):
-individual-file transfers, selected tool updates with recovery backups, and
-mobile terminal improvements. It follows the
+The current goal is
+[8 MiB disk support](docs/plans/eight-mib-disks.md), starting with one drive,
+safe migration and capacity tests, then additional drives. The completed
+[browser development workspace](docs/plans/browser-development-workspace.md)
+provides individual-file transfers, selected tool updates with recovery backups,
+and mobile terminal improvements. Both follow the
 [WASM-first software stability roadmap](docs/plans/software-stability-roadmap.md)
 and preserves its independent component releases and host boundaries.
 ESP32 physical qualification follows separately when hardware is available.
@@ -167,8 +169,9 @@ defines readable ASCII and arbitrary byte inputs, terminal snapshots, and
 cross-session disk persistence.
 
 The same toolchain builds an interactive browser terminal from the pinned
-fresh distribution. A restored or user-selected disk receives current resident
-system records while its applications and user files are preserved:
+fresh distribution. Normal reopening preserves saved disk bytes exactly.
+Adapting an external image to the current resident system is a separate,
+explicit operation with a recovery backup:
 
 ```sh
 npm run run:wasm-browser

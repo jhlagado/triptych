@@ -1,7 +1,7 @@
 //! Copy-only user-0 filesystem access. This boundary never changes a live CPU
 //! drive or publishes browser storage; the host owns that guarded transaction.
 
-use triptych_cpm_image::{CpmImage, CpmName, DirectoryFile, FileImport, FreeSpace};
+use triptych_cpm_image::{CpmGeometry, CpmImage, CpmName, DirectoryFile, FileImport, FreeSpace};
 use wasm_bindgen::prelude::*;
 
 struct StagedImport {
@@ -52,7 +52,7 @@ impl DiskFiles {
         if bytes.len() > self.source.as_bytes().len() {
             return Err("CP/M disk: file exceeds disk capacity".into());
         }
-        if self.imports.len() >= triptych_cpm_image::DIRECTORY_ENTRIES {
+        if self.imports.len() >= self.source.geometry().directory_entries() {
             return Err("CP/M disk: batch has more files than directory entries".into());
         }
         if self
@@ -100,13 +100,23 @@ impl DiskFiles {
             .map(|file| file.bytes)
             .ok_or_else(|| "CP/M disk: file disappeared".into())
     }
+
+    fn migrate_to_eight_mib(&self, system_area: &[u8]) -> Result<Vec<u8>, String> {
+        if !self.imports.is_empty() {
+            return Err("Clear staged imports before migrating the disk.".into());
+        }
+        self.source
+            .migrate_to(CpmGeometry::Triptych8M, system_area)
+            .map(CpmImage::into_bytes)
+            .map_err(|error| error.to_string())
+    }
 }
 
 fn js_error(message: String) -> JsError {
     JsError::new(&message)
 }
 
-/// Validated IBM-3740 source image plus a private, all-or-none import batch.
+/// Validated supported source image plus a private, all-or-none import batch.
 /// Metadata and reads always describe the original image, not staged imports.
 /// CP/M files are record-rounded; downloads retain their 128-byte padding.
 #[wasm_bindgen]
@@ -127,6 +137,19 @@ impl CpmDisk {
         CpmName::parse(name)
             .map(|name| name.canonical().to_owned())
             .map_err(|e| JsError::new(&e.to_string()))
+    }
+
+    pub fn geometry_id(&self) -> String {
+        self.disk.source.geometry().id().to_owned()
+    }
+
+    /// Return a private 8 MiB candidate with explicitly supplied system bytes.
+    /// Migration copies the source, not staged imports. The browser must still
+    /// obtain consent, preserve a backup and commit through its coordinator.
+    pub fn migrate_to_eight_mib(&self, system_area: &[u8]) -> Result<Vec<u8>, JsError> {
+        self.disk
+            .migrate_to_eight_mib(system_area)
+            .map_err(js_error)
     }
 
     pub fn file_names(&self) -> Vec<String> {
@@ -225,6 +248,44 @@ mod tests {
         let candidate = DiskFiles::new(&expected).unwrap();
         assert_eq!(candidate.file("hello.txt").unwrap().records, 2);
         assert_eq!(&candidate.read("hello.txt").unwrap()[129..], &[0x1a; 127]);
+    }
+
+    #[test]
+    fn large_format_stages_more_than_legacy_directory_capacity() {
+        let image = CpmImage::blank(CpmGeometry::Triptych8M);
+        let mut disk = DiskFiles::new(image.as_bytes()).unwrap();
+        for number in 0..65 {
+            disk.add_import(&format!("F{number:03}.NU"), &[number as u8])
+                .unwrap();
+        }
+        let candidate = DiskFiles::new(&disk.candidate().unwrap()).unwrap();
+        assert_eq!(candidate.files.len(), 65);
+        assert_eq!(candidate.source.geometry(), CpmGeometry::Triptych8M);
+        assert_eq!(candidate.read("F064.NU").unwrap()[0], 64);
+        assert_eq!(disk.source.as_bytes(), image.as_bytes());
+    }
+
+    #[test]
+    fn migration_is_explicit_immutable_and_rejects_a_pending_batch() {
+        let image = CpmImage::from_bytes(blank())
+            .unwrap()
+            .install("INPUT.NU", b"sub main()\r\nend\r\n")
+            .unwrap();
+        let mut disk = DiskFiles::new(image.as_bytes()).unwrap();
+        let system = vec![0x52; CpmGeometry::Triptych8M.system_bytes()];
+        assert!(disk.migrate_to_eight_mib(&system[..128]).is_err());
+        let result = disk.migrate_to_eight_mib(&system).unwrap();
+        let migrated = DiskFiles::new(&result).unwrap();
+        assert_eq!(
+            migrated.read("INPUT.NU").unwrap(),
+            disk.read("INPUT.NU").unwrap()
+        );
+        assert_eq!(&result[..system.len()], &system);
+        assert_eq!(disk.source.as_bytes(), image.as_bytes());
+        disk.add_import("OTHER.NU", b"pending").unwrap();
+        assert!(disk.migrate_to_eight_mib(&system).is_err());
+        assert_eq!(disk.imports.len(), 1);
+        assert_eq!(disk.source.as_bytes(), image.as_bytes());
     }
 
     #[test]

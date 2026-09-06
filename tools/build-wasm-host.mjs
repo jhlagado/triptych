@@ -14,6 +14,10 @@ import { join, resolve } from "node:path";
 
 import { buildCpmDistribution } from "./lib/cpm-distribution.mjs";
 import { buildBrowserToolCatalog } from "./lib/browser-tool-catalog.mjs";
+import {
+  buildLargeDiskSystem,
+  LARGE_DISK_SYSTEM_ASSET,
+} from "./lib/large-disk-system.mjs";
 
 const repositoryRoot = resolve(import.meta.dirname, "..");
 const browser = process.argv.includes("--browser");
@@ -97,6 +101,10 @@ try {
       allowDirty: !process.argv.includes("--release"),
     });
     const systemDisk = distribution.disk;
+    const largeSystem = await buildLargeDiskSystem(
+      repositoryRoot,
+      distribution,
+    );
     const tools = buildBrowserToolCatalog(distribution.manifest, systemDisk);
     const bootRom = distribution.bootstrap;
     const ccp = systemDisk.slice(0, 0x800);
@@ -110,6 +118,7 @@ try {
       copyFile(join(sourceDirectory, "app.js"), join(stagedOutput, "app.js")),
       ...[
         "disk-workspace.js",
+        "disk-profile.js",
         "working-disk-revisions.js",
         "tool-catalog.js",
         "source-bundle.js",
@@ -132,6 +141,7 @@ try {
       writeFile(join(stagedOutput, "ccp.bin"), ccp),
       writeFile(join(stagedOutput, "bdos.bin"), bdos),
       writeFile(join(stagedOutput, "bios.bin"), bios),
+      writeFile(join(stagedOutput, LARGE_DISK_SYSTEM_ASSET), largeSystem.bytes),
       writeFile(join(stagedOutput, "cpm22.img"), systemDisk),
       writeFile(
         join(stagedOutput, "tool-catalog.json"),
@@ -176,6 +186,7 @@ try {
         {
           schema: "triptych-browser-deployment-v1",
           distribution: distribution.manifest,
+          diskProfiles: [largeSystem.profile],
           host: {
             wasmBindgen: version,
             cargoLockSha256: createHash("sha256")

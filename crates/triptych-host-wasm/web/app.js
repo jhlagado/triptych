@@ -10,6 +10,7 @@ import {
 import { acquireDiskWriter, createDiskWorkspace } from "./disk-workspace.js";
 import { openRevisionedDiskStore } from "./working-disk-revisions.js";
 import { prepareSourceBundle, mapSourceBundleOffset } from "./source-bundle.js";
+import { fetchLargeDiskSystem } from "./disk-profile.js";
 import {
   validateToolCatalog,
   identifyInstalledTools,
@@ -58,6 +59,8 @@ let managementAttempt = 0;
 let diagnosticAttempt = 0;
 let catalog;
 let deployment;
+let displayedGeometry;
+let migrationPending = false;
 const filesDialog = document.querySelector("#files-dialog");
 const filesButton = document.querySelector("#files");
 const filesStatus = document.querySelector("#files-status");
@@ -75,6 +78,7 @@ const recoveryDownload = document.querySelector("#download-recovery");
 const retrySave = document.querySelector("#retry-save");
 const prepareBuildButton = document.querySelector("#prepare-build");
 const starterButton = document.querySelector("#stage-adventure");
+const migrateButton = document.querySelector("#migrate-large-disk");
 
 function message(error) {
   return error instanceof Error ? error.message : String(error);
@@ -95,6 +99,12 @@ function controls() {
   diskInput.disabled = !managing;
   prepareBuildButton.disabled = !managing;
   starterButton.disabled = !managing || !deployment;
+  migrateButton.disabled =
+    !managing ||
+    !!stagedDisk ||
+    migrationPending ||
+    displayedGeometry !== "ibm3740" ||
+    !deployment?.diskProfiles;
   commitButton.disabled =
     !managementToken ||
     !stagedDisk ||
@@ -276,9 +286,17 @@ function runMachine(generation) {
   requestAnimationFrame(() => runMachine(generation));
 }
 
-function adaptedDisk(source) {
-  if (source.length < BIOS_SYSTEM_OFFSET + bios.length) {
-    throw new Error("The selected image has no complete CP/M BIOS slot.");
+async function adaptedDisk(source) {
+  if (source.length === 8388608) {
+    const system = await largeDiskSystem();
+    const disk = source.slice();
+    disk.set(system.subarray(0, 0x1a00));
+    return disk;
+  }
+  if (![256256, 256512].includes(source.length)) {
+    throw new Error(
+      "System adaptation requires a supported legacy or 8 MiB disk geometry. Leave adaptation unchecked for exact recovery.",
+    );
   }
   const length =
     Math.ceil(source.length / BACKING_SECTOR_BYTES) * BACKING_SECTOR_BYTES;
@@ -288,6 +306,16 @@ function adaptedDisk(source) {
   disk.set(bdos, BDOS_SYSTEM_OFFSET);
   disk.set(bios, BIOS_SYSTEM_OFFSET);
   return disk;
+}
+
+function largeDiskSystem() {
+  return fetchLargeDiskSystem({
+    deployment,
+    bootstrap: bootRom,
+    ccp,
+    bdos,
+    baseUrl: document.baseURI,
+  });
 }
 
 function prepareMachine({ bytes, name }) {
@@ -498,6 +526,7 @@ function stagingRequest() {
 
 async function renderFiles() {
   const generation = ++panelGeneration;
+  displayedGeometry = undefined;
   fileList.replaceChildren();
   backupList.replaceChildren();
   toolsList.replaceChildren();
@@ -510,6 +539,7 @@ async function renderFiles() {
     let disk;
     try {
       disk = new CpmDisk(snapshot.bytes);
+      displayedGeometry = disk.geometry_id();
       const names = disk.file_names();
       for (const name of names) {
         const row = document.createElement("li");
@@ -519,7 +549,7 @@ async function renderFiles() {
         fileList.append(row);
       }
       document.querySelector("#disk-summary").textContent +=
-        ` Free: ${disk.free_bytes()} bytes, ${disk.free_directory_entries()} directory entries.`;
+        ` Geometry: ${displayedGeometry === "ibm3740" ? "legacy IBM 3740" : "8 MiB"}. Free: ${disk.free_bytes()} bytes, ${disk.free_directory_entries()} directory entries.`;
       if (catalog) {
         const identities = await identifyInstalledTools(
           catalog,
@@ -737,7 +767,8 @@ diskInput.addEventListener("change", async () => {
         )
       )
         return;
-      bytes = adaptedDisk(bytes);
+      bytes = await adaptedDisk(bytes);
+      request.check();
     }
     // Geometry and directory checks apply to Files, but exact whole-disk
     // recovery may legitimately contain an unsupported guest filesystem.
@@ -750,6 +781,47 @@ diskInput.addEventListener("change", async () => {
     panelError(error);
   } finally {
     diskInput.value = "";
+  }
+});
+
+migrateButton.addEventListener("click", async () => {
+  let disk;
+  try {
+    const request = stagingRequest();
+    if (stagedDisk)
+      throw new Error(
+        "Apply or cancel pending changes before upgrading the disk.",
+      );
+    disk = new CpmDisk(currentToken(request.token).bytes);
+    if (disk.geometry_id() !== "ibm3740")
+      throw new Error("Only a legacy disk can be upgraded to 8 MiB.");
+    if (
+      !confirm(
+        "Stage an 8 MiB upgrade of drive A? Files in all user areas are preserved; this release's CCP, BDOS and large-disk BIOS replace the system area. Apply and restart will preserve the complete previous disk as a backup.",
+      )
+    )
+      return;
+    migrationPending = true;
+    controls();
+    const system = await largeDiskSystem();
+    request.check();
+    if (stagedDisk)
+      throw new Error("Pending changes must be applied or cancelled first.");
+    const value = {
+      name: currentToken(request.token).name,
+      bytes: disk.migrate_to_eight_mib(system),
+    };
+    request.check();
+    workspace.stage(request.token, value);
+    stagedDisk = value;
+    filesStatus.textContent =
+      "8 MiB upgrade staged. Apply and restart to publish with an exact backup of the previous disk. Nothing has changed on disk yet.";
+  } catch (error) {
+    panelError(error);
+  } finally {
+    disk?.free();
+    migrationPending = false;
+    controls();
   }
 });
 
@@ -1056,6 +1128,8 @@ try {
   } catch (error) {
     catalog = undefined;
     console.warn("Tool updates unavailable", error);
+  } finally {
+    controls();
   }
 } catch (error) {
   setStatus(

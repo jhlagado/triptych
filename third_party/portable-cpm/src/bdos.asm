@@ -1012,6 +1012,7 @@ ZEROLOOP:
 
 ; Position the BIOS at SEQREC within allocation block DE.
 POSREC:
+        CALL    CHKBLK
         EX      DE,HL
         LD      DE,(DPBPTR)
         INC     DE
@@ -1842,6 +1843,7 @@ BITPTR:
         LD      A,D
         OR      E
         RET     Z
+        CALL    CHKBLK
         LD      A,E
         AND     7
         LD      B,A
@@ -1867,6 +1869,18 @@ SHIFBIT:
 
 BITDONE:
         OR      A
+        RET
+
+; Reject corrupt allocation references before vector indexing or the 16-bit
+; block-to-record shift. DE is the block; preserve it and HL/BC. IX identifies
+; the current DPB on return. Invalid references follow the fatal I/O path.
+CHKBLK:
+        LD      IX,(DPBPTR)
+        LD      A,(IX+5)
+        CP      E
+        LD      A,(IX+6)
+        SBC     A,D
+        JP      C,BADSECT
         RET
 
 DRVMASK:
