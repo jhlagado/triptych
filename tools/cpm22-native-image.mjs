@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import assert from "node:assert/strict";
-import { readFile, rename, rm, writeFile } from "node:fs/promises";
+import { readFile, stat, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 
 import { assembleAtomBinary as assemble } from "./lib/assemble-atom.mjs";
@@ -53,11 +53,12 @@ export async function prepareNativeCpm22Image({
       "distribution.manifest.json",
     );
     await Promise.all([
-      writeFile(bootRomPath, distribution.bootstrap),
-      writeFile(diskPath, distribution.disk),
+      writeFile(bootRomPath, distribution.bootstrap, { flag: "wx" }),
+      writeFile(diskPath, distribution.disk, { flag: "wx" }),
       writeFile(
         distributionManifestPath,
         `${JSON.stringify(distribution.manifest, null, 2)}\n`,
+        { flag: "wx" },
       ),
     ]);
     return {
@@ -93,8 +94,8 @@ export async function prepareNativeCpm22Image({
   const bootRomPath = join(outputDirectory, "bootstrap.bin");
   const diskPath = join(outputDirectory, "cpm22.img");
   await Promise.all([
-    writeFile(bootRomPath, bootRom),
-    writeFile(diskPath, paddedDisk),
+    writeFile(bootRomPath, bootRom, { flag: "wx" }),
+    writeFile(diskPath, paddedDisk, { flag: "wx" }),
   ]);
 
   return {
@@ -106,58 +107,114 @@ export async function prepareNativeCpm22Image({
 }
 
 /**
- * Installs the pinned portable CCP/BDOS and local Triptych BIOS in an existing working
- * disk.
- * The disk is published by one same-directory rename, so an assembly or write
- * failure cannot leave a partly patched image behind.
+ * Reopens the exact saved bytes. Bootstrap selection is a caller assertion about
+ * resident layout, not an identification or validation of the saved operating
+ * system. This path never installs resident releases or adapts the working disk.
  */
 export async function prepareNativeCpm22WorkingImage({
   repositoryRoot,
   workingImagePath,
+  workingImagePathB,
   outputDirectory,
-  systemCcp = "triptych",
+  bootstrapProfile = "triptych-cpu-v0.1",
+  systemCcp,
 }) {
-  const resolvedDiskPath = resolve(workingImagePath);
-  const [{ bootRom, ccp, bdos, bios }, sourceDisk] = await Promise.all([
-    assembleTriptychCpuFirmware(repositoryRoot),
-    readFile(resolvedDiskPath),
-  ]);
-
-  if (sourceDisk.length < BIOS_SYSTEM_OFFSET + BIOS_BYTES) {
+  if (systemCcp !== undefined) {
     throw new Error(
-      `CP/M image is ${sourceDisk.length} bytes and has no complete BIOS slot`,
+      "persistent reopening preserves the saved CCP; CCP selection requires an explicit disposable source copy",
     );
   }
-  if (sourceDisk.length % BACKING_SECTOR_BYTES !== 0) {
+  if (
+    workingImagePathB !== undefined &&
+    bootstrapProfile !== "triptych-cpu-v0.1-8m-ab"
+  ) {
     throw new Error(
-      `persistent CP/M working image must contain complete ${BACKING_SECTOR_BYTES}-byte backing sectors`,
+      "drive B requires the explicit triptych-cpu-v0.1-8m-ab bootstrap profile",
     );
   }
-
-  const workingDisk = Uint8Array.from(sourceDisk);
-  if (systemCcp === "triptych") {
-    workingDisk.set(ccp, 0);
-  } else if (systemCcp !== "oracle") {
-    throw new Error(`unsupported system CCP ${systemCcp}`);
+  const profiles = {
+    "triptych-cpu-v0.1": { source: "bootstrap.asm", imageBytes: 256512 },
+    "triptych-cpu-v0.1-8m-a": { source: "bootstrap.asm", imageBytes: 8388608 },
+    "triptych-cpu-v0.1-8m-ab": {
+      source: "bootstrap-8m-ab.asm",
+      imageBytes: 8388608,
+    },
+  };
+  if (!Object.hasOwn(profiles, bootstrapProfile)) {
+    throw new Error(
+      `unsupported persistent bootstrap profile ${bootstrapProfile}`,
+    );
   }
-  workingDisk.set(bdos, BDOS_SYSTEM_OFFSET);
-  workingDisk.set(bios, BIOS_SYSTEM_OFFSET);
-  const temporaryDiskPath = `${resolvedDiskPath}.triptych-system-${process.pid}.tmp`;
-  try {
-    await writeFile(temporaryDiskPath, workingDisk, { flag: "wx" });
-    await rename(temporaryDiskPath, resolvedDiskPath);
-  } catch (error) {
-    await rm(temporaryDiskPath, { force: true });
-    throw error;
+  const profile = profiles[bootstrapProfile];
+  const selectedPaths =
+    workingImagePathB === undefined
+      ? [workingImagePath]
+      : [workingImagePath, workingImagePathB];
+  if (
+    selectedPaths.some((path) => typeof path !== "string" || path.length === 0)
+  ) {
+    throw new Error("persistent drives require nonempty image paths");
   }
-
+  const diskPaths = selectedPaths.map((path) => resolve(path));
+  const identities = await Promise.all(diskPaths.map((path) => stat(path)));
+  if (
+    identities.length === 2 &&
+    identities[0].dev === identities[1].dev &&
+    identities[0].ino === identities[1].ino
+  ) {
+    throw new Error(
+      "drives A and B must be distinct images, not aliases for the same file",
+    );
+  }
+  for (const [i, identity] of identities.entries()) {
+    const letter = i === 0 ? "A" : "B";
+    if (!identity.isFile())
+      throw new Error(`drive ${letter} requires a regular image file`);
+    if (identity.size % BACKING_SECTOR_BYTES !== 0)
+      throw new Error(
+        `drive ${letter}: persistent CP/M working image must contain complete ${BACKING_SECTOR_BYTES}-byte backing sectors`,
+      );
+    if (identity.size !== profile.imageBytes)
+      throw new Error(
+        `drive ${letter}: persistent image length ${identity.size} does not match selected bootstrap profile ${bootstrapProfile}; select the known saved resident profile explicitly`,
+      );
+  }
+  const drives = await Promise.all(
+    diskPaths.map(async (path, i) => {
+      const bytes = await readFile(path);
+      assert.equal(
+        bytes.length,
+        profile.imageBytes,
+        "saved image changed during preparation",
+      );
+      return { letter: i === 0 ? "A" : "B", path, sha256: sha256(bytes) };
+    }),
+  );
+  const bootRom = await assemble(
+    join(repositoryRoot, "roms/cpu", profile.source),
+  );
+  assert.equal(
+    bootRom.length,
+    BOOT_ROM_BYTES,
+    "persistent bootstrap byte count",
+  );
   const bootRomPath = join(outputDirectory, "bootstrap.bin");
-  await writeFile(bootRomPath, bootRom);
+  for (const path of diskPaths)
+    assert.notEqual(
+      resolve(bootRomPath),
+      path,
+      "bootstrap output must not replace the working disk",
+    );
+  // Exclusive creation prevents an existing link from aliasing the saved disk.
+  await writeFile(bootRomPath, bootRom, { flag: "wx" });
   return {
     bootRomPath,
-    diskPath: resolvedDiskPath,
-    sourceImageSha256: sha256(sourceDisk),
-    workingImageSha256: sha256(workingDisk),
+    diskPath: diskPaths[0],
+    diskPaths,
+    drives,
+    sourceImageSha256: drives[0].sha256,
+    workingImageSha256: drives[0].sha256,
+    bootstrapProfile,
   };
 }
 

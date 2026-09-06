@@ -16,10 +16,12 @@ cooperating ESP32-family modules:
 The name is provisional. It describes the three-part architecture without
 fixing the eventual product name in source identifiers or electrical designs.
 
-The current goal is the
-[browser development workspace](docs/plans/browser-development-workspace.md):
-individual-file transfers, selected tool updates with recovery backups, and
-mobile terminal improvements. It follows the
+The current goal is
+[8 MiB disk support](docs/plans/eight-mib-disks.md), starting with one drive,
+safe migration and capacity tests, then additional drives. The completed
+[browser development workspace](docs/plans/browser-development-workspace.md)
+provides individual-file transfers, selected tool updates with recovery backups,
+and mobile terminal improvements. Both follow the
 [WASM-first software stability roadmap](docs/plans/software-stability-roadmap.md)
 and preserves its independent component releases and host boundaries.
 ESP32 physical qualification follows separately when hardware is available.
@@ -102,12 +104,11 @@ editor, assembler, and compiler. Its complete acceptance state is tracked by the
 [Atom CCP roadmap](docs/plans/atom-ccp-roadmap.md) and
 [CCP contract](docs/specifications/ccp-v0.1.md).
 
-For continuing development, create a persistent native-host working disk and
-address its contents by CP/M filename:
+For continuing development, create a fresh persistent disk from the pinned
+machine distribution, then address its contents by CP/M filename:
 
 ```sh
-cargo run -p triptych-cpm-image -- create \
-  /path/to/cpm22.img /path/to/triptych-working.img
+node tools/create-cpm-working-image.mjs /path/to/triptych-working.img
 cargo run -p triptych-cpm-image -- list \
   /path/to/triptych-working.img
 cargo run -p triptych-cpm-image -- import \
@@ -116,8 +117,11 @@ cargo run -p triptych-cpm-image -- export --text \
   /path/to/triptych-working.img HELLO.ASM /path/to/exported-hello.asm
 ```
 
-`create` refuses to overwrite an existing destination and pads the established
-256,256-byte CP/M image to the native host's 512-byte sector boundary. `import`
+The creation command publishes a new destination only; an existing file or
+symlink is never replaced. It prints the distribution manifest and requires a
+clean checkout unless `--allow-dirty` is explicitly selected for development.
+The separate `triptych-cpm-image create` command copies and sector-pads an
+existing image; it does not install machine-compatible system records. `import`
 validates the complete directory and allocation map before atomically replacing
 the image. Binary exports contain complete 128-byte CP/M records; `--text`
 removes trailing CP/M `$1A` text EOF bytes. Add `--force` to `export` only when
@@ -130,11 +134,33 @@ TRIPTYCH_CPM22_WORK_DISK=/path/to/triptych-working.img \
 npm run run:cpm22-native
 ```
 
-The launcher installs the pinned CCP/BDOS and local Triptych BIOS atomically
-before boot. Guest writes that reach the disk controller's flush boundary
-remain in the named working image across host processes. Startup preserves
-application and user-file records; it does not upgrade ATOM, NUC or Edit in a
+The launcher preserves all saved bytes, including CCP, BDOS and BIOS. Guest
+writes that reach the disk controller's flush boundary remain in the named
+working image across host processes. Reopening never upgrades system or tool
+records. The selected bootstrap must match the saved resident layout; disk
+capacity alone cannot establish that compatibility.
+
+An existing large image requires an explicit bootstrap profile:
+`TRIPTYCH_CPM_BOOTSTRAP_PROFILE=triptych-cpu-v0.1-8m-a` for the E400 one-drive
+layout, or `triptych-cpu-v0.1-8m-ab` for the E300 A/B layout. Set it alongside
+`TRIPTYCH_CPM22_WORK_DISK`. This selects the bootstrap only; it does not migrate
+the image or replace residents. The default profile remains the small E400
+machine. `TRIPTYCH_CPM_CCP` and `TRIPTYCH_CPM22_IMAGE` cannot be combined with a
 saved working disk.
+
+For two distinct saved eight MiB images using the A/B resident layout:
+
+```sh
+TRIPTYCH_CPM22_WORK_DISK=/path/to/drive-a.img \
+TRIPTYCH_CPM22_WORK_DISK_B=/path/to/drive-b.img \
+TRIPTYCH_CPM_BOOTSTRAP_PROFILE=triptych-cpu-v0.1-8m-ab \
+npm run run:cpm22-native
+```
+
+The launcher rejects incorrect capacities and paths that identify the same file,
+including hard links and symbolic links. These checks run before launch; they
+do not lock images against another process changing them. Use `B:` at the CP/M
+prompt to select B, or an explicit filename such as `TYPE B:README.TXT`.
 
 The Stage 5 WebAssembly proof additionally needs the exactly matching
 `wasm-bindgen` 0.2.127 command-line tool:
@@ -167,8 +193,9 @@ defines readable ASCII and arbitrary byte inputs, terminal snapshots, and
 cross-session disk persistence.
 
 The same toolchain builds an interactive browser terminal from the pinned
-fresh distribution. A restored or user-selected disk receives current resident
-system records while its applications and user files are preserved:
+fresh distribution. Normal reopening preserves saved disk bytes exactly.
+Adapting an external image to the current resident system is a separate,
+explicit operation with a recovery backup:
 
 ```sh
 npm run run:wasm-browser

@@ -212,6 +212,12 @@ BIOS at `$FA00..$FDFF`. Conventional entries remain `$0000` for warm boot,
 `$0005` for BDOS calls through the public `$EC06` entry, and `$0100` for `.COM`
 programs.
 
+The optional one-drive 8 MiB profile retains those load addresses and reserves
+`$FE00..$FFFE` for a 511-byte BIOS allocation vector initialized at disk login.
+`$FFFF` is outside that vector. The disk format and its qualification status are
+defined in [CP/M disk profiles](cpm-disk-profiles-v1.md). This optional profile
+does not change the default legacy disk or silently adapt saved media.
+
 The boot ROM reads 52 system records from drive 0 into `$E400`, removes the ROM
 overlay, and enters the BIOS cold-boot routine. Warm boot reloads the CCP and
 BDOS while retaining the resident BIOS. The BIOS alone converts CP/M track and

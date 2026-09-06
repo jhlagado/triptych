@@ -4,7 +4,7 @@
   "description": "Freeze successful REN, ERA, and SAVE behavior at the public console and disk boundaries",
   "systemCcp": "oracle",
   "systemBdos": "triptych",
-  "expectedInitialDriveSha256": "80ad44feca933feff04556f6df6dda61be1960af5ff378463b0aa8e7576f9c69",
+  "expectedInitialDriveSha256": "3fec1f2b6ad65f03a6776a36f30bdbcbe04fce55738c1435aff82eff59e7b940",
   "expectedFinalFiles": [
     {
       "name": "PAGE.COM",
@@ -66,7 +66,7 @@
         "wrapPending": false,
         "bellCount": 0
       },
-      "expectedDriveSha256": "f8e9005e1dad2f3de15ce2adae540f546c29b61adb2c21bbf8d7de1f32ab4ba3"
+      "expectedDriveSha256": "78c08ca4085e8b2ba2f881cb89e70710f067063bda6afcbbaf572311562138bc"
     }
   ]
 }

@@ -19,7 +19,7 @@
       ]
     }
   ],
-  "expectedInitialDriveSha256": "87e504dfb161812c89c21c01b18a2b7235e26b57d503a6d0db5117d7f659a4b5",
+  "expectedInitialDriveSha256": "150fe251ced3ea66d098d29091a79d72eee3b50e40eed0d4fc98535807c1e2cb",
   "sessions": [
     {
       "id": "oversized-and-recovery",
@@ -49,7 +49,7 @@
         "wrapPending": false,
         "bellCount": 0
       },
-      "expectedDriveSha256": "87e504dfb161812c89c21c01b18a2b7235e26b57d503a6d0db5117d7f659a4b5"
+      "expectedDriveSha256": "150fe251ced3ea66d098d29091a79d72eee3b50e40eed0d4fc98535807c1e2cb"
     }
   ]
 }
