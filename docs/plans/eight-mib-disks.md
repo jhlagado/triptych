@@ -155,6 +155,14 @@ New-revision Linux CI precedes hosted acceptance. The browser quick-start and
 recovery instructions now explain selected drives and complete-set archives;
 their pending-release notices need verified hosted identities before handoff.
 
+The updated hosted verifier now passes six disposable profiles against the
+earlier exact clean CI build in a local preview. Both retained-deployment tests
+pass, including archive-only A/B reopening and exact head/backup downloads at
+the same origin. These are recorded in the browser report; they do not establish
+that the new release is live. Finish final-revision Linux CI, retain the release
+archive permanently, publish the qualified candidate and verify actual hosted
+assets and workflows before completing this goal.
+
 The earlier one-drive foundation pinned Portable CP/M 0.1.2 and passed
 336 TypeScript tests, 59 browser tests, native/WASM application workflows and
 Rust checks. Its controller proof executes 43 commands across two 8 MiB

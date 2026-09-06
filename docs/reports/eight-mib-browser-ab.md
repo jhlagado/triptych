@@ -158,3 +158,44 @@ The current integration still requires remaining tool-arena qualification,
 Linux CI for the new revision, and same-origin hosted recovery qualification.
 Source-level queue bounds are not a browser peak-memory
 measurement. No physical ESP32 result follows from these host tests.
+
+## Subsequent recovery qualification
+
+The [tool-arena checkpoint](eight-mib-tool-arenas.md) passed the complete local
+check and was committed as `3502bed`. The earlier browser checkpoint `729f0d4`
+also passed clean Linux browser CI, including 90 final-release browser cases
+with no failures, skipped cases or retries reported as flaky. This is CI
+qualification, not deployment to the public website.
+
+The downloaded recovery artifact from
+[run 34058900462](https://github.com/jhlagado/triptych/actions/runs/34058900462)
+identifies GitHub's tested PR merge revision
+`d41a6ccb516ac7dd5c33c88985ae3db768ce843b`, not the branch-head revision. Its
+33 assets passed the archive verifier with deployment-manifest SHA-256
+`ce5bf539f1d42ab39f9c827fd1239b66b1e31be36a5aa202081a89766f9d9194`
+and intended schema `triptych-drive-set-v3`.
+
+The updated hosted verifier passed against a local HTTP preview of those exact
+CI files in six disposable profiles. It retains the original tool/adventure
+workflows and checks version-one and version-two stored-media preservation,
+backed-up A/B migration, B tool installation and development, complete backup
+download/restoration, and `.tds` import into a separate profile. Each saved
+version-three reload rejects fresh disk, configuration, bootstrap and system
+downloads. All hosted asset downloads and the browser responses used by these
+workflows are checked against CI, including the historical store module used to
+prepare the version-two fixture.
+
+The two retained-deployment tests also pass. The new A/B case creates distinct
+files on A and B and two complete backups, then reloads at the same origin
+using only the retained archive. It blocks live-network fallback and rejects
+seed/bootstrap/system requests. Guest reads distinguish both drives, while
+complete `.tds` downloads of the head and both backups match their pre-reload
+bytes exactly. The CI-artifact override qualifies the new case against the
+identified clean build; the original single-A case still runs against the
+ordinary local test build.
+
+Independent review corrected a repeated-filename import-completion race in the
+test and tightened the verifier's per-navigation and executed-response checks.
+No production browser behavior changed in this qualification slice. Actual
+GitHub-hosted acceptance, final-revision Linux CI and permanent release/recovery
+artifacts remain required before the milestone is complete.
