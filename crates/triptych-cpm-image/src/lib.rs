@@ -28,6 +28,7 @@ const DIRECTORY_FREE: u8 = 0xe5;
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum CpmGeometry {
     Ibm3740,
+    Triptych2M,
     Triptych8M,
 }
 
@@ -35,55 +36,60 @@ impl CpmGeometry {
     pub const fn id(self) -> &'static str {
         match self {
             Self::Ibm3740 => "ibm3740",
+            Self::Triptych2M => "triptych-cpm-2m-v1",
             Self::Triptych8M => "triptych-cpm-8m-v1",
         }
     }
     pub const fn image_bytes(self) -> usize {
         match self {
             Self::Ibm3740 => DISK_IMAGE_BYTES,
+            Self::Triptych2M => 2 * 1024 * 1024,
             Self::Triptych8M => 8 * 1024 * 1024,
         }
     }
     pub const fn working_bytes(self) -> usize {
         match self {
             Self::Ibm3740 => WORKING_IMAGE_BYTES,
-            Self::Triptych8M => self.image_bytes(),
+            Self::Triptych2M | Self::Triptych8M => self.image_bytes(),
         }
     }
     pub const fn system_bytes(self) -> usize {
         match self {
             Self::Ibm3740 => SYSTEM_BYTES,
-            Self::Triptych8M => 16384,
+            Self::Triptych2M | Self::Triptych8M => 16384,
         }
     }
     pub const fn directory_entries(self) -> usize {
         match self {
             Self::Ibm3740 => DIRECTORY_ENTRIES,
+            Self::Triptych2M => 1024,
             Self::Triptych8M => 512,
         }
     }
     const fn block_bytes(self) -> usize {
         match self {
             Self::Ibm3740 => BLOCK_BYTES,
-            Self::Triptych8M => 2048,
+            Self::Triptych2M | Self::Triptych8M => 2048,
         }
     }
     const fn block_count(self) -> usize {
         match self {
             Self::Ibm3740 => BLOCK_COUNT,
+            Self::Triptych2M => 1016,
             Self::Triptych8M => 4088,
         }
     }
     const fn reserved_blocks(self) -> usize {
         match self {
             Self::Ibm3740 => RESERVED_BLOCKS,
+            Self::Triptych2M => 16,
             Self::Triptych8M => 8,
         }
     }
     const fn allocation_width(self) -> usize {
         match self {
             Self::Ibm3740 => 1,
-            Self::Triptych8M => 2,
+            Self::Triptych2M | Self::Triptych8M => 2,
         }
     }
     const fn blocks_per_extent(self) -> usize {
@@ -203,15 +209,16 @@ pub struct CpmImage {
 }
 
 impl CpmImage {
-    /// Accepts either legacy length or the exact 8 MiB profile length.
+    /// Accepts either legacy length or an exact 2 MiB or 8 MiB profile length.
     /// Directory validation is separate so malformed images remain recoverable.
     pub fn from_bytes(bytes: Vec<u8>) -> Result<Self> {
         let geometry = match bytes.len() {
             DISK_IMAGE_BYTES | WORKING_IMAGE_BYTES => CpmGeometry::Ibm3740,
+            2_097_152 => CpmGeometry::Triptych2M,
             8_388_608 => CpmGeometry::Triptych8M,
             _ => {
                 return Err(CpmError::new(
-                    "disk image must be exactly 256256, 256512 or 8388608 bytes",
+                    "disk image must be exactly 256256, 256512, 2097152 or 8388608 bytes",
                 ))
             }
         };

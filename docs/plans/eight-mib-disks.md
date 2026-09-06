@@ -1,5 +1,11 @@
 # Eight MiB disks
 
+Direction update, 2026-09-07: the user selected
+[two-MiB disks with configurable drive slots](two-mib-configurable-drives.md)
+as the next design. Preserve the existing eight-MiB implementation, tests and
+saved media. The dated checkpoints below remain evidence for that work; this
+direction change is not a rollback or a claim that pending release gates passed.
+
 Date: 2026-09-06. Status: active goal; one-drive foundations and browser migration
 pass the complete local check. The separately pinned A/B residents and basic
 native/WASM tool workflows now pass the complete local check. Full-volume BDOS

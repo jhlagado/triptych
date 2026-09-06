@@ -16,14 +16,18 @@ cooperating ESP32-family modules:
 The name is provisional. It describes the three-part architecture without
 fixing the eventual product name in source identifiers or electrical designs.
 
-The current goal is
-[8 MiB disk support](docs/plans/eight-mib-disks.md), starting with one drive,
-safe migration and capacity tests, then additional drives. The completed
+The current design direction is
+[two-MiB disks with configurable drive slots](docs/plans/two-mib-configurable-drives.md):
+two-KiB allocation blocks, normally two or four configured drives, with sixteen
+as the maximum target. Implementation is in progress; bootable host and browser
+support is not yet qualified.
+Existing small-disk and [eight-MiB profiles](docs/plans/eight-mib-disks.md)
+remain available; no saved disk is converted automatically. The completed
 [browser development workspace](docs/plans/browser-development-workspace.md)
 provides individual-file transfers, selected tool updates with recovery backups,
-and mobile terminal improvements. Both follow the
+and mobile terminal improvements. These plans follow the
 [WASM-first software stability roadmap](docs/plans/software-stability-roadmap.md)
-and preserves its independent component releases and host boundaries.
+and preserve its independent component releases and host boundaries.
 ESP32 physical qualification follows separately when hardware is available.
 
 ## Repository layout

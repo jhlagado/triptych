@@ -184,6 +184,12 @@ fn directory_entries_255_256_and_511_remain_distinct() {
 
 #[test]
 fn migration_preserves_all_users_attributes_empty_files_and_record_padding() {
+    for geometry in [CpmGeometry::Triptych2M, LARGE] {
+        check_migration_preserves_all_users(geometry);
+    }
+}
+
+fn check_migration_preserves_all_users(target: CpmGeometry) {
     let mut source = CpmImage::blank(CpmGeometry::Ibm3740);
     for user in 0..16_u8 {
         source = source
@@ -215,7 +221,7 @@ fn migration_preserves_all_users_attributes_empty_files_and_record_padding() {
     bytes[SYSTEM_BYTES + 17 * 32 + 9] |= 0x80;
     let source = CpmImage::from_bytes(bytes).unwrap();
     let before = source.clone();
-    let migrated = source.migrate_to(LARGE, &vec![0x42; SYSTEM]).unwrap();
+    let migrated = source.migrate_to(target, &vec![0x42; SYSTEM]).unwrap();
     assert_eq!(source, before);
     assert_eq!(source.as_bytes()[DISK_IMAGE_BYTES], 0x97);
     assert_eq!(metadata(&migrated), metadata(&source));
@@ -241,7 +247,7 @@ fn migration_preserves_all_users_attributes_empty_files_and_record_padding() {
             read_user(&source, user, "SAME.BIN")
         );
     }
-    assert!(source.migrate_to(LARGE, &[0; 52 * 128]).is_err());
+    assert!(source.migrate_to(target, &[0; 52 * 128]).is_err());
     assert_eq!(source, before);
 }
 
@@ -256,7 +262,9 @@ fn migration_rejects_sparse_or_malformed_sources_instead_of_skipping_users() {
         bytes[SYSTEM_BYTES + field] = value;
         let source = CpmImage::from_bytes(bytes).unwrap();
         let before = source.clone();
-        assert!(source.migrate_to(LARGE, &vec![0; SYSTEM]).is_err());
+        for target in [CpmGeometry::Triptych2M, LARGE] {
+            assert!(source.migrate_to(target, &vec![0; SYSTEM]).is_err());
+        }
         assert_eq!(source, before);
     }
 }

@@ -50,8 +50,9 @@ fn next_geometry(
 ) -> Result<CpmGeometry, Box<dyn Error>> {
     match arguments.next().as_deref().and_then(|value| value.to_str()) {
         Some("ibm3740") => Ok(CpmGeometry::Ibm3740),
+        Some("triptych-cpm-2m-v1") => Ok(CpmGeometry::Triptych2M),
         Some("triptych-cpm-8m-v1") => Ok(CpmGeometry::Triptych8M),
-        _ => Err("FORMAT must be ibm3740 or triptych-cpm-8m-v1".into()),
+        _ => Err("FORMAT must be ibm3740, triptych-cpm-2m-v1 or triptych-cpm-8m-v1".into()),
     }
 }
 

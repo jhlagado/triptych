@@ -123,6 +123,12 @@ fn failed_import_does_not_publish_a_partial_image() {
 
 #[test]
 fn formats_and_migrates_large_images_without_overwriting_sources_or_destinations() {
+    for geometry in [CpmGeometry::Triptych2M, CpmGeometry::Triptych8M] {
+        check_format_and_migration(geometry);
+    }
+}
+
+fn check_format_and_migration(geometry: CpmGeometry) {
     let temporary = TemporaryDirectory::new();
     let source = temporary.join("legacy.img");
     let system = temporary.join("system.bin");
@@ -132,11 +138,11 @@ fn formats_and_migrates_large_images_without_overwriting_sources_or_destinations
         .install("SOURCE.NU", b"sub main()\r\nend\r\n")
         .unwrap();
     fs::write(&source, before.as_bytes()).unwrap();
-    let system_bytes = vec![0x52; CpmGeometry::Triptych8M.system_bytes()];
+    let system_bytes = vec![0x52; geometry.system_bytes()];
     fs::write(&system, &system_bytes).unwrap();
     let format = run(&[
         Path::new("format"),
-        Path::new("triptych-cpm-8m-v1"),
+        Path::new(geometry.id()),
         &system,
         &blank,
     ]);
@@ -146,11 +152,11 @@ fn formats_and_migrates_large_images_without_overwriting_sources_or_destinations
         String::from_utf8_lossy(&format.stderr)
     );
     let blank_bytes = fs::read(&blank).unwrap();
-    assert_eq!(blank_bytes.len(), 8 * 1024 * 1024);
+    assert_eq!(blank_bytes.len(), geometry.image_bytes());
     assert_eq!(&blank_bytes[..system_bytes.len()], &system_bytes);
     let migrate = run(&[
         Path::new("migrate"),
-        Path::new("triptych-cpm-8m-v1"),
+        Path::new(geometry.id()),
         &source,
         &system,
         &migrated,
@@ -161,7 +167,7 @@ fn formats_and_migrates_large_images_without_overwriting_sources_or_destinations
         String::from_utf8_lossy(&migrate.stderr)
     );
     let after = CpmImage::from_bytes(fs::read(&migrated).unwrap()).unwrap();
-    assert_eq!(after.geometry(), CpmGeometry::Triptych8M);
+    assert_eq!(after.geometry(), geometry);
     assert_eq!(
         after.read("SOURCE.NU").unwrap().unwrap().bytes,
         before.read("SOURCE.NU").unwrap().unwrap().bytes
@@ -170,7 +176,7 @@ fn formats_and_migrates_large_images_without_overwriting_sources_or_destinations
 
     let repeated = run(&[
         Path::new("migrate"),
-        Path::new("triptych-cpm-8m-v1"),
+        Path::new(geometry.id()),
         &source,
         &system,
         &migrated,
@@ -179,7 +185,7 @@ fn formats_and_migrates_large_images_without_overwriting_sources_or_destinations
     assert_eq!(fs::read(&migrated).unwrap(), after.as_bytes());
     let same_path = run(&[
         Path::new("migrate"),
-        Path::new("triptych-cpm-8m-v1"),
+        Path::new(geometry.id()),
         &source,
         &system,
         &source,
@@ -194,10 +200,39 @@ fn rejected_geometry_or_system_area_does_not_create_a_destination() {
     let system = temporary.join("short-system.bin");
     let target = temporary.join("disk.img");
     fs::write(&system, [0; 128]).unwrap();
-    for format in ["triptych-cpm-8m-v1", "unknown"] {
+    for format in ["triptych-cpm-2m-v1", "triptych-cpm-8m-v1", "unknown"] {
         let rejected = run(&[Path::new("format"), Path::new(format), &system, &target]);
         assert!(!rejected.status.success());
         assert!(!target.exists());
         assert_eq!(fs::read(&system).unwrap(), [0; 128]);
     }
+}
+
+#[test]
+fn two_mib_capacity_failure_keeps_source_and_destination_unpublished() {
+    let temporary = TemporaryDirectory::new();
+    let source = temporary.join("large.img");
+    let system = temporary.join("two-mib-system.bin");
+    let target = temporary.join("two-mib.img");
+    let payload = vec![0x59; 2_048_000 + 128];
+    let before = CpmImage::blank(CpmGeometry::Triptych8M)
+        .install("LARGE.BIN", &payload)
+        .unwrap();
+    fs::write(&source, before.as_bytes()).unwrap();
+    let system_bytes = vec![0x38; CpmGeometry::Triptych2M.system_bytes()];
+    fs::write(&system, &system_bytes).unwrap();
+    let rejected = run(&[
+        Path::new("migrate"),
+        Path::new("triptych-cpm-2m-v1"),
+        &source,
+        &system,
+        &target,
+    ]);
+    assert!(!rejected.status.success());
+    assert!(String::from_utf8_lossy(&rejected.stderr).contains("insufficient capacity"));
+    assert!(!target.exists());
+    assert_eq!(fs::read(&source).unwrap(), before.as_bytes());
+    assert_eq!(fs::read(&system).unwrap(), system_bytes);
+    // No candidate or partial publication remains beside the inputs.
+    assert_eq!(fs::read_dir(&temporary.0).unwrap().count(), 2);
 }
