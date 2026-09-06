@@ -91,6 +91,10 @@ try {
   async function newPage() {
     // Every profile is disposable; no user's browser or saved disk is opened.
     const context = await browser.newContext();
+    // Playwright routing disables the HTTP cache. Each navigation must supply
+    // complete response bytes for identity checks, not a conditional 304.
+    // Forward requests unchanged; status, length and hash checks still apply.
+    await context.route("**/*", (route) => route.continue());
     const page = await context.newPage();
     page.setDefaultTimeout(30_000);
     page.on("dialog", (dialog) => dialog.accept());
@@ -432,7 +436,7 @@ try {
 
   // Create only the legacy record in another disposable origin profile. Abort
   // the first app load so it cannot open/migrate the database before seeding.
-  // The qualified navigation then loads untouched hosted files with no routes.
+  // The qualified navigation loads hosted files without response substitution.
   const migrated = await newPage();
   const appUrl = new URL("app.js", base).href;
   await migrated.route(appUrl, (route) => route.abort());

@@ -5,7 +5,9 @@ pass the complete local check. The separately pinned A/B residents and basic
 native/WASM tool workflows now pass the complete local check. Full-volume BDOS
 and actual machine storage-failure tests pass. Browser drive sets pass local
 acceptance. The additional tool-arena suites and complete local verification
-pass; Linux and hosted release qualification remain.
+pass. Candidate `8338492` subsequently passed Linux CI, including 91 final
+browser cases. The final directory-full interface proof also passed upstream;
+permanent recovery retention and hosted release qualification remain.
 Starting revision: `1589d7ebf9d2271a464446a1ff3039f68c6e02f3`.
 
 The starting tree passed `npm run check`, including 48 browser tests, 287
@@ -163,6 +165,15 @@ that the new release is live. Finish final-revision Linux CI, retain the release
 archive permanently, publish the qualified candidate and verify actual hosted
 assets and workflows before completing this goal.
 
+The final candidate's Linux results and the upstream directory-full proof are
+recorded in the [browser report](../reports/eight-mib-browser-ab.md#final-candidate-ci-and-directory-capacity-audit).
+The latter passed against unchanged v0.1.3 BDOS bytes and is merged upstream;
+it distinguishes directory exhaustion from data-block exhaustion. Release
+publication must retain the exact tested files and record their hosted
+verification in the [release notes](https://github.com/jhlagado/triptych/releases).
+The user guides refer to that versioned evidence rather than treating a local
+checkout or a green build as proof of the live website.
+
 The earlier one-drive foundation pinned Portable CP/M 0.1.2 and passed
 336 TypeScript tests, 59 browser tests, native/WASM application workflows and
 Rust checks. Its controller proof executes 43 commands across two 8 MiB
@@ -170,6 +181,6 @@ images and 20 boundary reads after reopening, with exact image comparisons.
 It does not establish multi-drive CP/M or browser drive-set behavior.
 
 The [resident candidates](../reports/eight-mib-multiple-drive-memory.md) retain
-the earlier alternatives and constraints. Basic E400-stack lifetime tests now
-pass under the selected E300 profile; full capacity qualification is still
-required before declaring the combined milestone complete.
+the earlier alternatives and constraints. Their basic E400-stack lifetime
+tests under the selected E300 profile are supplemented by the later tool-arena
+qualification described above.

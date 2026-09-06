@@ -1,11 +1,12 @@
 # Browser development session
 
-Release status: this guide describes the current eight-MiB A/B interface and
-version-three drive-set storage. Local acceptance is recorded in the
-[browser A/B report](reports/eight-mib-browser-ab.md); hosted release and
-same-origin recovery qualification remain pending. The public
-[Triptych website](https://jhlagado.github.io/triptych/) may still show the
-preceding release.
+This guide describes the eight-MiB A/B interface and version-three drive-set
+storage. The [published releases](https://github.com/jhlagado/triptych/releases)
+record qualified revisions, hosted test results and recovery downloads for the
+[Triptych website](https://jhlagado.github.io/triptych/). A development checkout
+can contain changes that have not yet been deployed. The
+[browser A/B report](reports/eight-mib-browser-ab.md) records implementation
+and pre-release acceptance evidence.
 
 In a desktop browser, wait for `A>` and click the terminal to type. A fresh
 profile starts with the supplied single-drive disk. Previously saved media

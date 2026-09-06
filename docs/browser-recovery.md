@@ -1,12 +1,12 @@
 # Browser disk and deployment recovery
 
-Release status: these instructions describe the current version-three
-drive-set implementation. Local evidence is in the
-[browser A/B report](reports/eight-mib-browser-ab.md). Hosted release and
-same-origin version-three recovery qualification remain pending; no retained
-version-three release is designated here yet. The earlier `wasm-0f7f077`
-qualification covered version-two storage and is not a downgrade target for a
-version-three profile.
+These instructions cover version-three drive sets. Select a recovery build
+from the [published releases](https://github.com/jhlagado/triptych/releases)
+only when its notes identify version-three qualification, the exact retained
+archive and its verification evidence. The
+[browser A/B report](reports/eight-mib-browser-ab.md) records implementation
+and pre-release acceptance. The earlier `wasm-0f7f077` qualification covered
+version-two storage and is not a downgrade target for a version-three profile.
 
 Browser storage is not a substitute for an external backup. Use **Download
 saved drive set** and keep the `.tds` file outside the browser profile before
@@ -92,10 +92,10 @@ before troubleshooting the guest or website.
 
 A website recovery archive is separate from a `.tds` drive-set archive. The
 former contains application files; the latter contains your saved media and
-bootstrap. The [browser A/B report](reports/eight-mib-browser-ab.md) records
-the remaining release qualification. Before a production recovery release can
-be used, its evidence must identify the retained archive, full source revision,
-release tag, archive digest and successful version-three hosted recovery run.
+bootstrap. Before a production recovery release can be used, its published
+evidence must identify the retained archive, full source revision, release tag,
+archive digest and successful version-three hosted recovery run. A green build
+or a temporary CI artifact alone does not establish that qualification.
 
 Each website recovery archive contains `site/` with the exact served files and
 `recovery-archive.json` outside that directory. The deployment manifest records
@@ -152,10 +152,10 @@ it:
 node tools/prove-hosted-browser.mjs https://jhlagado.github.io/triptych/ /absolute/path/to/downloaded/site FULL_SOURCE_REVISION
 ```
 
-The version-three hosted qualification for this procedure is still pending.
-Do not treat an earlier version-two verifier result as evidence for A/B or
-complete-set recovery. After successful redeployment and hosted verification,
-remove only the temporary rule created above, using its returned ID:
+Use the version-three verifier from the recorded release revision. An earlier
+version-two result is not evidence for A/B or complete-set recovery. After
+successful redeployment and hosted verification, remove only the temporary
+rule created above, using its returned ID:
 
 ```sh
 gh api --method DELETE repos/jhlagado/triptych/environments/github-pages/deployment-branch-policies/TEMPORARY_RULE_ID

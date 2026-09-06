@@ -199,3 +199,66 @@ test and tightened the verifier's per-navigation and executed-response checks.
 No production browser behavior changed in this qualification slice. Actual
 GitHub-hosted acceptance, final-revision Linux CI and permanent release/recovery
 artifacts remain required before the milestone is complete.
+
+## Final candidate CI and directory-capacity audit
+
+Candidate `833849286c14220b5347af92dbd699f09df51ef8` passed both
+[Linux browser CI](https://github.com/jhlagado/triptych/actions/runs/34060387712)
+and the [firmware build check](https://github.com/jhlagado/triptych/actions/runs/34060387734).
+The browser job ran the complete repository check, including the tool-arena
+suites, then built and tested the release files separately. Its retained runtime
+report records 91 passing cases, zero skipped cases, zero failures and zero flaky
+cases. The firmware result establishes the build boundary only.
+
+The downloaded artifact identifies tested PR merge revision
+`6a7ced2c9d83acad21fa506980e39f8c4a52eefc`. Archive verification passed for all
+33 assets, with manifest SHA-256
+`80f8e89b170c4490703a043300e7eb3ffec358de1d31edca6ce87b3beacf250c`
+and intended storage schema `triptych-drive-set-v3`. These are the tested CI
+files, not a local rebuild or a claim that the public website serves them.
+
+The six-profile preview of this exact artifact exposed a verifier cache-policy
+error: all workflows completed, but the accumulated asset check rejected valid
+HTTP 304 responses on reload. The verifier now creates each disposable context
+with a passthrough route, which disables Playwright's HTTP cache. It still checks
+every response's status, length and digest, and forwards requests unchanged.
+The rerun against the same conditional-response server passed all six profiles;
+the server recorded 258 HTTP 200 responses and zero 304s. Independent review
+confirmed that legacy-seeding page routes retain priority and that saved-media
+checks are unchanged. No production browser code changed in this correction.
+
+The archive-only same-origin recovery tests are included in the 91-case CI
+report. The preview result separately checks both large images, bootstrap,
+backups and the complete-set archive. Its verifier source SHA-256 is
+`2692f5a265d0c054898a2538599ca4233256b042f15640f976255bd00ce63a55`.
+This remains a local preview of retained CI files, not public-site acceptance.
+
+A final interface audit found a missing distinction: the existing full-volume
+proof filled both allocation and directory capacity, but did not attempt a new
+file after directory exhaustion while data blocks remained free. Portable CP/M
+[PR 4](https://github.com/jhlagado/portable-cpm/pull/4), merged as
+`447b20afc9c2c1823e4dc81f1af460c84e27d1d7`, adds that proof to its normal suite.
+No operating-system source or release bytes changed. The assembled BDOS must
+match the retained v0.1.3 A/B digest before execution.
+
+On each drive, the new test creates 512 empty files through guest BDOS calls,
+rejects the next MAKE while all 4,080 data blocks remain free, then deletes and
+reuses directory slot 511. Rejection preserves both complete images, allocation
+vectors and the write count. Other-drive contents, unrelated FCB storage and
+return PC/SP are checked. After reset, the test checks allocation reconstruction,
+boundary filenames and non-directory bytes; it does not compare every directory
+byte across reset. A lead rerun passed 2,089 calls and 16,875,532 instructions,
+with 14 bytes of measured resident stack use. Independent review found no
+blocking issue.
+
+Portable CP/M's complete local check and
+[Linux CI](https://github.com/jhlagado/portable-cpm/actions/runs/34061389728)
+passed all 363 tests and the release build. This additional proof uses the
+guest BDOS with a BIOS interface double; the existing native/WASM and storage
+tests remain the evidence for machine integration and persistence.
+
+This dated checkpoint precedes publication. Permanent archive retention and
+actual hosted verification are separate release gates. The
+[published release notes](https://github.com/jhlagado/triptych/releases) must
+identify the deployed revision, retained archive and hosted runtime evidence
+before that release is described as qualified.
