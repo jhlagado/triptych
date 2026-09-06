@@ -4,7 +4,8 @@ Date: 2026-09-06. Status: active goal; one-drive foundations and browser migrati
 pass the complete local check. The separately pinned A/B residents and basic
 native/WASM tool workflows now pass the complete local check. Full-volume BDOS
 and actual machine storage-failure tests pass. Browser drive sets pass local
-acceptance. Remaining tool-arena proofs and complete release qualification remain.
+acceptance. The additional tool-arena suites and complete local verification
+pass; Linux and hosted release qualification remain.
 Starting revision: `1589d7ebf9d2271a464446a1ff3039f68c6e02f3`.
 
 The starting tree passed `npm run check`, including 48 browser tests, 287
@@ -143,7 +144,16 @@ The combined check passed 459 code tests, 90 browser cases and all 34 headless
 scenarios, together with native/WASM workflows and Rust checks. The report also
 records measured browser storage latency and retained checkpoint memory, without
 claiming full-page peak memory. Additional tool-arena qualification, new-revision
-Linux CI and hosted release/recovery qualification remain open.
+Linux CI and hosted release/recovery qualification remain open at that checkpoint.
+
+The subsequent [tool-arena report](../reports/eight-mib-tool-arenas.md) records
+80 further native/WASM checkpoints and 44 COM lifetimes for ATOM tables and
+dependencies, Nucleus source-admitted memory and recursive calls, and Edit's
+search/replacement buffers and full-text rejection. These suites are now part
+of the complete check, which passed with 459 code tests and 90 browser cases.
+New-revision Linux CI precedes hosted acceptance. The browser quick-start and
+recovery instructions now explain selected drives and complete-set archives;
+their pending-release notices need verified hosted identities before handoff.
 
 The earlier one-drive foundation pinned Portable CP/M 0.1.2 and passed
 336 TypeScript tests, 59 browser tests, native/WASM application workflows and

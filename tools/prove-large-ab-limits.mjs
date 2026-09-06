@@ -13,6 +13,25 @@ import { buildLargeAbSystem } from "./lib/large-ab-system.mjs";
 const root = resolve(import.meta.dirname, "..");
 const require = createRequire(import.meta.url);
 const { TriptychCpu, CpmDisk } = require("../dist/wasm/triptych_host_wasm.js");
+const suiteName = process.argv
+  .find((arg) => arg.startsWith("--suite="))
+  ?.slice(8);
+const suiteModules = {
+  "atom-symbols": "./lib/large-ab-atom-arenas.mjs",
+  "atom-parts": "./lib/large-ab-atom-arenas.mjs",
+  "atom-chain": "./lib/large-ab-atom-arenas.mjs",
+  edit: "./lib/large-ab-edit-arenas.mjs",
+  nucleus: "./lib/large-ab-nucleus-arenas.mjs",
+};
+assert(
+  suiteName === undefined || Object.hasOwn(suiteModules, suiteName),
+  "unknown capacity suite",
+);
+// A suite supplies only fixtures and assertions. The same instruction observer,
+// resident guards and native whole-image replay qualify every tool's lifetime.
+const suite = suiteName
+  ? (await import(suiteModules[suiteName])).createSuite(suiteName)
+  : undefined;
 const hash = (bytes) => createHash("sha256").update(bytes).digest("hex");
 const distribution = await buildCpmDistribution(root, {
   allowDirty: process.argv.includes("--allow-dirty"),
@@ -37,7 +56,7 @@ const paddedSource = (prefix, comment, length) =>
     "ascii",
   );
 const nuc = "sub main() fails\n    writeOutputByte('K') else fail\nend\n";
-const fixtures = new Map([
+let fixtures = new Map([
   ["AMAX.ASM", Buffer.from("ORG $0100\nRET\nDS 18303,0\n")],
   ["AOVER.ASM", Buffer.from("ORG $0100\nRET\nDS 18304,0\n")],
   ["ASRC.ASM", paddedSource("ORG $0100\nRET\n", ";", 65535)],
@@ -55,20 +74,6 @@ const fixtures = new Map([
   ["EOVER.TXT", Buffer.alloc(47105, 66)],
   ["END.TXT", Buffer.from("AB-LIMITS-END")],
 ]);
-const b = withDisk(base, (disk) => {
-  for (const [name, bytes] of fixtures) disk.add_import(name, bytes);
-  return Buffer.from(disk.export_candidate());
-});
-const inputs = [base, b];
-const fixtureRecords = withDisk(
-  b,
-  (disk) =>
-    new Map(
-      disk
-        .file_names()
-        .map((name) => [name, Buffer.from(disk.read_file(name))]),
-    ),
-);
 const prompt = "\r\nB>";
 const cmd = (id, text, tool, required, check) => ({
   id,
@@ -79,7 +84,7 @@ const cmd = (id, text, tool, required, check) => ({
   suffix: prompt,
 });
 let atomOutput, smallAtomOutput, nucOutput;
-const steps = [
+let steps = [
   { id: "boot", input: "", suffix: "\r\nA>" },
   cmd("select-b", "B:"),
   cmd(
@@ -202,6 +207,31 @@ const steps = [
   ),
   cmd("following-command", "TYPE END.TXT", undefined, "AB-LIMITS-END"),
 ];
+if (suite) {
+  fixtures = suite.fixtures;
+  steps = suite.steps;
+}
+const b = withDisk(base, (disk) => {
+  for (const [name, bytes] of fixtures) disk.add_import(name, bytes);
+  return Buffer.from(disk.export_candidate());
+});
+const inputs = [base, b];
+const fixtureRecords = withDisk(
+  b,
+  (disk) =>
+    new Map(
+      disk
+        .file_names()
+        .map((name) => [name, Buffer.from(disk.read_file(name))]),
+    ),
+);
+for (const name of suite?.mutableFiles ?? []) {
+  assert(fixtures.has(name), "only suite-owned fixtures may be mutable");
+  assert(
+    steps.every((step) => typeof step.check === "function"),
+    "mutable fixtures require per-checkpoint assertions",
+  );
+}
 const floors = { "ATOM.COM": 0xd800, "NUC.COM": 0xd500, "EDIT.COM": 0xd800 };
 const cpu = new TriptychCpu(system.bootstrap);
 inputs.forEach((bytes, drive) => cpu.install_drive(drive, bytes, true));
@@ -289,7 +319,13 @@ function observe() {
           sp >= floors[active.tool],
           `${active.tool} stack crossed output/text boundary`,
         );
+      if (!floors[active.tool])
+        assert(
+          sp >= 0xe400,
+          `${active.tool}: generated stack entered tool workspace`,
+        );
     }
+    suite?.observe?.(cpu, { pc, sp }, active);
     if (pc === 0 && !cpu.boot_rom_enabled()) {
       assert.equal(sp, active.entrySp + 2, `${active.id}: exact RET stack`);
       assert.equal(
@@ -320,9 +356,11 @@ try {
       };
     }
     assert(cpu.enqueue_serial_input(Buffer.from(step.input, "latin1")));
+    const maxInstructions = step.maxInstructions ?? 150_000_000;
+    const maxMs = step.maxMs ?? 180_000;
     let count = 0,
       reached = false;
-    while (count < 150_000_000 && Date.now() - started < 180_000) {
+    while (count < maxInstructions && Date.now() - started < maxMs) {
       if (active || pending || reload) {
         for (let i = 0; i < 512; i++) {
           observe();
@@ -373,6 +411,7 @@ try {
       installedGuards = true;
     }
     immutable();
+    step.checkOutput?.(transcript.subarray(begin));
     step.checkMemory?.(cpu);
     assert(
       cpu.disk_management_ready(),
@@ -391,8 +430,9 @@ try {
     }
     withDisk(cpu.export_drive_checkpoint(1), (disk) => {
       for (const [name, bytes] of fixtureRecords)
-        assert.deepEqual(Buffer.from(disk.read_file(name)), bytes);
-      for (const stem of ["KEEP", "SMALL", "NKEEP"])
+        if (!suite?.mutableFiles?.has(name))
+          assert.deepEqual(Buffer.from(disk.read_file(name)), bytes);
+      for (const stem of suite?.outputStems ?? ["KEEP", "SMALL", "NKEEP"])
         for (const extension of ["$$$", "BAK"])
           assert(
             !disk.file_names().includes(`${stem}.${extension}`),
@@ -488,6 +528,7 @@ try {
 }
 const result = {
   status: "passed",
+  suite: suiteName ?? "source-output-text",
   evidence,
   profile: system.profile,
   components: system.components,
@@ -498,7 +539,9 @@ const result = {
   lifetimes,
   maximumBdosStackBytes: system.resident.bdosStackTop - minBdosSp,
   limits: [
-    "ATOM source/output, NUC source and Edit text capacities plus generated unhandled failure/bounds trap only; symbol/pending/dependency tables, NUC generated-image/writable arenas and recursive activation capacities not proved",
+    ...(suite?.limits ?? [
+      "ATOM source/output, NUC source and Edit text capacities plus generated unhandled failure/bounds trap only; symbol/pending/dependency tables, NUC generated-image/writable arenas and recursive activation capacities not proved",
+    ]),
     "PC/SP observations are WASM measurements; native evidence is exact console and complete two-drive images",
     "not browser or ESP32 qualification",
   ],
