@@ -1,4 +1,4 @@
-//! CP/M 2.2 filesystem operations for Triptych's ideal IBM 3740 disk image.
+//! CP/M 2.2 filesystem operations for Triptych's closed disk profiles.
 //!
 //! This crate deliberately works with named files and complete disk images.
 //! The guest-visible logical-record controller remains owned by
@@ -23,6 +23,79 @@ pub const BLOCKS_PER_EXTENT: usize = 16;
 pub const BACKING_SECTOR_BYTES: usize = 512;
 
 const DIRECTORY_FREE: u8 = 0xe5;
+
+/// Supported EXM=0 disk layouts. Image length selects a candidate, not validity.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum CpmGeometry {
+    Ibm3740,
+    Triptych8M,
+}
+
+impl CpmGeometry {
+    pub const fn id(self) -> &'static str {
+        match self {
+            Self::Ibm3740 => "ibm3740",
+            Self::Triptych8M => "triptych-cpm-8m-v1",
+        }
+    }
+    pub const fn image_bytes(self) -> usize {
+        match self {
+            Self::Ibm3740 => DISK_IMAGE_BYTES,
+            Self::Triptych8M => 8 * 1024 * 1024,
+        }
+    }
+    pub const fn working_bytes(self) -> usize {
+        match self {
+            Self::Ibm3740 => WORKING_IMAGE_BYTES,
+            Self::Triptych8M => self.image_bytes(),
+        }
+    }
+    pub const fn system_bytes(self) -> usize {
+        match self {
+            Self::Ibm3740 => SYSTEM_BYTES,
+            Self::Triptych8M => 16384,
+        }
+    }
+    pub const fn directory_entries(self) -> usize {
+        match self {
+            Self::Ibm3740 => DIRECTORY_ENTRIES,
+            Self::Triptych8M => 512,
+        }
+    }
+    const fn block_bytes(self) -> usize {
+        match self {
+            Self::Ibm3740 => BLOCK_BYTES,
+            Self::Triptych8M => 2048,
+        }
+    }
+    const fn block_count(self) -> usize {
+        match self {
+            Self::Ibm3740 => BLOCK_COUNT,
+            Self::Triptych8M => 4088,
+        }
+    }
+    const fn reserved_blocks(self) -> usize {
+        match self {
+            Self::Ibm3740 => RESERVED_BLOCKS,
+            Self::Triptych8M => 8,
+        }
+    }
+    const fn allocation_width(self) -> usize {
+        match self {
+            Self::Ibm3740 => 1,
+            Self::Triptych8M => 2,
+        }
+    }
+    const fn blocks_per_extent(self) -> usize {
+        16 / self.allocation_width()
+    }
+    const fn entry_offset(self, index: usize) -> usize {
+        self.system_bytes() + index * DIRECTORY_ENTRY_BYTES
+    }
+    const fn block_offset(self, block: usize) -> usize {
+        self.system_bytes() + block * self.block_bytes()
+    }
+}
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct CpmError(String);
@@ -126,18 +199,87 @@ pub struct FileImport<'a> {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct CpmImage {
     bytes: Vec<u8>,
+    geometry: CpmGeometry,
 }
 
 impl CpmImage {
-    /// Accepts either the canonical 256,256-byte IBM 3740 image or the
-    /// 256,512-byte form padded to Triptych's 512-byte host-sector boundary.
+    /// Accepts either legacy length or the exact 8 MiB profile length.
+    /// Directory validation is separate so malformed images remain recoverable.
     pub fn from_bytes(bytes: Vec<u8>) -> Result<Self> {
-        if bytes.len() != DISK_IMAGE_BYTES && bytes.len() != WORKING_IMAGE_BYTES {
-            return Err(CpmError::new(format!(
-                "image must contain exactly {DISK_IMAGE_BYTES} bytes or the {WORKING_IMAGE_BYTES}-byte Triptych working-image form"
-            )));
+        let geometry = match bytes.len() {
+            DISK_IMAGE_BYTES | WORKING_IMAGE_BYTES => CpmGeometry::Ibm3740,
+            8_388_608 => CpmGeometry::Triptych8M,
+            _ => {
+                return Err(CpmError::new(
+                    "disk image must be exactly 256256, 256512 or 8388608 bytes",
+                ))
+            }
+        };
+        Ok(Self { bytes, geometry })
+    }
+
+    pub fn geometry(&self) -> CpmGeometry {
+        self.geometry
+    }
+
+    /// Creates an empty canonical image, with zeroed (not bootable) system records.
+    pub fn blank(geometry: CpmGeometry) -> Self {
+        let mut bytes = vec![DIRECTORY_FREE; geometry.image_bytes()];
+        bytes[..geometry.system_bytes()].fill(0);
+        Self { bytes, geometry }
+    }
+
+    /// Builds a new image, preserving every user's record-rounded file contents
+    /// and per-extent attributes. The complete target system area is explicit;
+    /// this operation does not establish that its resident software is compatible.
+    pub fn migrate_to(&self, geometry: CpmGeometry, system_bytes: &[u8]) -> Result<Self> {
+        if system_bytes.len() != geometry.system_bytes() {
+            return Err(CpmError::new(
+                "migration requires the complete target system area",
+            ));
         }
-        Ok(Self { bytes })
+        let source = self.scan_directory()?;
+        let mut target = Self::blank(geometry);
+        target.bytes[..system_bytes.len()].copy_from_slice(system_bytes);
+        let mut next_entry = 0;
+        let mut next_block = geometry.reserved_blocks();
+        for file in &source.files {
+            let filename = CpmName::parse(&file.name)?;
+            for extent in &file.extents {
+                let count = extent
+                    .records
+                    .div_ceil(geometry.block_bytes() / RECORD_BYTES);
+                if next_entry >= geometry.directory_entries()
+                    || next_block + count > geometry.block_count()
+                {
+                    return Err(CpmError::new("migration target has insufficient capacity"));
+                }
+                let blocks: Vec<_> = (next_block..next_block + count).collect();
+                target.write_extent(
+                    next_entry,
+                    &filename,
+                    extent.extent,
+                    extent.records,
+                    &blocks,
+                )?;
+                let from = self.geometry.entry_offset(extent.entry_index);
+                let to = geometry.entry_offset(next_entry);
+                // User, name attributes, extent identity and RC remain exact.
+                target.bytes[to..to + 16].copy_from_slice(&self.bytes[from..from + 16]);
+                let contents = self.read_extent_bytes(extent);
+                for (index, block) in blocks.into_iter().enumerate() {
+                    let offset = geometry.block_offset(block);
+                    let start = index * geometry.block_bytes();
+                    let length = geometry.block_bytes().min(contents.len() - start);
+                    target.bytes[offset..offset + length]
+                        .copy_from_slice(&contents[start..start + length]);
+                }
+                next_entry += 1;
+                next_block += count;
+            }
+        }
+        target.validate()?;
+        Ok(target)
     }
 
     pub fn as_bytes(&self) -> &[u8] {
@@ -151,7 +293,7 @@ impl CpmImage {
     /// Returns a native-host-ready image without changing any logical CP/M
     /// record. The extra half sector is inaccessible to the IBM 3740 DPB.
     pub fn into_working_bytes(mut self) -> Vec<u8> {
-        self.bytes.resize(WORKING_IMAGE_BYTES, 0);
+        self.bytes.resize(self.geometry.working_bytes(), 0);
         self.bytes
     }
 
@@ -176,12 +318,12 @@ impl CpmImage {
 
     pub fn free_space(&self) -> Result<FreeSpace> {
         let scan = self.scan_directory()?;
-        let allocation_blocks = (RESERVED_BLOCKS..BLOCK_COUNT)
+        let allocation_blocks = (self.geometry.reserved_blocks()..self.geometry.block_count())
             .filter(|block| !scan.used_blocks[*block])
             .count();
         Ok(FreeSpace {
             allocation_blocks,
-            bytes: allocation_blocks * BLOCK_BYTES,
+            bytes: allocation_blocks * self.geometry.block_bytes(),
             directory_entries: scan.free_entries.len(),
         })
     }
@@ -208,7 +350,7 @@ impl CpmImage {
     /// so batch success does not depend on whether growing files come first.
     pub fn install_batch(&self, imports: &[FileImport<'_>]) -> Result<Self> {
         let mut scan = self.scan_directory()?;
-        if imports.len() > DIRECTORY_ENTRIES {
+        if imports.len() > self.geometry.directory_entries() {
             return Err(CpmError::new("batch has more files than directory entries"));
         }
         let mut names = Vec::with_capacity(imports.len());
@@ -253,7 +395,7 @@ impl CpmImage {
             {
                 // Preserve existing CP/M attribute bits when replacing bytes.
                 // Read-only was checked across all extents above.
-                let entry = entry_offset(previous.extents[0].entry_index);
+                let entry = self.geometry.entry_offset(previous.extents[0].entry_index);
                 for (index, byte) in attributed.name.iter_mut().enumerate() {
                     *byte |= self.bytes[entry + 1 + index] & 0x80;
                 }
@@ -274,14 +416,15 @@ impl CpmImage {
     ) -> Result<()> {
         let records = contents.len().div_ceil(RECORD_BYTES);
         let extent_count = records.div_ceil(RECORDS_PER_EXTENT);
-        let block_count = records.div_ceil(BLOCK_BYTES / RECORD_BYTES);
+        let geometry = self.geometry;
+        let block_count = records.div_ceil(geometry.block_bytes() / RECORD_BYTES);
         if scan.free_entries.len() < extent_count {
             return Err(CpmError::new(format!(
                 "directory has no room for {}",
                 filename.canonical
             )));
         }
-        let available_blocks: Vec<_> = (RESERVED_BLOCKS..BLOCK_COUNT)
+        let available_blocks: Vec<_> = (geometry.reserved_blocks()..geometry.block_count())
             .filter(|block| !scan.used_blocks[*block])
             .collect();
         if available_blocks.len() < block_count {
@@ -303,14 +446,14 @@ impl CpmImage {
             .enumerate()
         {
             let extent_records = RECORDS_PER_EXTENT.min(records.saturating_sub(record_cursor));
-            let extent_blocks = extent_records.div_ceil(BLOCK_BYTES / RECORD_BYTES);
+            let extent_blocks = extent_records.div_ceil(geometry.block_bytes() / RECORD_BYTES);
             let blocks = &available_blocks[block_cursor..block_cursor + extent_blocks];
             self.write_extent(entry_index, filename, extent_index, extent_records, blocks)?;
             for &block in blocks {
-                let offset = block_offset(block);
-                self.bytes[offset..offset + BLOCK_BYTES].fill(DIRECTORY_FREE);
+                let offset = geometry.block_offset(block);
+                self.bytes[offset..offset + geometry.block_bytes()].fill(DIRECTORY_FREE);
                 let source_offset = record_cursor * RECORD_BYTES;
-                let length = BLOCK_BYTES.min(padded.len() - source_offset);
+                let length = geometry.block_bytes().min(padded.len() - source_offset);
                 self.bytes[offset..offset + length]
                     .copy_from_slice(&padded[source_offset..source_offset + length]);
                 scan.used_blocks[block] = true;
@@ -338,13 +481,7 @@ impl CpmImage {
         let records = extents.iter().map(|extent| extent.records).sum::<usize>();
         let mut bytes = Vec::with_capacity(records * RECORD_BYTES);
         for extent in extents {
-            let mut remaining = extent.records * RECORD_BYTES;
-            for block in extent.blocks {
-                let length = remaining.min(BLOCK_BYTES);
-                let offset = block_offset(block);
-                bytes.extend_from_slice(&self.bytes[offset..offset + length]);
-                remaining -= length;
-            }
+            bytes.extend_from_slice(&self.read_extent_bytes(&extent));
         }
         Ok(Some(StoredFile {
             name: filename.canonical,
@@ -353,12 +490,24 @@ impl CpmImage {
         }))
     }
 
+    fn read_extent_bytes(&self, extent: &DirectoryExtent) -> Vec<u8> {
+        let mut remaining = extent.records * RECORD_BYTES;
+        let mut bytes = Vec::with_capacity(remaining);
+        for &block in &extent.blocks {
+            let length = remaining.min(self.geometry.block_bytes());
+            let offset = self.geometry.block_offset(block);
+            bytes.extend_from_slice(&self.bytes[offset..offset + length]);
+            remaining -= length;
+        }
+        bytes
+    }
+
     fn scan_directory(&self) -> Result<DirectoryScan> {
         let mut free_entries = Vec::new();
-        let mut used_blocks = [false; BLOCK_COUNT];
+        let mut used_blocks = vec![false; self.geometry.block_count()];
         let mut files: Vec<ScannedFile> = Vec::new();
-        for entry_index in 0..DIRECTORY_ENTRIES {
-            let entry = entry_offset(entry_index);
+        for entry_index in 0..self.geometry.directory_entries() {
+            let entry = self.geometry.entry_offset(entry_index);
             let user = self.bytes[entry];
             if user == DIRECTORY_FREE {
                 free_entries.push(entry_index);
@@ -404,7 +553,7 @@ impl CpmImage {
     }
 
     fn read_extent(&self, entry_index: usize) -> Result<DirectoryExtent> {
-        let entry = entry_offset(entry_index);
+        let entry = self.geometry.entry_offset(entry_index);
         let records = usize::from(self.bytes[entry + 15]);
         if records > RECORDS_PER_EXTENT {
             return Err(CpmError::new(format!(
@@ -418,10 +567,19 @@ impl CpmImage {
         }
         let extent =
             usize::from(self.bytes[entry + 12]) | (usize::from(self.bytes[entry + 14]) << 5);
-        let block_count = records.div_ceil(BLOCK_BYTES / RECORD_BYTES);
-        let mut blocks = Vec::with_capacity(BLOCKS_PER_EXTENT);
-        for index in 0..BLOCKS_PER_EXTENT {
-            let block = usize::from(self.bytes[entry + 16 + index]);
+        let geometry = self.geometry;
+        let block_count = records.div_ceil(geometry.block_bytes() / RECORD_BYTES);
+        let mut blocks = Vec::with_capacity(geometry.blocks_per_extent());
+        for index in 0..geometry.blocks_per_extent() {
+            let offset = entry + 16 + index * geometry.allocation_width();
+            let block = if geometry.allocation_width() == 2 {
+                usize::from(u16::from_le_bytes([
+                    self.bytes[offset],
+                    self.bytes[offset + 1],
+                ]))
+            } else {
+                usize::from(self.bytes[offset])
+            };
             if block == 0 {
                 if index >= block_count {
                     continue;
@@ -430,7 +588,7 @@ impl CpmImage {
                     "directory entry {entry_index} has an unsupported sparse allocation"
                 )));
             }
-            if !(RESERVED_BLOCKS..BLOCK_COUNT).contains(&block) {
+            if !(geometry.reserved_blocks()..geometry.block_count()).contains(&block) {
                 return Err(CpmError::new(format!(
                     "directory entry {entry_index} references invalid block {block}"
                 )));
@@ -479,13 +637,13 @@ impl CpmImage {
     }
 
     fn clear_entry(&mut self, entry_index: usize) {
-        let entry = entry_offset(entry_index);
+        let entry = self.geometry.entry_offset(entry_index);
         self.bytes[entry..entry + DIRECTORY_ENTRY_BYTES].fill(DIRECTORY_FREE);
     }
 
     fn clear_block(&mut self, block: usize) {
-        let offset = block_offset(block);
-        self.bytes[offset..offset + BLOCK_BYTES].fill(DIRECTORY_FREE);
+        let offset = self.geometry.block_offset(block);
+        self.bytes[offset..offset + self.geometry.block_bytes()].fill(DIRECTORY_FREE);
     }
 
     fn write_extent(
@@ -496,7 +654,7 @@ impl CpmImage {
         records: usize,
         blocks: &[usize],
     ) -> Result<()> {
-        let entry = entry_offset(entry_index);
+        let entry = self.geometry.entry_offset(entry_index);
         self.bytes[entry..entry + DIRECTORY_ENTRY_BYTES].fill(0);
         self.bytes[entry + 1..entry + 9].copy_from_slice(&filename.name);
         self.bytes[entry + 9..entry + 12].copy_from_slice(&filename.extension);
@@ -507,8 +665,17 @@ impl CpmImage {
         self.bytes[entry + 15] =
             u8::try_from(records).map_err(|_| CpmError::new("extent record count overflow"))?;
         for (index, block) in blocks.iter().enumerate() {
-            self.bytes[entry + 16 + index] =
-                u8::try_from(*block).map_err(|_| CpmError::new("allocation block overflow"))?;
+            let offset = entry + 16 + index * self.geometry.allocation_width();
+            if self.geometry.allocation_width() == 2 {
+                self.bytes[offset..offset + 2].copy_from_slice(
+                    &u16::try_from(*block)
+                        .map_err(|_| CpmError::new("allocation block overflow"))?
+                        .to_le_bytes(),
+                );
+            } else {
+                self.bytes[offset] =
+                    u8::try_from(*block).map_err(|_| CpmError::new("allocation block overflow"))?;
+            }
         }
         Ok(())
     }
@@ -533,7 +700,7 @@ struct ScannedFile {
 #[derive(Debug)]
 struct DirectoryScan {
     free_entries: Vec<usize>,
-    used_blocks: [bool; BLOCK_COUNT],
+    used_blocks: Vec<bool>,
     files: Vec<ScannedFile>,
 }
 
@@ -559,10 +726,12 @@ fn validate_extent_sequences(files: &[ScannedFile]) -> Result<()> {
     Ok(())
 }
 
+#[cfg(test)]
 fn entry_offset(entry_index: usize) -> usize {
     SYSTEM_BYTES + entry_index * DIRECTORY_ENTRY_BYTES
 }
 
+#[cfg(test)]
 fn block_offset(block: usize) -> usize {
     SYSTEM_BYTES + block * BLOCK_BYTES
 }

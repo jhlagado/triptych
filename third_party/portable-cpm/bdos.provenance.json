@@ -1,12 +1,12 @@
 {
   "schema": "triptych-release-provenance-v1",
   "repository": "https://github.com/jhlagado/portable-cpm.git",
-  "revision": "b07dad632e7ef3be6528289a5a35308983964b05",
+  "revision": "2adfb035ec4de9a3a6dc629677fc8a0072cf0f74",
   "bytes": 3584,
-  "sha256": "c5fc4d7dd29bf8914c4735165747e3b35dca3b8999a9f70035d972ff602718fc",
-  "manifestSha256": "c94b77512a61855deba8e49da96d0fc0596f2bc0032a124516a942a783042824",
+  "sha256": "02956431e3af849d99eecbffbb89a0c7a29487f91301575d1dd511127ab4d43b",
+  "manifestSha256": "1e049af921e2e715521bace8d23a4ef64c07e8ccca1f749009fda07a4358629a",
   "origin": {
     "kind": "release-asset",
-    "url": "https://github.com/jhlagado/portable-cpm/releases/download/v0.1.1/bdos.bin"
+    "url": "https://github.com/jhlagado/portable-cpm/releases/download/v0.1.2/bdos.bin"
   }
 }

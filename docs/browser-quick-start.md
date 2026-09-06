@@ -1,8 +1,17 @@
 # Browser development session
 
-Open [Triptych](https://jhlagado.github.io/triptych/) in a desktop browser and
-wait for `A>`. Click the terminal to type. A previously saved browser disk is
-restored automatically, so its files may differ from a fresh distribution.
+This guide describes the eight-MiB A/B interface and version-three drive-set
+storage. The [published releases](https://github.com/jhlagado/triptych/releases)
+record qualified revisions, hosted test results and recovery downloads for the
+[Triptych website](https://jhlagado.github.io/triptych/). A development checkout
+can contain changes that have not yet been deployed. The
+[browser A/B report](reports/eight-mib-browser-ab.md) records implementation
+and pre-release acceptance evidence.
+
+In a desktop browser, wait for `A>` and click the terminal to type. A fresh
+profile starts with the supplied single-drive disk. Previously saved media
+reopen automatically, so their files and drive layout may differ. Opening a
+new website release does not silently replace their operating system or tools.
 
 ## Assemble and run
 
@@ -17,8 +26,9 @@ ATOM reports `HELLO.COM written`; the program prints `Hello from ATOM`.
 
 ## Edit, compile and reopen
 
-This exercise changes the supplied `INPUT.NU`. Download a backup first if it
-contains your own work.
+This exercise changes the supplied `INPUT.NU`. Use **Download saved drive set**
+first if the disk contains your own work, and keep the `.tds` file outside the
+browser profile.
 
 1. Enter `EDIT INPUT.NU`.
 2. Press Ctrl-F, type `'O'` including the quotes, and press Enter.
@@ -34,22 +44,109 @@ Use Ctrl, including on macOS, rather than Command for the editor shortcuts.
 If the sample already contains `'Y'`, it was saved by an earlier session;
 choose a different output character for another trial.
 
+Ctrl-S saves into the emulated disk. The browser save-status message confirms
+the separate persistent-storage operation. After a storage error, use
+**Download latest checkpoint set** before leaving the page. It includes each
+drive's last successful guest flush, which may be newer than browser storage.
+It excludes unsaved editor text and unflushed writes. A checkpoint set can
+contain a newer A checkpoint and an older B checkpoint; guest writes across
+both drives are not a single transaction.
+
+## Files and verified tool updates
+
+Save and exit the guest program, open **Files and recovery**, acknowledge that
+the program has exited, and choose **Enter disk management**. Use **Drive to
+view or edit** to select A or B for file imports, tool updates, source projects
+and diagnostic mapping. This selector does not change CP/M's current drive.
+Enter `B:` in the terminal to run guest commands on B; enter `A:` to return.
+
+File imports and ATOM, NUC or Edit updates are staged privately. Select
+**Stage file imports** or a tool's **Stage update**, then **Apply and restart**.
+Applying preserves the preceding complete drive set as a backup before
+restarting CP/M. **Cancel changes** resumes the original machine. The file
+listing shows committed files in user area 0, not the staged changes. Files
+use CP/M 8.3 names; downloads include 128-byte record padding. Empty imports
+and read-only replacements are rejected.
+
+### Add capacity and drive B
+
+Download the saved drive set before changing the disk layout. In disk
+management, select A and choose one of these explicit changes:
+
+- **Stage upgrade of drive A to 8 MiB** migrates the files to the one-drive
+  eight-MiB system. It does not enable B.
+- **Stage eight MiB A/B system** installs the A/B resident system on A. Legacy
+  files are migrated to eight MiB; an existing eight-MiB A retains its file
+  area. Files in all user areas are preserved, although Files displays user 0.
+
+For two drives, follow the A/B operation with **Stage blank B**, then
+**Apply and restart**. Each drive has eight MiB of image capacity, with
+8,355,840 bytes initially available for files after system and directory space.
+Blank B has
+no tools, source files or operating-system bytes. Select B in Files to import
+sources and stage the tools you need, apply, then enter `B:` in the terminal.
+The assemble/edit/compile workflow above also works on B once those files and
+tools are present there.
+
+Instead of creating blank B, select B and use **Stage disk image** with an
+eight-MiB image. Attaching B does not adapt its system area. **Stage removal of
+B** removes it on apply, with the preceding complete set backed up; A's bytes
+and A/B resident profile remain unchanged.
+
 ## Backup and restore
 
-**Download saved disk** exports the whole disk, including source and compiled
-programs. Keep that file outside browser storage. Guest Ctrl-S saves into the
-emulated disk; the browser save-status message confirms the separate persistent
-storage operation. A storage-error message means reload-safe saving has not
-been confirmed; download a recovery copy before leaving the page.
+**Download saved drive set** exports a `.tds` archive containing the exact
+bootstrap, resident-profile label, A image and optional B image. This is the
+complete backup for reopening the same disk arrangement. **Download saved disk
+A** or **Download saved disk B** exports only the selected disk image; it does
+not include the bootstrap or profile. The corresponding checkpoint downloads
+use guest-flushed data rather than the last durable browser copy.
 
-To test a backup, open Triptych in a separate browser profile. Open **Files and
-recovery**, acknowledge that the guest program has exited, and enter disk
-management. Use **Stage disk image**, leave adaptation unchecked, then choose
-**Apply and restart** and close Files. Wait for `A>`, inspect the source
-with `TYPE INPUT.NU` or `EDIT INPUT.NU`, and run `INPUT`. Back up the current disk
-before selecting another image. Importing a disk selects that disk's files;
-it is not a merge. Clearing browser site data can remove the browser's saved
-copy. **Reset machine** is a machine reset, not a backup operation.
+To test a `.tds` backup, open Triptych in a separate browser profile. Enter
+disk management, choose **Stage complete drive-set archive**, select the file,
+then **Apply and restart** and close Files. Inspect the source and run the
+program on its original drive. Restoring replaces the complete set, including
+whether B is attached; it is not a merge. A backup row's **Stage restore** also
+restores the complete set, regardless of the Files drive selector.
+
+For a single `.img` backup, use **Stage disk image** on the intended drive.
+For A, explicitly select its **A image resident profile** if it differs from
+the current one. A historical single-drive image needs **Legacy E400, one
+drive**; first stage removal of B if B is attached. Leave **Adapt external
+image with this release's CCP/BDOS/BIOS (changes system bytes)** unchecked for
+exact disk-byte restoration. Image size alone does not identify its resident
+system. A `.tds` archive avoids this manual bootstrap/profile selection.
+
+Select adaptation only for a deliberate system update: it replaces A's
+resident system bytes with this release's verified system for the selected
+profile while preserving its file area. Applying retains the preceding set as
+a backup.
+
+If the guest is stuck or cannot boot, **Recover from saved disk** permits
+replacement after explicit consent to discard unsaved state on apply. The
+[recovery guide](browser-recovery.md) covers this path, raw downloads and website
+redeployment. Do not clear site data, delete IndexedDB or downgrade storage to
+recover work. **Reset machine** is a machine reset, not a backup operation.
+
+### Multi-source adventure
+
+Inside disk management, select the drive containing your tools. **Stage
+adventure starter** stages `IO.NU`, `MAIN.NU` and `BUILD.JSN`. **Prepare build**
+creates the generated `GAME.NU` input and `GAME.MAP` source map. **Apply and
+restart**, close Files, select that drive in CP/M, then run `NUC GAME.NU` and
+`GAME`. The winning keys are `E`, `T`, `W`; `Q` quits.
+
+To change the program, use `EDIT MAIN.NU`, find `CAVE` with Ctrl-F and replace
+it with `BASE` using Ctrl-R. Save with Ctrl-S and quit with Ctrl-Q. Enter disk
+management again on the same drive, prepare the build, apply, and recompile.
+The game now prints `BASE>`. Edit the maintained sources, not the generated
+build file.
+
+If compilation reports an error, paste the full Nucleus diagnostic into Files
+and choose **Locate in saved sources** on the same drive. Mapping is available
+only while source records and the generated build match the saved map. It does
+not identify an older diagnostic's build automatically or include unsaved
+editor RAM.
 
 ## Commands and limits
 
@@ -58,60 +155,10 @@ For normal development, start with `DIR`, `TYPE filename`, `ATOM source.asm`,
 `NUC source.nu`, `EDIT filename`, and a program name without `.COM`. `ERA`
 deletes files; keep backups before experimenting with disk-changing commands.
 
-The baseline is drive A, fixed CP/M disk geometry and an 80×24 terminal.
-Compatibility covers the published feature matrix and tested application
-corpus, not every CP/M application. Desktop Chromium, macOS native and Linux
-CI have acceptance evidence. Physical mobile-keyboard behavior and ESP32
-storage/power-loss behavior remain unqualified. No board is needed for this
-browser session.
-
-## Files and verified tool updates
-
-The hosted version includes **Files and recovery**. Its fresh-profile and
-migrated-profile workflows are qualified in the
-[integration report](reports/browser-workspace-integration.md).
-
-After saving and exiting Edit, open Files, acknowledge that the guest program
-has exited, and choose **Enter disk management**. File imports and selected
-ATOM, NUC or Edit updates are staged privately. **Apply and restart** preserves
-the preceding saved disk as a backup and restarts CP/M with the changed disk.
-Cancel resumes the original CPU. Files use CP/M 8.3 names; downloads include
-record padding. Empty imports and read-only replacements are rejected.
-
-**Download saved disk** exports the committed browser copy. **Download latest
-checkpoint** can retain newer guest-flushed data after a browser save failure;
-it excludes unsaved editor text and later unflushed writes. Keep downloaded
-copies outside browser storage.
-
-If a guest is stuck or an imported disk will not boot, the expandable recovery
-section permits **Recover from saved disk** after explicit consent to discard
-unsaved state when applying a replacement. A backup or downloaded image can then
-be staged and applied. Leave system adaptation unchecked for exact restoration.
-This recovery path does not require a healthy guest or clearing site data.
-The [recovery guide](browser-recovery.md) distinguishes disk restoration from
-website redeployment and explains the retained recovery archive.
-
-Existing saved disks keep their original CCP, BDOS and BIOS bytes: opening the
-new website does not silently upgrade their operating system. A fresh profile
-uses the current distribution. To adapt an existing disk deliberately, download
-it first, stage that image in Files with **Adapt external image with this release's
-CCP/BDOS/BIOS** selected, then apply.
-That replaces its resident system area and preserves its file area; the displaced
-disk is backed up. Leave adaptation unchecked when exact restoration is intended.
-
-### Multi-source adventure
-
-Inside disk management, **Stage adventure starter** stages `IO.NU`, `MAIN.NU`
-and `BUILD.JSN`. **Prepare build** creates the generated `GAME.NU` input and
-`GAME.MAP` source map. **Apply and restart**, close Files, then run
-`NUC GAME.NU` and `GAME`. The winning keys are `E`, `T`, `W`; `Q` quits.
-
-To change the program, use `EDIT MAIN.NU`, find `CAVE` with Ctrl-F and replace
-it with `BASE` using Ctrl-R. Save with Ctrl-S and quit with Ctrl-Q. Enter disk
-management again, prepare the build, apply, and recompile. The game now prints
-`BASE>`. Edit the maintained sources, not the generated build file.
-
-If compilation reports an error, paste the full Nucleus diagnostic into Files
-and choose **Locate in saved sources**. Mapping is available only while source
-records and the generated build match the saved map. It does not identify an
-older diagnostic's build automatically or include unsaved editor RAM.
+The baseline is drive A and an 80×24 terminal. The explicit large-disk profiles
+support eight-MiB A alone or A with optional eight-MiB B. Compatibility covers
+the published feature matrix and tested application corpus, not every CP/M
+application. See the [tool-arena report](reports/eight-mib-tool-arenas.md) for
+the measured tool boundaries and exclusions. Physical mobile-keyboard behavior
+and ESP32 storage/power-loss behavior remain unqualified. No board is needed
+for this browser session.

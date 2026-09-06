@@ -1,11 +1,14 @@
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { prepareNativeCpm22WorkingImage } from "./cpm22-native-image.mjs";
+import {
+  prepareNativeCpm22Image,
+  prepareNativeCpm22WorkingImage,
+} from "./cpm22-native-image.mjs";
 
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = resolve(scriptDirectory, "..");
@@ -55,26 +58,64 @@ function run(executable, commandArguments, options = {}) {
   });
   if (result.status !== 0) {
     throw new Error(
-      result.error?.message ??
-        result.stderr ??
-        result.stdout ??
-        `${executable} failed`,
+      `${result.error?.message ?? result.stderr ?? `${executable} failed`}\nGuest output:\n${result.stdout ?? ""}`,
     );
   }
   return result.stdout;
 }
 
 function runHost(bootRomPath, diskPath, input, stopAfter) {
-  return run(hostExecutable, [
-    "--input-ascii",
-    input,
-    "--stop-after",
-    stopAfter,
-    "--max-steps",
-    "20000000",
-    bootRomPath,
-    diskPath,
-  ]);
+  // Send no typeahead through cold boot and initial directory login. Their
+  // console polling can consume input before the command reader is active.
+  return new Promise((resolve, reject) => {
+    const child = spawn(
+      hostExecutable,
+      [
+        "--stop-after",
+        stopAfter,
+        "--max-steps",
+        "200000000",
+        bootRomPath,
+        diskPath,
+      ],
+      { stdio: ["pipe", "pipe", "pipe"] },
+    );
+    let stdout = "",
+      stderr = "",
+      sent = false,
+      failure;
+    const timer = setTimeout(() => {
+      failure = new Error("native working-image proof timed out");
+      child.kill("SIGKILL");
+    }, 30000);
+    child.on("error", (error) => {
+      failure = error;
+    });
+    child.stdin.on("error", (error) => {
+      failure ??= error;
+      child.kill("SIGKILL");
+    });
+    child.stdout.on("data", (bytes) => {
+      stdout += bytes.toString("latin1");
+      if (!sent && stdout.endsWith("\r\nA>")) {
+        sent = true;
+        child.stdin.write(Buffer.from(input, "latin1"));
+      }
+    });
+    child.stderr.on("data", (bytes) => {
+      stderr += bytes.toString();
+    });
+    child.on("close", (code, signal) => {
+      clearTimeout(timer);
+      if (failure || code !== 0 || signal || !sent)
+        reject(
+          new Error(
+            `${failure?.message ?? stderr ?? "native host failed"}\nGuest output:\n${stdout}`,
+          ),
+        );
+      else resolve(stdout);
+    });
+  });
 }
 
 function assertEqual(actual, expected, label) {
@@ -95,7 +136,14 @@ try {
   const workingDisk = join(temporary, "working.img");
   const exportedAtom = join(temporary, "ATOM-exported.COM");
   const exportedSource = join(temporary, "INPUT-exported.ASM");
-  run(cpmExecutable, ["create", sourceImagePath, workingDisk]);
+  // This external compatibility proof explicitly adapts a disposable copy once.
+  // Subsequent persistent launches must preserve the prepared resident bytes.
+  const initial = await prepareNativeCpm22Image({
+    repositoryRoot,
+    sourceImagePath,
+    outputDirectory: temporary,
+  });
+  run(cpmExecutable, ["create", initial.diskPath, workingDisk]);
   run(cpmExecutable, ["import", workingDisk, atomPath, "ATOM.COM"]);
   run(cpmExecutable, ["import", workingDisk, atomSourcePath, "INPUT.ASM"]);
   const beforeListing = run(cpmExecutable, ["list", workingDisk]);
@@ -127,13 +175,15 @@ try {
     throw new Error("text export did not reproduce INPUT.ASM exactly");
   }
 
+  const reopenDirectory = join(temporary, "reopen");
+  await mkdir(reopenDirectory);
   const prepared = await prepareNativeCpm22WorkingImage({
     repositoryRoot,
     workingImagePath: workingDisk,
-    outputDirectory: temporary,
+    outputDirectory: reopenDirectory,
   });
   const assembleStop = "OUTPUT.COM written\r\n\r\nA>";
-  const assembleTranscript = runHost(
+  const assembleTranscript = await runHost(
     prepared.bootRomPath,
     prepared.diskPath,
     "ATOM\r",
@@ -143,7 +193,7 @@ try {
     throw new Error(`unexpected Atom transcript: ${assembleTranscript}`);
   }
   const programStop = "Hello from native Atom\r\n\r\nA>";
-  const programTranscript = runHost(
+  const programTranscript = await runHost(
     prepared.bootRomPath,
     prepared.diskPath,
     "OUTPUT\r",

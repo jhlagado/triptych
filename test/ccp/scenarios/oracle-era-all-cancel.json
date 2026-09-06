@@ -4,7 +4,7 @@
   "description": "Freeze the ERA *.* confirmation and cancellation transcript",
   "systemCcp": "oracle",
   "systemBdos": "triptych",
-  "expectedInitialDriveSha256": "80ad44feca933feff04556f6df6dda61be1960af5ff378463b0aa8e7576f9c69",
+  "expectedInitialDriveSha256": "3fec1f2b6ad65f03a6776a36f30bdbcbe04fce55738c1435aff82eff59e7b940",
   "sessions": [
     {
       "id": "cancel-erase-all",
@@ -39,7 +39,7 @@
         "wrapPending": false,
         "bellCount": 0
       },
-      "expectedDriveSha256": "80ad44feca933feff04556f6df6dda61be1960af5ff378463b0aa8e7576f9c69"
+      "expectedDriveSha256": "3fec1f2b6ad65f03a6776a36f30bdbcbe04fce55738c1435aff82eff59e7b940"
     }
   ]
 }

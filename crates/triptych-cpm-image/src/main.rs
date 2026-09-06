@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 use std::process;
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use triptych_cpm_image::{CpmImage, CpmName};
+use triptych_cpm_image::{CpmGeometry, CpmImage, CpmName};
 
 static TEMPORARY_SEQUENCE: AtomicU64 = AtomicU64::new(0);
 
@@ -23,6 +23,8 @@ fn run() -> Result<(), Box<dyn Error>> {
     let command = arguments.next().ok_or(USAGE)?;
     match command.to_str() {
         Some("create") => create(parse_exact_paths(arguments, 2, "create")?),
+        Some("format") => format_image(arguments),
+        Some("migrate") => migrate_image(arguments),
         Some("list") => list(parse_exact_paths(arguments, 1, "list")?),
         Some("import") => import(arguments),
         Some("export") => export(arguments),
@@ -37,9 +39,47 @@ fn run() -> Result<(), Box<dyn Error>> {
 
 const USAGE: &str = "usage:
   triptych-cpm create SOURCE-IMAGE WORKING-IMAGE
+  triptych-cpm format FORMAT SYSTEM-AREA NEW-IMAGE
+  triptych-cpm migrate FORMAT SOURCE-IMAGE SYSTEM-AREA NEW-IMAGE
   triptych-cpm list IMAGE
   triptych-cpm import IMAGE MAC-FILE [CPM-NAME]
   triptych-cpm export [--text] [--force] IMAGE CPM-NAME MAC-FILE";
+
+fn next_geometry(
+    arguments: &mut impl Iterator<Item = OsString>,
+) -> Result<CpmGeometry, Box<dyn Error>> {
+    match arguments.next().as_deref().and_then(|value| value.to_str()) {
+        Some("ibm3740") => Ok(CpmGeometry::Ibm3740),
+        Some("triptych-cpm-8m-v1") => Ok(CpmGeometry::Triptych8M),
+        _ => Err("FORMAT must be ibm3740 or triptych-cpm-8m-v1".into()),
+    }
+}
+
+fn format_image(mut arguments: impl Iterator<Item = OsString>) -> Result<(), Box<dyn Error>> {
+    let geometry = next_geometry(&mut arguments)?;
+    let paths = parse_exact_paths(arguments, 2, "format")?;
+    let system = fs::read(&paths[0])?;
+    let image = CpmImage::blank(geometry).migrate_to(geometry, &system)?;
+    write_atomic(&paths[1], &image.into_working_bytes(), Publication::New)?;
+    println!("Formatted {} as {}.", paths[1].display(), geometry.id());
+    Ok(())
+}
+
+fn migrate_image(mut arguments: impl Iterator<Item = OsString>) -> Result<(), Box<dyn Error>> {
+    let geometry = next_geometry(&mut arguments)?;
+    let paths = parse_exact_paths(arguments, 3, "migrate")?;
+    let source = load_image(&paths[0])?;
+    let system = fs::read(&paths[1])?;
+    let candidate = source.migrate_to(geometry, &system)?;
+    write_atomic(&paths[2], &candidate.into_working_bytes(), Publication::New)?;
+    println!(
+        "Migrated {} to {} as {}; the source image is unchanged.",
+        paths[0].display(),
+        paths[2].display(),
+        geometry.id(),
+    );
+    Ok(())
+}
 
 fn create(paths: Vec<PathBuf>) -> Result<(), Box<dyn Error>> {
     let source = load_image(&paths[0])?;

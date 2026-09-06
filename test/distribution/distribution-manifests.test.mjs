@@ -62,6 +62,83 @@ function fixture(id) {
 }
 
 describe("distribution manifest target checks", () => {
+  it.each(["ccp", "bdos"])(
+    "requires explicit matching A/B profile for %s",
+    (id) => {
+      const f = fixture(id);
+      f.component.target.origin -= 256;
+      f.entry.origin -= 256;
+      f.entry.entry -= 256;
+      f.manifest.targetProfile = "triptych-cpu-v0.1-8m-ab";
+      expect(() =>
+        validateDistributionManifest(f.component, f.manifest, atomRevision),
+      ).toThrow();
+      expect(
+        validateDistributionManifest(
+          f.component,
+          f.manifest,
+          atomRevision,
+          "triptych-cpu-v0.1-8m-ab",
+        ),
+      ).toEqual(f.manifest);
+      for (const mutate of [
+        (x) => {
+          x.manifest.targetProfile = "triptych-cpu-v0.1";
+        },
+        (x) => {
+          x.entry.origin += 256;
+        },
+        (x) => {
+          x.entry.entry += 256;
+        },
+        (x) => {
+          x.component.target.origin += 256;
+        },
+      ]) {
+        const bad = structuredClone(f);
+        bad.entry = bad.manifest.components.find((entry) => entry.id === id);
+        mutate(bad);
+        expect(() =>
+          validateDistributionManifest(
+            bad.component,
+            bad.manifest,
+            atomRevision,
+            "triptych-cpu-v0.1-8m-ab",
+          ),
+        ).toThrow();
+      }
+      expect(() =>
+        validateDistributionManifest(
+          f.component,
+          f.manifest,
+          atomRevision,
+          "test-multi-drive-workspace-v1",
+        ),
+      ).toThrow(/unsupported/);
+    },
+  );
+
+  it("bounds A/B application loading independently of runtime workspace", () => {
+    const f = fixture("nucleus");
+    expect(() =>
+      validateDistributionManifest(
+        f.component,
+        f.manifest,
+        atomRevision,
+        "triptych-cpu-v0.1-8m-ab",
+      ),
+    ).toThrow(/capacity/);
+    f.component.target.capacity = 0xe200;
+    expect(
+      validateDistributionManifest(
+        f.component,
+        f.manifest,
+        atomRevision,
+        "triptych-cpu-v0.1-8m-ab",
+      ),
+    ).toEqual(f.manifest);
+  });
+
   it.each(["ccp", "bdos", "nucleus", "edit"])(
     "accepts published %s metadata without mutation",
     (id) => {

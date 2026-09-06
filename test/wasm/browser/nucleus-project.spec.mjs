@@ -37,11 +37,10 @@ async function runCommand(page, value) {
 }
 async function savedBytes(page) {
   return page.evaluate(async () => {
-    const { openRevisionedDiskStore } =
-      await import("/working-disk-revisions.js");
-    const store = await openRevisionedDiskStore();
+    const { openDriveSetStore } = await import("/drive-set-store.js");
+    const store = await openDriveSetStore();
     try {
-      return Array.from((await store.load()).bytes);
+      return Array.from((await store.load()).snapshot.drives.A.bytes);
     } finally {
       store.close();
     }
