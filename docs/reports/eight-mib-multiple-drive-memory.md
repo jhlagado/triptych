@@ -116,8 +116,9 @@ operation on one drive leaves the other image and ALV unchanged.
 Tool qualification must exercise maximum admitted buffers, capacity failures,
 nested compilation, save/reopen and stack/resident canaries on both CPU
 implementations. Browser and native recovery also need independent drive
-identities and saved revisions. This report supplies no drive-selection,
-multi-drive persistence or hardware execution proof.
+identities and saved revisions. The later isolated prototypes supply only the
+limited assembly and smoke evidence stated below; full multi-drive persistence
+and hardware execution remain unqualified.
 
 Keep existing published images exact and require explicit migration to a new
 resident combination. Copying old tool files is insufficient compatibility

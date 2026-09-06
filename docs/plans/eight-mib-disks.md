@@ -110,8 +110,8 @@ merely because another drive completed a flush.
 ## Current next step
 
 Qualify and correct upstream multi-drive BDOS semantics before selecting the
-resident layout. Current source reinitializes the allocation vector on drive
-reselection and does not select an explicit FCB drive. Tests must prove open-file
+resident layout. The pinned 0.1.2 source reinitializes the allocation vector on
+drive reselection and does not select an explicit FCB drive. Tests must prove open-file
 allocation preservation on A/B/A and explicit-drive access without changing the
 default drive. The corrected resident byte count determines the next layout.
 
