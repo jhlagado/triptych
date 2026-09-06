@@ -1,7 +1,7 @@
 # CP/M disk profiles v1
 
-Status: selected implementation contract, 2026-09-06. One-drive host execution
-has passed; release qualification remains pending. The existing IBM 3740 release remains the
+Status: selected implementation contract, 2026-09-06. One-drive and basic A/B host execution
+have passed; complete release qualification remains pending. The existing IBM 3740 release remains the
 default until the acceptance gates pass.
 
 ## Formats
@@ -73,6 +73,59 @@ vectors require a separately specified memory layout and application-capacity
 qualification. The logical disk format remains the same when resident addresses
 change. Disk format, resident profile, component release and saved revision are
 distinct identities.
+
+## A/B resident profile
+
+The separate `triptych-cpu-v0.1-8m-ab` profile supports two independently
+selected large drives. A is mandatory boot media; B is optional data media.
+Both CP/M-visible drives require the exact large geometry. B does not need
+resident system records. Its reserved track must survive file operations.
+
+| Region                        | Inclusive addresses |  Bytes |
+| ----------------------------- | ------------------- | -----: |
+| COM load area                 | 0100–E2FF           | 57,856 |
+| CCP artifact                  | E300–EAFF           |  2,048 |
+| BDOS artifact                 | EB00–F8FF           |  3,584 |
+| BIOS loaded artifact          | F900–FCFF           |  1,024 |
+| Live BIOS code and work areas | F900–FBE0           |    737 |
+| A allocation vector           | FC00–FDFE           |    511 |
+| B allocation vector           | FE00–FFFE           |    511 |
+
+FDFF and FFFF are outside the vectors and remain available as guards. The
+assembled BIOS must reject a live extent above FC00. Its padding at FC00–FCFF
+is loaded during cold boot but has no live BIOS meaning after entry. BDOS may
+overwrite that padding when initializing A's allocation vector.
+
+The separate bootstrap uses stack and overlay-exit stub E200 and counters
+E1F0/E1F1. Cold boot loads 52 records from A, ending at FD00 exclusive. Warm
+boot reloads only the 44 CCP/BDOS records, ending at F900 exclusive. It retains
+the page-zero default drive while reading residents from A. The loader leaves
+both allocation vectors intact; subsequent BDOS login/reset may initialize them.
+
+Warm boot validates A, flushes A, and flushes B whenever the controller reports
+B present, even if its capacity is unsuitable for CP/M. Only absence permits
+skipping B. This distinction is necessary because direct controller access can
+dirty incompatible media. A flush drains the shared cache but checkpoints only
+the selected drive. Both flushes must finish before the first resident read.
+A flush failure halts boot before reload. A completed earlier checkpoint may
+remain durable if a later flush fails; the pair of flushes is not a transaction.
+
+The loader rejects a COM exceeding 57,856 record-rounded bytes before entry.
+The pinned ATOM, NUC and Edit wrappers may use their E400 stacks after launch:
+the CCP's E300–E3FF code is then dead until warm boot. The saved launch word at
+EAEB–EAEC must remain intact. Their return must restore the incoming stack and
+reach address 0000; warm boot must restore CCP and BDOS before CCP re-entry.
+Calls through BDOS remain live throughout the transient. This is a qualified
+tool-lifetime contract, not permission for arbitrary programs to overwrite
+resident storage. Maximum tool capacity and generated failure/trap paths remain
+acceptance requirements beyond the basic success/error workflows.
+
+The A/B builder uses a separate release lock and distinct assets
+`system-triptych-cpm-8m-ab-v1.bin` and
+`bootstrap-triptych-cpm-8m-ab-v1.bin`. It reproduces the retained upstream
+profile with ATOM; it does not relocate or patch default binaries. Its descriptor
+binds the resident lock, system bytes, bootstrap, CCP, BDOS and BIOS source and
+binary hashes. Existing one-drive asset names and meanings remain unchanged.
 
 ## Migration and publication
 

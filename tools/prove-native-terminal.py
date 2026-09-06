@@ -70,6 +70,7 @@ def prove(exit_method):
         environment.pop("TRIPTYCH_CPM22_WORK_DISK", None)
         environment.pop("TRIPTYCH_CPM22_IMAGE", None)
         environment.pop("TRIPTYCH_CPM_CCP", None)
+        environment.pop("TRIPTYCH_CPM_BOOTSTRAP_PROFILE", None)
         process = subprocess.Popen(
             [sys.executable, str(Path(__file__).resolve()), "--session", str(report_write)], cwd=ROOT,
             stdin=slave, stdout=slave, stderr=slave, env=environment,

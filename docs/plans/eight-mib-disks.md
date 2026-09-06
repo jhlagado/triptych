@@ -1,9 +1,10 @@
 # Eight MiB disks
 
 Date: 2026-09-06. Status: active goal; one-drive foundations and browser migration
-pass the complete local check. The two-drive controller/host proof also passes.
-Multi-drive BDOS, resident profiles, browser drive sets and release qualification
-remain.
+pass the complete local check. The separately pinned A/B residents and basic
+native/WASM tool workflows now pass the complete local check. Full-volume BDOS
+and actual machine storage-failure tests pass. Maximum tool-capacity proofs,
+browser drive sets and complete release qualification remain.
 Starting revision: `1589d7ebf9d2271a464446a1ff3039f68c6e02f3`.
 
 The starting tree passed `npm run check`, including 48 browser tests, 287
@@ -109,19 +110,37 @@ merely because another drive completed a flush.
 
 ## Current next step
 
-Qualify and correct upstream multi-drive BDOS semantics before selecting the
-resident layout. The pinned 0.1.2 source reinitializes the allocation vector on
-drive reselection and does not select an explicit FCB drive. Tests must prove open-file
-allocation preservation on A/B/A and explicit-drive access without changing the
-default drive. The corrected resident byte count determines the next layout.
+Portable CP/M 0.1.3 is published after 361 tests and independent release review.
+It corrects multi-drive selection, queries and allocation reset. Triptych retains
+its separately named E300/EB00 A/B artifacts under a new resident lock; the
+default 0.1.2 release inputs remain unchanged. The implemented F900 BIOS has
+737 live bytes and leaves separate allocation vectors at FC00 and FE00.
 
-Portable CP/M 0.1.2 is published and pinned. The full local Triptych check passes
+The retained-release A/B proof passes 30 native/WASM checkpoints and 12 COM
+lifetimes, including explicit drive access, B editing and compilation, exact
+load limits and fresh reopen. It checks full image and console parity, the saved
+launch word, actual return PC/SP and resident reload before CCP entry.
+
+Genuine full-volume allocation and actual backing-store/checkpoint failures
+during warm boot now pass separate interface and machine tests. The complete
+Triptych gate passes 378 Vitest cases, 59 browser cases, host workflows and Rust
+checks. Persistent native reopening preserves existing system bytes and selects
+its bootstrap profile explicitly; a fresh creator publishes new media separately.
+The [A/B integration report](../reports/eight-mib-ab-integration.md) records the
+release identities, execution measurements and proof limits.
+
+Next gates are maximum tool-capacity and generated terminal paths, interactive
+native B attachment and a coherent browser drive set. Browser
+publication must preserve the complete preceding drive set and compare all
+expected revisions before publishing replacements.
+
+The earlier one-drive foundation pinned Portable CP/M 0.1.2 and passed
 336 TypeScript tests, 59 browser tests, native/WASM application workflows and
-Rust checks. The new controller proof executes 43 commands across two 8 MiB
+Rust checks. Its controller proof executes 43 commands across two 8 MiB
 images and 20 boundary reads after reopening, with exact image comparisons.
 It does not establish multi-drive CP/M or browser drive-set behavior.
 
-The [resident candidates](../reports/eight-mib-multiple-drive-memory.md) require
-application compatibility qualification. Current tools use E400 stacks, but the
-pinned CCP supplies a warm-boot return address. Test that explicit CCP-lifetime
-overlap before requiring new tool releases or reducing their buffer capacities.
+The [resident candidates](../reports/eight-mib-multiple-drive-memory.md) retain
+the earlier alternatives and constraints. Basic E400-stack lifetime tests now
+pass under the selected E300 profile; full capacity qualification is still
+required before declaring the combined milestone complete.

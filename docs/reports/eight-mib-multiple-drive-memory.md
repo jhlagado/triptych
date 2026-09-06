@@ -1,10 +1,17 @@
 # Memory candidates for multiple 8 MiB drives
 
-Date: 2026-09-06. Design candidates, not a selected multi-drive profile.
+Date: 2026-09-06. Historical design candidates; the selected E300 A/B layout is
+now specified in the [disk-profile contract](../specifications/cpm-disk-profiles-v1.md).
+The implemented BIOS has 737 live bytes, ending at FBE1 exclusive. Basic
+retained-release native/WASM tool execution passes; complete capacity and
+drive-set persistence qualification remain open. The candidate measurements
+below describe their inspected revisions, not the current source census.
+
+Original design status:
 The initial arithmetic below has been extended by isolated ATOM prototypes and
 source-level lifetime analysis. Corrected upstream BDOS behavior must be measured
 before final placement. The [disk-profile contract](../specifications/cpm-disk-profiles-v1.md)
-continues to specify one drive.
+at that point specified one drive.
 
 ## Resident placement
 

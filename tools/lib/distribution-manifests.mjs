@@ -39,7 +39,13 @@ export function validateDistributionManifest(
   component,
   manifest,
   atomRevision,
+  targetProfile = "triptych-cpu-v0.1",
 ) {
+  const offsets = { "triptych-cpu-v0.1": 0, "triptych-cpu-v0.1-8m-ab": -256 };
+  assert.ok(
+    Object.hasOwn(offsets, targetProfile),
+    "unsupported resident profile",
+  );
   assert.equal(
     component.recipe,
     "verified-release",
@@ -59,7 +65,11 @@ export function validateDistributionManifest(
   );
 
   if (Object.hasOwn(OS, component.id)) {
-    const expected = OS[component.id];
+    const expected = {
+      ...OS[component.id],
+      origin: OS[component.id].origin + offsets[targetProfile],
+      entry: OS[component.id].entry + offsets[targetProfile],
+    };
     const source = `src/${component.id}.asm`;
     assert.equal(
       component.source.repository,
@@ -88,11 +98,7 @@ export function validateDistributionManifest(
       "portable-cpm-artifacts-v1",
       "OS manifest schema",
     );
-    assert.equal(
-      manifest.targetProfile,
-      "triptych-cpu-v0.1",
-      "OS target profile",
-    );
+    assert.equal(manifest.targetProfile, targetProfile, "OS target profile");
     assert.equal(
       manifest.atom.repository,
       `${REPOSITORY}atom`,
@@ -144,7 +150,7 @@ export function validateDistributionManifest(
     assert.ok(
       Number.isSafeInteger(component.target.capacity) &&
         component.target.capacity > 0 &&
-        component.target.capacity <= 0xe300,
+        component.target.capacity <= 0xe300 + offsets[targetProfile],
       "application capacity must fit the TPA",
     );
     assert.ok(

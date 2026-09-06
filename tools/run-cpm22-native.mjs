@@ -21,9 +21,28 @@ const hostExecutable = join(
 );
 const sourceImagePath = process.env.TRIPTYCH_CPM22_IMAGE;
 const workingImagePath = process.env.TRIPTYCH_CPM22_WORK_DISK;
+const bootstrapProfile = process.env.TRIPTYCH_CPM_BOOTSTRAP_PROFILE;
 const systemCcp = process.env.TRIPTYCH_CPM_CCP ?? "triptych";
 if (systemCcp !== "oracle" && systemCcp !== "triptych") {
   throw new Error("TRIPTYCH_CPM_CCP must be oracle or triptych");
+}
+if (
+  workingImagePath !== undefined &&
+  process.env.TRIPTYCH_CPM_CCP !== undefined
+) {
+  throw new Error(
+    "TRIPTYCH_CPM_CCP cannot replace the CCP in a saved working disk; use an explicit disposable source copy",
+  );
+}
+if (workingImagePath !== undefined && sourceImagePath !== undefined) {
+  throw new Error(
+    "choose either TRIPTYCH_CPM22_WORK_DISK or the disposable TRIPTYCH_CPM22_IMAGE source",
+  );
+}
+if (workingImagePath === undefined && bootstrapProfile !== undefined) {
+  throw new Error(
+    "TRIPTYCH_CPM_BOOTSTRAP_PROFILE selects the known resident layout of a saved TRIPTYCH_CPM22_WORK_DISK only",
+  );
 }
 if (process.platform === "win32") {
   throw new Error(
@@ -65,7 +84,7 @@ try {
         repositoryRoot,
         workingImagePath,
         outputDirectory: temporary,
-        systemCcp,
+        bootstrapProfile,
       })
     : await prepareNativeCpm22Image({
         repositoryRoot,
@@ -75,14 +94,18 @@ try {
       });
   console.log("Triptych native CP/M 2.2 terminal");
   console.log(`Rust host: ${hostExecutable}`);
-  console.log(
-    `CCP: ${systemCcp === "triptych" ? "pinned Portable CP/M release" : "retained compatibility oracle"}`,
-  );
   if (persistent) {
     console.log(`Working disk: ${resolve(workingImagePath)}`);
     console.log(`Pre-launch SHA-256: ${prepared.sourceImageSha256}`);
+    console.log(`Selected bootstrap profile: ${prepared.bootstrapProfile}`);
+    console.log(
+      "Saved system and application bytes are preserved exactly; resident compatibility is the caller's selection, not inferred from disk capacity.",
+    );
     console.log("Flushed guest writes remain in this working image.");
   } else if (sourceImagePath !== undefined) {
+    console.log(
+      `CCP: ${systemCcp === "triptych" ? "pinned Portable CP/M release" : "retained compatibility oracle"}`,
+    );
     console.log(`Source disk: ${resolve(sourceImagePath)}`);
     console.log(`Source SHA-256: ${prepared.sourceImageSha256}`);
     console.log(
