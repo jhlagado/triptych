@@ -1,7 +1,8 @@
 # Two-MiB configurable-drive roadmap
 
-Date: 2026-09-07. Status: scratch BIOS feasibility and initial Portable CP/M
-interface tests passed; production implementation is in progress.
+Date: 2026-09-07. Status: production BIOS profiles and image-format tests passed;
+native/WASM ATOM smoke tests passed at counts 1, 2, 4 and 16. Persistence,
+complete tool qualification and release integration remain in progress.
 
 The user selected two-MiB disks with two-KiB blocks. The target is a configurable
 one-to-sixteen-slot machine, normally two or four slots, with independent A–P
@@ -41,6 +42,12 @@ Stage 1 settles the resident-size gate before broad implementation. Stages 2a,
 2a/2b; stage 4 follows actual resident execution. Persistence work can proceed
 beside them, but stage 5 requires both machine and persistence proofs. Stage 6
 uses one coordinated build and publication, with independent review of evidence.
+
+The selected [v4 save contract](../specifications/cpm-drive-set-v4.md) freezes
+archive framing, media identity and preservation requirements. Implement and
+review the standalone codec and historical compatibility dispatch first, then
+the activation-marker-aware storage writer. A codec test does not establish
+transactional durability or qualify browser activation.
 
 ## Reconfiguration acceptance workflow
 
