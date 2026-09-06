@@ -26,28 +26,15 @@ test("autosave and recovery download exclude writes after the last guest flush",
 
   const savedBytes = () =>
     page.evaluate(async () => {
-      const database = await new Promise((resolve, reject) => {
-        const request = indexedDB.open("triptych-cpu", 2);
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject(request.error);
-      });
+      const { openDriveSetStore } = await import("/drive-set-store.js");
+      const store = await openDriveSetStore();
       try {
-        return await new Promise((resolve, reject) => {
-          const transaction = database.transaction(
-            "disk-revisions",
-            "readonly",
-          );
-          const request = transaction.objectStore("disk-revisions").get("head");
-          let bytes;
-          request.onsuccess = () => {
-            bytes = request.result?.bytes;
-          };
-          transaction.oncomplete = () =>
-            resolve(bytes ? Array.from(bytes) : []);
-          transaction.onabort = () => reject(transaction.error);
-        });
+        const head = await store.load();
+        return head.kind === "ready"
+          ? Array.from(head.snapshot.drives.A.bytes)
+          : [];
       } finally {
-        database.close();
+        store.close();
       }
     });
 

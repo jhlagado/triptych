@@ -1,10 +1,13 @@
 # Drive-set storage and native B
 
-Date: 2026-09-07. The native A/B launcher, supplemental tool-limit proof and
+Checkpoint: 2026-09-07, commit `5750a2c`. The native A/B launcher, supplemental tool-limit proof and
 browser storage components pass local verification. The browser page still uses
 its previous single-drive coordinator; the new storage code is not activated or
 deployed. The [implementation plan](../plans/browser-drive-sets.md) defines the
 remaining integration and recovery gates.
+
+The subsequent [browser integration report](eight-mib-browser-ab.md) records
+activation of this storage interface and its current acceptance evidence.
 
 ## Native saved drives
 

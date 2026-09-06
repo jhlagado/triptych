@@ -23,15 +23,41 @@ async function manage(page) {
 }
 async function head(page) {
   return page.evaluate(async () => {
-    const { openRevisionedDiskStore } =
-      await import("/working-disk-revisions.js");
-    const store = await openRevisionedDiskStore();
+    const { openDriveSetStore } = await import("/drive-set-store.js");
+    let store = await openDriveSetStore();
     try {
-      const value = await store.load();
+      let value = await store.load();
+      if (
+        value.kind === "recovery" &&
+        value.error ===
+          "Historical bootstrap is required to reopen the saved legacy disk."
+      ) {
+        store.close();
+        const legacyBootstrap = new Uint8Array(
+          await (await fetch("/bootstrap.bin")).arrayBuffer(),
+        );
+        store = await openDriveSetStore({ legacyBootstrap });
+        value = await store.load();
+      }
+      if (value.kind !== "ready")
+        throw new Error(`Expected ready saved state: ${JSON.stringify(value)}`);
       return {
-        ...value,
-        bytes: Array.from(value.bytes),
-        backups: await store.listBackups(),
+        kind: value.kind,
+        token: value.token,
+        receipt: value.receipt,
+        name: value.snapshot.drives.A.name,
+        bName: value.snapshot.drives.B?.name ?? null,
+        bytes: Array.from(value.snapshot.drives.A.bytes),
+        b: value.snapshot.drives.B
+          ? Array.from(value.snapshot.drives.B.bytes)
+          : null,
+        bootstrap: {
+          profile: value.snapshot.bootstrap.profile,
+          bytes: Array.from(value.snapshot.bootstrap.bytes),
+        },
+        backups: (await store.listBackups()).sort(
+          (a, b) => b.revision - a.revision || a.id.localeCompare(b.id),
+        ),
       };
     } finally {
       store.close();
@@ -248,8 +274,13 @@ test("aborted manual publication keeps the head and backups unchanged and retrie
   await page.addInitScript(() => {
     const add = IDBObjectStore.prototype.add;
     IDBObjectStore.prototype.add = function (value, ...rest) {
-      if (globalThis.abortManual && value?.key?.startsWith("change:")) {
+      if (
+        globalThis.abortManual &&
+        this.name === "drive-set-state" &&
+        value?.key?.startsWith("backup:")
+      ) {
         globalThis.abortManual = false;
+        globalThis.manualProbeTriggered = true;
         throw new DOMException("Manual quota probe", "QuotaExceededError");
       }
       return add.call(this, value, ...rest);
@@ -271,6 +302,7 @@ test("aborted manual publication keeps the head and backups unchanged and retrie
   await expect(page.locator("#files-status")).toContainText(
     "Manual quota probe",
   );
+  expect(await page.evaluate(() => globalThis.manualProbeTriggered)).toBe(true);
   expect(await head(page)).toEqual(before);
   await expect(page.locator("#commit-disk")).toBeEnabled();
   await apply(page);
@@ -300,16 +332,15 @@ test("backup restoration preserves exact bytes and backs up the displaced disk",
   const restored = await head(page);
   expect(restored.bytes).toEqual(original.bytes);
   expect(restored.backups).toHaveLength(2);
-  const displaced = await page.evaluate(async (operationId) => {
-    const { openRevisionedDiskStore } =
-      await import("/working-disk-revisions.js");
-    const store = await openRevisionedDiskStore();
+  const displaced = await page.evaluate(async (id) => {
+    const { openDriveSetStore } = await import("/drive-set-store.js");
+    const store = await openDriveSetStore();
     try {
-      return Array.from((await store.readBackup(operationId)).bytes);
+      return Array.from((await store.readBackup(id)).drives.A.bytes);
     } finally {
       store.close();
     }
-  }, restored.backups[0].operationId);
+  }, restored.backups[0].id);
   expect(displaced).toEqual(changed.bytes);
 });
 
@@ -384,11 +415,10 @@ test("corrupt legacy data enters recovery without seeding over the original reco
   await expect(page.locator("#status")).toContainText("Recovery required");
   await expect(page.locator("#legacy-recovery")).toBeVisible();
   const original = await page.evaluate(async () => {
-    const { openRevisionedDiskStore } =
-      await import("/working-disk-revisions.js");
-    const store = await openRevisionedDiskStore();
+    const { openDriveSetStore } = await import("/drive-set-store.js");
+    const store = await openDriveSetStore();
     try {
-      const value = await store.loadLegacyRecord();
+      const value = await store.readRawRecovery("working-disks", "drive-a");
       return { schema: value.schema, bytes: Array.from(value.bytes) };
     } finally {
       store.close();
@@ -460,16 +490,16 @@ for (const newerAction of ["disk", "file"]) {
 test("closing while management entry saves cancels the eventual session and resumes input", async ({
   page,
 }) => {
-  await page.route("**/working-disk-revisions.js", async (route) => {
+  await page.route("**/drive-set-store.js", async (route) => {
     const response = await route.fetch();
     const source = await response.text();
-    const marker = "return publish(expectedRevision, undefined, value, false);";
+    const marker = "publish(expected, undefined, snapshot, false),";
     expect(source).toContain(marker);
     await route.fulfill({
       response,
       body: source.replace(
         marker,
-        `if(globalThis.pauseCheckpoint) {globalThis.pauseCheckpoint=false;await new Promise(resolve=>{globalThis.finishCheckpoint=resolve;});}\n${marker}`,
+        `(async () => {if(globalThis.pauseCheckpoint) {globalThis.pauseCheckpoint=false;await new Promise(resolve=>{globalThis.finishCheckpoint=resolve;});} return publish(expected, undefined, snapshot, false);})(),`,
       ),
     });
   });
@@ -493,26 +523,55 @@ test("closing while management entry saves cancels the eventual session and resu
   await expect(page.locator("#terminal")).toContainText("ATOM");
 });
 
-test("failed boot downloads retain saved-disk and backup recovery access", async ({
+test("saved v3 work boots without downloading a replacement bootstrap", async ({
   page,
 }, info) => {
   await boot(page);
   const saved = await head(page);
-  await page.route("**/bootstrap.bin", (route) =>
-    route.fulfill({ status: 503, body: "Unavailable" }),
-  );
+  let bootstrapRequests = 0;
+  await page.route("**/bootstrap.bin", (route) => {
+    bootstrapRequests++;
+    return route.fulfill({ status: 503, body: "Unavailable" });
+  });
   await page.reload();
-  await expect(page.locator("#status")).toContainText("Recovery required");
+  await expect(page.locator("#status")).toHaveAttribute(
+    "data-state",
+    "running",
+  );
+  await expect(page.locator("#terminal")).toContainText("A>");
+  expect(bootstrapRequests).toBe(0);
   await expect(page.locator("#download")).toBeEnabled();
   const pending = page.waitForEvent("download");
   await page.locator("#download").click();
   const download = await pending;
-  const path = info.outputPath("recover-after-boot-failure.img");
+  const path = info.outputPath("retained-bootstrap.img");
   await download.saveAs(path);
   expect(await readFile(path)).toEqual(Buffer.from(saved.bytes));
   await page.locator("#files").click();
   await expect(page.locator("#file-list")).toContainText("NUC.COM");
-  expect((await head(page)).bytes).toEqual(saved.bytes);
+  expect(await head(page)).toEqual(saved);
+});
+
+test("failed WASM download retains exact saved-disk recovery access", async ({
+  page,
+}, info) => {
+  await boot(page);
+  const saved = await head(page);
+  let failedRequests = 0;
+  await page.route("**/triptych_host_wasm_bg.wasm", (route) => {
+    failedRequests++;
+    return route.fulfill({ status: 503, body: "Unavailable" });
+  });
+  await page.reload();
+  await expect(page.locator("#status")).toContainText("Recovery required");
+  expect(failedRequests).toBeGreaterThan(0);
+  await expect(page.locator("#download")).toBeEnabled();
+  const pending = page.waitForEvent("download");
+  await page.locator("#download").click();
+  const path = info.outputPath("recover-after-wasm-failure.img");
+  await (await pending).saveAs(path);
+  expect(await readFile(path)).toEqual(Buffer.from(saved.bytes));
+  expect(await head(page)).toEqual(saved);
 });
 
 test("a nonbooting disk can be recovered from its saved backup without guest readiness", async ({

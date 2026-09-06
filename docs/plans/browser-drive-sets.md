@@ -2,7 +2,7 @@
 
 Date: 2026-09-07. Selected implementation design for the
 [eight MiB disk milestone](eight-mib-disks.md). Storage and archive implementation
-is in progress; browser activation, migration and hosted qualification remain open.
+and browser integration pass local verification; hosted qualification remains open.
 
 ## Saved state and recovery
 

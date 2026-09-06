@@ -19,6 +19,10 @@ struct DiskFiles {
 impl DiskFiles {
     fn new(bytes: &[u8]) -> Result<Self, String> {
         let source = CpmImage::from_bytes(bytes.to_vec()).map_err(|e| e.to_string())?;
+        Self::from_image(source)
+    }
+
+    fn from_image(source: CpmImage) -> Result<Self, String> {
         // Both calls scan every occupied entry, including other users. Recovery
         // of malformed images belongs to whole-image export, not this file API.
         let files = source.files().map_err(|e| e.to_string())?;
@@ -133,6 +137,14 @@ impl CpmDisk {
             .map_err(js_error)
     }
 
+    /// Create an independent empty data disk, without CCP, BDOS or BIOS bytes.
+    /// This does not mount a drive or publish storage; the host owns that commit.
+    pub fn create_eight_mib() -> Result<CpmDisk, JsError> {
+        DiskFiles::from_image(CpmImage::blank(CpmGeometry::Triptych8M))
+            .map(|disk| Self { disk })
+            .map_err(js_error)
+    }
+
     pub fn canonical_name(name: &str) -> Result<String, JsError> {
         CpmName::parse(name)
             .map(|name| name.canonical().to_owned())
@@ -221,6 +233,63 @@ mod tests {
         let mut bytes = vec![0; WORKING_IMAGE_BYTES];
         bytes[SYSTEM_BYTES..SYSTEM_BYTES + DIRECTORY_BYTES].fill(0xe5);
         bytes
+    }
+
+    #[test]
+    fn public_blank_eight_mib_is_data_only_and_matches_shared_geometry() {
+        let geometry = CpmGeometry::Triptych8M;
+        let expected = CpmImage::blank(geometry);
+        let disk = CpmDisk::create_eight_mib().unwrap();
+        let source = disk.export_source();
+        assert_eq!(source, expected.as_bytes());
+        assert_eq!(source.len(), geometry.image_bytes());
+        assert!(source[..geometry.system_bytes()]
+            .iter()
+            .all(|byte| *byte == 0));
+        assert_eq!(disk.geometry_id(), geometry.id());
+        assert!(disk.file_names().is_empty());
+        assert_eq!(disk.import_count(), 0);
+        assert_eq!(
+            disk.free_directory_entries() as usize,
+            geometry.directory_entries()
+        );
+        assert_eq!(
+            disk.free_bytes() as usize,
+            expected.free_space().unwrap().bytes
+        );
+        assert_eq!(disk.export_candidate().unwrap(), source);
+        let reopened = CpmDisk::new(&source).unwrap();
+        assert_eq!(reopened.export_source(), source);
+        assert_eq!(reopened.geometry_id(), disk.geometry_id());
+    }
+
+    #[test]
+    fn public_blank_eight_mib_keeps_instances_exports_and_staged_inputs_private() {
+        let mut first = CpmDisk::create_eight_mib().unwrap();
+        let second = CpmDisk::create_eight_mib().unwrap();
+        let original = second.export_source();
+        let mut exported = first.export_source();
+        exported.fill(0x55);
+        let mut input = vec![0x41; 129];
+        assert_eq!(first.add_import("hello.txt", &input).unwrap(), "HELLO.TXT");
+        input.fill(0x42);
+        assert_eq!(first.import_count(), 1);
+        assert!(first.file_names().is_empty());
+        assert_eq!(first.export_source(), original);
+        assert_eq!(second.export_candidate().unwrap(), original);
+        assert_eq!(second.import_count(), 0);
+        let candidate = first.export_candidate().unwrap();
+        let reopened = CpmDisk::new(&candidate).unwrap();
+        assert_eq!(reopened.file_names(), ["HELLO.TXT"]);
+        assert_eq!(reopened.file_records("HELLO.TXT").unwrap(), 2);
+        let contents = reopened.read_file("HELLO.TXT").unwrap();
+        assert_eq!(&contents[..129], &[0x41; 129]);
+        assert_eq!(&contents[129..], &[0x1a; 127]);
+        let system_bytes = CpmGeometry::Triptych8M.system_bytes();
+        assert_eq!(&candidate[..system_bytes], &original[..system_bytes]);
+        first.clear_imports();
+        assert_eq!(first.export_candidate().unwrap(), original);
+        assert_eq!(reopened.export_source(), candidate);
     }
 
     #[test]

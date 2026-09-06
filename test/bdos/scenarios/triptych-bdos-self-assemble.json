@@ -22,7 +22,7 @@
       "sha256": "072d43cb9be3a21daaa923399d7423dbeeeb699895d572b5aea4a112ce420cca"
     }
   ],
-  "expectedInitialDriveSha256": "cc5602ec262cfc32b2b7f711edbab267ed3a0aa6bf0bbf1e2e8ce72d8a9e8ebd",
+  "expectedInitialDriveSha256": "fc24272f9178e94aa3ea7b54ff0593873e606177db4eb84bc1f7c880dbd46de9",
   "sessions": [
     {
       "id": "assemble-bdos",
@@ -39,7 +39,7 @@
         }
       ],
       "expectedTranscript": "\r\nA>ATBDOS BDOS.ASM BDOS.BIN\r\r\n\r\nBDOS.BIN written\r\n\r\nA>",
-      "expectedDriveSha256": "7fefc7feb88dc2d93e36a87dbda07b83844ea45faf4bd0d79b87563b6fe4b80b",
+      "expectedDriveSha256": "56b33ef844ab14271716c73fc9eaf6d4232c1d95c1c463ff24fb1c1de222b4f4",
       "expectedTerminal": {
         "text": "\nA>ATBDOS BDOS.ASM BDOS.BIN\n\nBDOS.BIN written\n\nA>",
         "cursorRow": 5,

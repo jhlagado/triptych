@@ -114,13 +114,15 @@ async function snapshot(directory, expectedRevision, allowDevelopment) {
       deploymentSchema: manifest.schema,
       deploymentManifestSha256: hash(manifestBytes),
       assetCount: manifest.assets.length,
-      intendedStorageSchema: "triptych-working-disk-v2",
+      intendedStorageSchema: "triptych-drive-set-v3",
       runtimeQualification: "not-performed",
     },
   };
 }
 
-/** Verify retained bytes, not runtime compatibility. A separate same-origin
+/** Verify current-build retained bytes, not runtime compatibility. Older
+ * archives require their corresponding release verifier; this checker does not
+ * infer that an old page can reopen v3 state. A separate same-origin
  * migrated-profile browser proof is required before calling this a rollback.
  */
 export async function verifyBrowserRecoveryArchive({

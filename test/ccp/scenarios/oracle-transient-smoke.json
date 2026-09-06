@@ -4,7 +4,7 @@
   "description": "Freeze blank-line, drive-selection, missing-command, transient-load, persistence, and warm-return behavior",
   "systemCcp": "oracle",
   "systemBdos": "triptych",
-  "expectedInitialDriveSha256": "80ad44feca933feff04556f6df6dda61be1960af5ff378463b0aa8e7576f9c69",
+  "expectedInitialDriveSha256": "3fec1f2b6ad65f03a6776a36f30bdbcbe04fce55738c1435aff82eff59e7b940",
   "expectedFinalFiles": [
     {
       "name": "RESULT.TXT",
@@ -43,7 +43,7 @@
         }
       ],
       "expectedTranscript": "\r\nA>\r\r\nA>a:\r\r\nA>nope\r\r\nNOPE?\r\n\r\nA>smoke\r\r\nWrote RESULT.TXT\r\n\r\nA>",
-      "expectedDriveSha256": "aa36aec04d0611e6af1564d9b677da537c2976f0189cb56063e4eb877296e9a4",
+      "expectedDriveSha256": "bf5a201591cf54b53be492a047d815ba04c66daf5b4ea4f38038badb262e61b7",
       "expectedTerminal": {
         "text": "\nA>\nA>a:\nA>nope\nNOPE?\n\nA>smoke\nWrote RESULT.TXT\n\nA>",
         "cursorRow": 9,

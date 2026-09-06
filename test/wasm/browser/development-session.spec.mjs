@@ -172,7 +172,7 @@ test("a downloaded working disk can be imported into a fresh browser session", a
     await boot(cleanPage);
     await importDisk(cleanPage, diskPath);
     await expect(cleanPage.locator("#status")).toContainText(
-      "Running recovered-working-disk.img",
+      "Running A: recovered-working-disk.img",
     );
     await waitForPrompt(cleanPage);
     await runCommand(cleanPage, "DIR");

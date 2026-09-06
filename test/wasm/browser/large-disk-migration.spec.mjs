@@ -26,35 +26,47 @@ async function manage(page) {
 
 async function state(page) {
   return page.evaluate(async () => {
-    const { openRevisionedDiskStore } =
-      await import("/working-disk-revisions.js");
+    const { openDriveSetStore } = await import("/drive-set-store.js");
     const { CpmDisk } = await import("/triptych_host_wasm.js");
     const hash = async (bytes) =>
       Array.from(
         new Uint8Array(await crypto.subtle.digest("SHA-256", bytes)),
         (byte) => byte.toString(16).padStart(2, "0"),
       ).join("");
-    const store = await openRevisionedDiskStore();
+    const store = await openDriveSetStore();
     let disk;
     try {
       const head = await store.load();
-      disk = new CpmDisk(head.bytes);
+      const snapshot = head.snapshot;
+      disk = new CpmDisk(snapshot.drives.A.bytes);
       const files = {};
       for (const name of disk.file_names())
         files[name] = await hash(disk.read_file(name));
       const backups = [];
-      for (const backup of await store.listBackups()) {
-        const before = await store.readBackup(backup.operationId);
+      for (const backup of (await store.listBackups()).sort(
+        (a, b) => b.revision - a.revision || a.id.localeCompare(b.id),
+      )) {
+        const before = await store.readBackup(backup.id);
         backups.push({
-          operationId: backup.operationId,
-          bytes: before.bytes.length,
-          sha256: await hash(before.bytes),
+          id: backup.id,
+          name: before.drives.A.name,
+          bName: before.drives.B?.name ?? null,
+          bytes: before.drives.A.bytes.length,
+          sha256: await hash(before.drives.A.bytes),
+          bSha256: before.drives.B ? await hash(before.drives.B.bytes) : null,
+          bootstrapSha256: await hash(before.bootstrap.bytes),
+          profile: before.bootstrap.profile,
         });
       }
       return {
-        revision: head.revision,
-        bytes: head.bytes.length,
-        sha256: await hash(head.bytes),
+        token: head.token,
+        name: snapshot.drives.A.name,
+        bName: snapshot.drives.B?.name ?? null,
+        bytes: snapshot.drives.A.bytes.length,
+        sha256: await hash(snapshot.drives.A.bytes),
+        bSha256: snapshot.drives.B ? await hash(snapshot.drives.B.bytes) : null,
+        bootstrapSha256: await hash(snapshot.bootstrap.bytes),
+        profile: snapshot.bootstrap.profile,
         geometry: disk.geometry_id(),
         files,
         backups,
@@ -256,8 +268,13 @@ test("quota failure atomically preserves legacy head and backup, then retries on
   await page.addInitScript(() => {
     const add = IDBObjectStore.prototype.add;
     IDBObjectStore.prototype.add = function (value, ...rest) {
-      if (globalThis.failMigration && value?.key?.startsWith("change:")) {
+      if (
+        globalThis.failMigration &&
+        this.name === "drive-set-state" &&
+        value?.key?.startsWith("backup:")
+      ) {
         globalThis.failMigration = false;
+        globalThis.migrationProbeTriggered = true;
         throw new DOMException("Migration quota probe", "QuotaExceededError");
       }
       return add.call(this, value, ...rest);
@@ -274,6 +291,9 @@ test("quota failure atomically preserves legacy head and backup, then retries on
   await page.locator("#commit-disk").click();
   await expect(page.locator("#files-status")).toContainText(
     "Migration quota probe",
+  );
+  expect(await page.evaluate(() => globalThis.migrationProbeTriggered)).toBe(
+    true,
   );
   expect(await state(page)).toEqual(before);
   await apply(page);

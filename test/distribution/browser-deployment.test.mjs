@@ -11,6 +11,8 @@ const checker = resolve(
 );
 const revision = "a".repeat(40);
 const systemAsset = "system-triptych-cpm-8m-v1.bin";
+const abSystemAsset = "system-triptych-cpm-8m-ab-v1.bin";
+const abBootstrapAsset = "bootstrap-triptych-cpm-8m-ab-v1.bin";
 const sha256 = (bytes) => createHash("sha256").update(bytes).digest("hex");
 let directory;
 let manifest;
@@ -55,6 +57,11 @@ beforeEach(async () => {
   const largeSystem = Buffer.alloc(16384);
   disk.copy(largeSystem, 0, 0, 0x1600);
   largeSystem.fill(0x44, 0x1600, 0x1a00);
+  const abSystem = Buffer.alloc(16384);
+  abSystem.fill(0x55, 0, 0x800);
+  abSystem.fill(0x66, 0x800, 0x1600);
+  abSystem.fill(0x77, 0x1600, 0x1900);
+  const abBootstrap = Buffer.alloc(256, 0x88);
   const assets = new Map([
     ["bootstrap.bin", bootstrap],
     ["ccp.bin", disk.subarray(0, 0x800)],
@@ -62,6 +69,8 @@ beforeEach(async () => {
     ["bios.bin", disk.subarray(0x1600, 0x1a00)],
     ["cpm22.img", disk],
     [systemAsset, largeSystem],
+    [abSystemAsset, abSystem],
+    [abBootstrapAsset, abBootstrap],
   ]);
   for (const name of [
     "index.html",
@@ -72,6 +81,8 @@ beforeEach(async () => {
     "working-disk-revisions.js",
     "disk-workspace.js",
     "disk-profile.js",
+    "drive-set.js",
+    "drive-set-store.js",
     "tool-catalog.js",
     "tool-catalog.json",
     "source-bundle.js",
@@ -87,7 +98,7 @@ beforeEach(async () => {
   ]) {
     assets.set(name, Buffer.from(`synthetic ${name}\n`));
   }
-  expect(assets.size).toBe(26);
+  expect(assets.size).toBe(30);
   manifest = {
     schema: "triptych-browser-deployment-v1",
     distribution: {
@@ -112,6 +123,26 @@ beforeEach(async () => {
           source: "system/cpm/bios-8m.asm",
           sourceSha256: "b".repeat(64),
           sha256: sha256(largeSystem.subarray(0x1600, 0x1a00)),
+        },
+      },
+      {
+        id: "triptych-cpm-8m-v1",
+        residentProfile: "triptych-cpu-v0.1-8m-ab",
+        imageBytes: 8388608,
+        systemBytes: 16384,
+        drives: 2,
+        systemAsset: abSystemAsset,
+        systemSha256: sha256(abSystem),
+        bootstrapAsset: abBootstrapAsset,
+        bootstrapSha256: sha256(abBootstrap),
+        residentLockSha256: "c".repeat(64),
+        ccpSha256: sha256(abSystem.subarray(0, 0x800)),
+        bdosSha256: sha256(abSystem.subarray(0x800, 0x1600)),
+        bios: {
+          source: "system/cpm/bios-8m-ab.asm",
+          sourceSha256: "d".repeat(64),
+          sha256: sha256(abSystem.subarray(0x1600, 0x1a00)),
+          liveEnd: 0xfc00,
         },
       },
     ],
@@ -140,7 +171,7 @@ describe("browser deployment verification CLI", () => {
       status: "passed",
       revision,
       dirty: false,
-      assets: 26,
+      assets: 30,
       diskSha256: manifest.distribution.disk.sha256,
     });
   });
@@ -148,7 +179,7 @@ describe("browser deployment verification CLI", () => {
   it("rejects missing large-disk metadata in a new deployment", async () => {
     delete manifest.diskProfiles;
     await saveManifest();
-    rejected(check(), "one supported disk profile");
+    rejected(check(), "two supported disk profiles");
   });
 
   it.each([
@@ -158,13 +189,13 @@ describe("browser deployment verification CLI", () => {
   ])("rejects invalid profile metadata: %s", async (_label, profiles) => {
     manifest.diskProfiles = profiles;
     await saveManifest();
-    rejected(check(), "one supported disk profile");
+    rejected(check(), "two supported disk profiles");
   });
 
   it("rejects a duplicate valid profile descriptor", async () => {
     manifest.diskProfiles.push(structuredClone(manifest.diskProfiles[0]));
     await saveManifest();
-    rejected(check(), "one supported disk profile");
+    rejected(check(), "two supported disk profiles");
   });
 
   it.each([
@@ -281,6 +312,8 @@ describe("browser deployment verification CLI", () => {
     "working-disk-revisions.js",
     "disk-workspace.js",
     "disk-profile.js",
+    "drive-set.js",
+    "drive-set-store.js",
     "tool-catalog.js",
     "tool-catalog.json",
     "source-bundle.js",
@@ -289,6 +322,8 @@ describe("browser deployment verification CLI", () => {
     "adventure-BUILD.JSN",
     ".nojekyll",
     systemAsset,
+    abSystemAsset,
+    abBootstrapAsset,
   ])(
     "rejects omitted required %s even when it is removed from the manifest",
     async (name) => {
@@ -333,5 +368,48 @@ describe("browser deployment verification CLI", () => {
       sha256(bytes);
     await saveManifest();
     rejected(check(), "ccp.bin differs from distribution slot");
+  });
+
+  it("accepts reversed profile order without treating geometry IDs as unique", async () => {
+    manifest.diskProfiles.reverse();
+    await saveManifest();
+    const result = check();
+    expect(result.status, result.stderr).toBe(0);
+  });
+
+  it.each([
+    ["extra", true, "A/B disk profile fields"],
+    ["drives", 1, "unsupported A/B resident profile"],
+    ["bootstrapAsset", "bootstrap.bin", "unsupported A/B resident profile"],
+    ["systemSha256", "0".repeat(64), "A/B asset identity mismatch"],
+    ["residentLockSha256", "BAD", "unsupported A/B resident profile"],
+    ["ccpSha256", "0".repeat(64), "A/B resident slots"],
+  ])("rejects changed A/B profile %s", async (field, value, diagnostic) => {
+    manifest.diskProfiles[1][field] = value;
+    await saveManifest();
+    rejected(check(), diagnostic);
+  });
+
+  it.each([0, 0x800, 0x1600, 0x1900, 0x3fff])(
+    "rejects A/B slot/padding corruption at %i with updated complete identity",
+    async (offset) => {
+      const bytes = await readFile(join(directory, abSystemAsset));
+      bytes[offset] ^= 1;
+      manifest.diskProfiles[1].systemSha256 = sha256(bytes);
+      if (offset === 0x1900) {
+        manifest.diskProfiles[1].bios.sha256 = sha256(
+          bytes.subarray(0x1600, 0x1a00),
+        );
+      }
+      await replaceAsset(abSystemAsset, bytes);
+      rejected(check(), "A/B resident slots or reserved bytes");
+    },
+  );
+
+  it("rejects an independently changed A/B bootstrap even with rehashed asset metadata", async () => {
+    const bytes = await readFile(join(directory, abBootstrapAsset));
+    bytes[0] ^= 1;
+    await replaceAsset(abBootstrapAsset, bytes);
+    rejected(check(), "A/B asset identity mismatch");
   });
 });

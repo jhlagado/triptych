@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { readFile, readdir } from "node:fs/promises";
 import { resolve, join } from "node:path";
+import { webcrypto } from "node:crypto";
+import { fetchLargeAbDiskSystem } from "../crates/triptych-host-wasm/web/disk-profile.js";
 
 const directory = resolve(process.argv[2] ?? "dist/wasm-browser");
 const expectedRevision = process.argv[3];
@@ -60,6 +62,8 @@ for (const name of [
   "working-disk-revisions.js",
   "disk-workspace.js",
   "disk-profile.js",
+  "drive-set.js",
+  "drive-set-store.js",
   "tool-catalog.js",
   "tool-catalog.json",
   "source-bundle.js",
@@ -77,6 +81,8 @@ for (const name of [
   "bios.bin",
   "cpm22.img",
   systemAsset,
+  "system-triptych-cpm-8m-ab-v1.bin",
+  "bootstrap-triptych-cpm-8m-ab-v1.bin",
 ]) {
   assert.ok(names.has(name), `missing required asset ${name}`);
 }
@@ -107,10 +113,13 @@ assert.equal(
 // This verifier targets new builds. Qualify pre-profile archived deployments
 // with their release's verification contract, not inferred new metadata.
 assert.ok(
-  Array.isArray(manifest.diskProfiles) && manifest.diskProfiles.length === 1,
-  "one supported disk profile is required",
+  Array.isArray(manifest.diskProfiles) && manifest.diskProfiles.length === 2,
+  "two supported disk profiles are required",
 );
-const profile = manifest.diskProfiles[0];
+const profile = manifest.diskProfiles.find(
+  (entry) => entry?.residentProfile === "triptych-cpu-v0.1-8m-a",
+);
+assert.ok(profile, "disk profile residentProfile");
 assert.ok(profile && typeof profile === "object", "disk profile object");
 assert.deepEqual(
   Object.keys(profile).sort(),
@@ -189,6 +198,19 @@ assert.ok(
   system.subarray(0x1a00).every((byte) => byte === 0),
   "large system reserved tail must be zero",
 );
+// The browser and offline checker share the closed A/B descriptor, asset and
+// slot checks. This intentionally does not compare E300 residents to E400 ones.
+await fetchLargeAbDiskSystem({
+  deployment: manifest,
+  baseUrl: "https://deployment.invalid/",
+  crypto: webcrypto,
+  fetch: async (url) => {
+    const bytes = await readFile(
+      join(directory, new URL(url).pathname.slice(1)),
+    );
+    return { ok: true, arrayBuffer: async () => Uint8Array.from(bytes).buffer };
+  },
+});
 console.log(
   JSON.stringify({
     status: "passed",

@@ -9,19 +9,53 @@ import { installCpm22File } from "../../../tools/lib/cpm22-disk.mjs";
 
 async function stored(page) {
   return page.evaluate(async () => {
-    const { openRevisionedDiskStore } =
-      await import("/working-disk-revisions.js");
-    const store = await openRevisionedDiskStore();
+    const { openDriveSetStore } = await import("/drive-set-store.js");
+    let store = await openDriveSetStore();
     try {
-      const head = await store.load();
-      const backups = await store.listBackups();
+      let head = await store.load();
+      if (
+        head.kind === "recovery" &&
+        head.error ===
+          "Historical bootstrap is required to reopen the saved legacy disk."
+      ) {
+        store.close();
+        const legacyBootstrap = new Uint8Array(
+          await (await fetch("/bootstrap.bin")).arrayBuffer(),
+        );
+        store = await openDriveSetStore({ legacyBootstrap });
+        head = await store.load();
+      }
+      if (head.kind !== "ready")
+        throw new Error(`Expected ready saved state: ${JSON.stringify(head)}`);
+      const backups = (await store.listBackups()).sort(
+        (a, b) => b.revision - a.revision || a.id.localeCompare(b.id),
+      );
       return {
-        revision: head.revision,
-        bytes: Array.from(head.bytes),
+        token: head.token,
+        name: head.snapshot.drives.A.name,
+        bName: head.snapshot.drives.B?.name ?? null,
+        bytes: Array.from(head.snapshot.drives.A.bytes),
+        b: head.snapshot.drives.B
+          ? Array.from(head.snapshot.drives.B.bytes)
+          : null,
+        bootstrap: {
+          profile: head.snapshot.bootstrap.profile,
+          bytes: Array.from(head.snapshot.bootstrap.bytes),
+        },
         backups: await Promise.all(
           backups.map(async (entry) => {
-            const value = await store.readBackup(entry.operationId);
-            return { ...entry, bytes: Array.from(value.bytes) };
+            const value = await store.readBackup(entry.id);
+            return {
+              ...entry,
+              name: value.drives.A.name,
+              bName: value.drives.B?.name ?? null,
+              bytes: Array.from(value.drives.A.bytes),
+              b: value.drives.B ? Array.from(value.drives.B.bytes) : null,
+              bootstrap: {
+                profile: value.bootstrap.profile,
+                bytes: Array.from(value.bootstrap.bytes),
+              },
+            };
           }),
         ),
       };
@@ -45,7 +79,8 @@ test("a retained deployment reopens migrated work and backups at the same origin
     expectedRevision: manifest.distribution.triptych.revision,
     allowDevelopment: manifest.distribution.triptych.dirty,
   };
-  await archiveBrowserRecovery(options);
+  const receipt = await archiveBrowserRecovery(options);
+  expect(receipt.intendedStorageSchema).toBe("triptych-drive-set-v3");
   const original = installCpm22File(
     await readFile(join(sourceDirectory, "cpm22.img")),
     {
@@ -140,7 +175,7 @@ test("a retained deployment reopens migrated work and backups at the same origin
   for (const name of [
     "index.html",
     "app.js",
-    "working-disk-revisions.js",
+    "drive-set-store.js",
     "triptych_host_wasm_bg.wasm",
   ])
     expect(served.has(name), `${name} served from archive`).toBe(true);

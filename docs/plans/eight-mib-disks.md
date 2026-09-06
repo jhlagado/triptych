@@ -3,8 +3,8 @@
 Date: 2026-09-06. Status: active goal; one-drive foundations and browser migration
 pass the complete local check. The separately pinned A/B residents and basic
 native/WASM tool workflows now pass the complete local check. Full-volume BDOS
-and actual machine storage-failure tests pass. Maximum tool-capacity proofs,
-browser drive sets and complete release qualification remain.
+and actual machine storage-failure tests pass. Browser drive sets pass local
+acceptance. Remaining tool-arena proofs and complete release qualification remain.
 Starting revision: `1589d7ebf9d2271a464446a1ff3039f68c6e02f3`.
 
 The starting tree passed `npm run check`, including 48 browser tests, 287
@@ -135,11 +135,15 @@ capacity and generated-failure paths, plus the standalone browser drive-set
 codec and transaction store. The complete check passed 392 code tests and
 80 browser tests; a subsequent focused run passed all 22 storage cases.
 
-The next integration is the [browser drive-set coordinator](browser-drive-sets.md)
-and verified A/B assets, followed by selected-drive operations and complete-set
-recovery. Publication must preserve the complete preceding drive set and compare
-the expected whole-set revision before replacing it. Additional tool-arena
-qualification and browser memory/latency measurements remain explicit proof gaps.
+The [browser integration report](../reports/eight-mib-browser-ab.md) records the
+subsequent complete-set coordinator, verified A/B assets and selected-drive UI.
+Focused browser proofs now cover B tool workflows, backup/archive restoration,
+both partial-flush directions, malformed saved state and delayed drive switches.
+The combined check passed 459 code tests, 90 browser cases and all 34 headless
+scenarios, together with native/WASM workflows and Rust checks. The report also
+records measured browser storage latency and retained checkpoint memory, without
+claiming full-page peak memory. Additional tool-arena qualification, new-revision
+Linux CI and hosted release/recovery qualification remain open.
 
 The earlier one-drive foundation pinned Portable CP/M 0.1.2 and passed
 336 TypeScript tests, 59 browser tests, native/WASM application workflows and

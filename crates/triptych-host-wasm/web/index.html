@@ -35,11 +35,18 @@
         <button id="download-recovery" type="button" disabled>
           Download latest checkpoint
         </button>
+        <button id="download-set" type="button" disabled>
+          Download saved drive set
+        </button>
+        <button id="download-checkpoint-set" type="button" disabled>
+          Download latest checkpoint set
+        </button>
         <button id="retry-save" type="button" hidden>Retry saving</button>
         <button id="legacy-recovery" type="button" hidden>
           Download legacy recovery data
         </button>
       </section>
+      <div id="raw-recovery" class="controls"></div>
 
       <div class="terminal-shell">
         <pre
@@ -88,11 +95,13 @@
         Click or tap the terminal before typing. On mobile, use the terminal
         keys for Ctrl, Esc, Tab, and arrows. Return sends CR; paste converts
         line endings for CP/M. A CP/M flush followed by “Working disk saved”
-        makes guest writes reload-safe. Download saved disk copies the committed
-        browser image. Download latest checkpoint can recover newer
-        guest-flushed data after a save failure; it may not be durably saved.
-        Later unflushed writes and unsaved editor text are excluded. Browser
-        storage may be cleared or evicted: keep downloaded backups too.
+        makes guest writes reload-safe. Download saved disk copies the drive
+        selected in Files and recovery. Download saved drive set includes the
+        exact bootstrap, A and any attached B in one .tds archive. The latest
+        checkpoint downloads can recover newer guest-flushed data after a save
+        failure; that data may not be durably saved. Later unflushed writes and
+        unsaved editor text are excluded. Browser storage may be cleared or
+        evicted: keep downloaded backups too.
       </footer>
     </main>
     <dialog id="files-dialog" aria-labelledby="files-title">
@@ -101,6 +110,13 @@
         <button id="close-files" type="button">Close</button>
       </div>
       <p id="files-status" role="status" aria-live="polite"></p>
+      <label
+        >Drive to view or edit
+        <select id="file-drive">
+          <option value="A">A:</option>
+          <option value="B">B:</option>
+        </select>
+      </label>
       <p id="disk-summary"></p>
       <label
         ><input id="saved-and-exited" type="checkbox" /> I have saved and exited
@@ -190,6 +206,20 @@
         resident system, restarts CP/M and backs up the complete old disk. This
         profile supports drive A only; additional drives are not enabled.
       </p>
+      <div class="controls">
+        <button id="enable-ab" type="button" disabled>
+          Stage eight MiB A/B system
+        </button>
+        <button id="blank-b" type="button" disabled>Stage blank B</button>
+        <button id="remove-b" type="button" disabled>Stage removal of B</button>
+      </div>
+      <p>
+        A/B explicitly replaces A's resident system and preserves its files. B
+        can then be a new blank data disk or an attached eight MiB image.
+        Applying any change backs up both drives and their bootstrap together.
+        Selecting A or B above only changes the Files view, not the CP/M default
+        drive.
+      </p>
       <h3>Whole-disk replacement</h3>
       <label class="file-control"
         ><span>Stage disk image</span
@@ -203,9 +233,36 @@
         ><input id="adapt-image" type="checkbox" /> Adapt external image with
         this release's CCP/BDOS/BIOS (changes system bytes)</label
       >
+      <label
+        >A image resident profile
+        <select id="image-profile">
+          <option value="current">
+            Keep the current bootstrap and profile
+          </option>
+          <option value="legacy-e400">Legacy E400, one drive</option>
+          <option value="triptych-cpu-v0.1-8m-a">
+            Eight MiB E400, one drive
+          </option>
+          <option value="triptych-cpu-v0.1-8m-ab">Eight MiB E300, A/B</option>
+        </select>
+      </label>
       <p>
         Leave adaptation unchecked for exact recovery. Applying a disk, files or
         tools preserves the previous committed disk as a backup.
+      </p>
+      <label class="file-control"
+        ><span>Stage complete drive-set archive</span>
+        <input
+          id="drive-set-input"
+          type="file"
+          accept=".tds,application/octet-stream"
+          disabled
+        />
+      </label>
+      <p>
+        Drive-set archives include the exact bootstrap and both images,
+        including an absent B. No adaptation is applied when restoring an
+        archive.
       </p>
       <h3>Recovery backups</h3>
       <ul id="backup-list"></ul>

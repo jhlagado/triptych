@@ -4,7 +4,7 @@
   "description": "Freeze confirmed ERA *.* deletion through the public console and directory boundaries",
   "systemCcp": "oracle",
   "systemBdos": "triptych",
-  "expectedInitialDriveSha256": "80ad44feca933feff04556f6df6dda61be1960af5ff378463b0aa8e7576f9c69",
+  "expectedInitialDriveSha256": "3fec1f2b6ad65f03a6776a36f30bdbcbe04fce55738c1435aff82eff59e7b940",
   "sessions": [
     {
       "id": "confirm-erase-all",
@@ -39,7 +39,7 @@
         "wrapPending": false,
         "bellCount": 0
       },
-      "expectedDriveSha256": "e9878bd6e68c494d01767dee01ae009d6cda751d8a87f0bf6ff4d2e6651a0d93"
+      "expectedDriveSha256": "472724aff3e12d1077c504d2b33762d0ff9fe58623ef92334ea8d2beae53dcd8"
     }
   ]
 }

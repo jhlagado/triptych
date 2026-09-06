@@ -1,0 +1,815 @@
+{
+  "date": "2026-09-06T14:59:00.741Z",
+  "suppliedBase": "http://127.0.0.1:4173/",
+  "environment": {
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.7922.34 Safari/537.36",
+    "hardwareConcurrency": 8,
+    "deviceMemoryGiB": 8,
+    "modules": [
+      {
+        "name": "drive-set-store.js",
+        "bytes": 20036,
+        "sha256": "066d17faf0b0c7f4c51b7f1ffbcaa4d155c0ca0680e5a15435bca431bd81b188"
+      },
+      {
+        "name": "disk-workspace.js",
+        "bytes": 16328,
+        "sha256": "6a9463ea439270690651b81dcb05f2f0a3e51a65611744955cda561f9fb345be"
+      },
+      {
+        "name": "drive-set.js",
+        "bytes": 9902,
+        "sha256": "c2c6e59273539c40cf9413f2ab6c0408d113fbec17dd37fee5595a977143b1d2"
+      },
+      {
+        "name": "working-disk-store.js",
+        "bytes": 1304,
+        "sha256": "c1e8badffb702574b070b5d8fc3c86cc77595cc5eab3227ae0fc6d9f8acc6220"
+      }
+    ],
+    "browserVersion": "151.0.7922.34",
+    "node": "v24.18.0",
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "25.5.0",
+    "cpu": "Apple M2"
+  },
+  "method": {
+    "samples": 5,
+    "statistic": "median and median absolute deviation",
+    "units": "milliseconds, bytes",
+    "saveBoundary": "public coordinator submission through completed IndexedDB transaction",
+    "manualBoundary": "beginManagement + stage + commit; controlled runtime hooks, no CPU preparation",
+    "queueMemory": "forced-GC CDP samples, NOT peak memory; coordinator retained bytes derived from 2 payloads and confirmed supersession/publication behavior",
+    "storage": "exact raw stored blob payload lengths/counts; excludes IndexedDB metadata and engine overhead; NOT quota or physical disk usage",
+    "inputs": "deterministic synthetic media with distinct A/B contents; five B-only manual changes for AB, five A-only changes for single-drive comparators",
+    "excluded": "CPU execution, filesystem parsing, application rendering, ESP32 and browser quota"
+  },
+  "profiles": [
+    {
+      "profile": "legacy-a",
+      "setup": {
+        "name": "triptych-measure-fba3973c-a0b0-4eae-90f9-0db5d64638b5",
+        "payloadBytes": 256768,
+        "changedDrive": "A",
+        "changedImageBytes": 256512
+      },
+      "autosave": {
+        "samplesMs": [
+          2.6000003814697266,
+          2.3000001907348633,
+          1.8000001907348633,
+          1.5,
+          1.5
+        ],
+        "medianMs": 1.8000001907348633,
+        "madMs": 0.3000001907348633
+      },
+      "manual": {
+        "samplesMs": [
+          11,
+          11.5,
+          9.09999942779541,
+          9,
+          9.300000190734863
+        ],
+        "medianMs": 9.300000190734863,
+        "madMs": 0.3000001907348633,
+        "before": {
+          "blobCount": 2,
+          "blobBytes": 256768,
+          "blobs": [
+            {
+              "sha256": "4f6deb5e39811317becdb7eaf7197a620b3f8ff7a6753523b491c8cfd2105418",
+              "bytes": 256512
+            },
+            {
+              "sha256": "5341e6b2646979a70e57653007a1f310169421ec9bdd9f1a5648f75ade005af1",
+              "bytes": 256
+            }
+          ],
+          "headCount": 1,
+          "backupCount": 0,
+          "receiptCount": 0
+        },
+        "samples": [
+          {
+            "elapsedMs": 11,
+            "raw": {
+              "blobCount": 3,
+              "blobBytes": 513280,
+              "blobs": [
+                {
+                  "sha256": "4f6deb5e39811317becdb7eaf7197a620b3f8ff7a6753523b491c8cfd2105418",
+                  "bytes": 256512
+                },
+                {
+                  "sha256": "5341e6b2646979a70e57653007a1f310169421ec9bdd9f1a5648f75ade005af1",
+                  "bytes": 256
+                },
+                {
+                  "sha256": "d51aec6ed3177775894357d82376311fab52cb231260b78d79453c72827b9d27",
+                  "bytes": 256512
+                }
+              ],
+              "headCount": 1,
+              "backupCount": 1,
+              "receiptCount": 1
+            }
+          },
+          {
+            "elapsedMs": 11.5,
+            "raw": {
+              "blobCount": 4,
+              "blobBytes": 769792,
+              "blobs": [
+                {
+                  "sha256": "0ab0677e40781e10e459098e7d9ce82baf734c8c92883176169f5f2b70cfaf67",
+                  "bytes": 256512
+                },
+                {
+                  "sha256": "4f6deb5e39811317becdb7eaf7197a620b3f8ff7a6753523b491c8cfd2105418",
+                  "bytes": 256512
+                },
+                {
+                  "sha256": "5341e6b2646979a70e57653007a1f310169421ec9bdd9f1a5648f75ade005af1",
+                  "bytes": 256
+                },
+                {
+                  "sha256": "d51aec6ed3177775894357d82376311fab52cb231260b78d79453c72827b9d27",
+                  "bytes": 256512
+                }
+              ],
+              "headCount": 1,
+              "backupCount": 2,
+              "receiptCount": 2
+            }
+          },
+          {
+            "elapsedMs": 9.09999942779541,
+            "raw": {
+              "blobCount": 5,
+              "blobBytes": 1026304,
+              "blobs": [
+                {
+                  "sha256": "0ab0677e40781e10e459098e7d9ce82baf734c8c92883176169f5f2b70cfaf67",
+                  "bytes": 256512
+                },
+                {
+                  "sha256": "35d932c5e26318965a4bb86740b69957a2627cebd3bb75927d04016e48320d5f",
+                  "bytes": 256512
+                },
+                {
+                  "sha256": "4f6deb5e39811317becdb7eaf7197a620b3f8ff7a6753523b491c8cfd2105418",
+                  "bytes": 256512
+                },
+                {
+                  "sha256": "5341e6b2646979a70e57653007a1f310169421ec9bdd9f1a5648f75ade005af1",
+                  "bytes": 256
+                },
+                {
+                  "sha256": "d51aec6ed3177775894357d82376311fab52cb231260b78d79453c72827b9d27",
+                  "bytes": 256512
+                }
+              ],
+              "headCount": 1,
+              "backupCount": 3,
+              "receiptCount": 3
+            }
+          },
+          {
+            "elapsedMs": 9,
+            "raw": {
+              "blobCount": 6,
+              "blobBytes": 1282816,
+              "blobs": [
+                {
+                  "sha256": "0ab0677e40781e10e459098e7d9ce82baf734c8c92883176169f5f2b70cfaf67",
+                  "bytes": 256512
+                },
+                {
+                  "sha256": "35d932c5e26318965a4bb86740b69957a2627cebd3bb75927d04016e48320d5f",
+                  "bytes": 256512
+                },
+                {
+                  "sha256": "4f6deb5e39811317becdb7eaf7197a620b3f8ff7a6753523b491c8cfd2105418",
+                  "bytes": 256512
+                },
+                {
+                  "sha256": "5341e6b2646979a70e57653007a1f310169421ec9bdd9f1a5648f75ade005af1",
+                  "bytes": 256
+                },
+                {
+                  "sha256": "a852ae9c937190395c2a5a1b7534a003ee578f5b1664d43edc74310feccbd5e0",
+                  "bytes": 256512
+                },
+                {
+                  "sha256": "d51aec6ed3177775894357d82376311fab52cb231260b78d79453c72827b9d27",
+                  "bytes": 256512
+                }
+              ],
+              "headCount": 1,
+              "backupCount": 4,
+              "receiptCount": 4
+            }
+          },
+          {
+            "elapsedMs": 9.300000190734863,
+            "raw": {
+              "blobCount": 7,
+              "blobBytes": 1539328,
+              "blobs": [
+                {
+                  "sha256": "0ab0677e40781e10e459098e7d9ce82baf734c8c92883176169f5f2b70cfaf67",
+                  "bytes": 256512
+                },
+                {
+                  "sha256": "35d932c5e26318965a4bb86740b69957a2627cebd3bb75927d04016e48320d5f",
+                  "bytes": 256512
+                },
+                {
+                  "sha256": "4f6deb5e39811317becdb7eaf7197a620b3f8ff7a6753523b491c8cfd2105418",
+                  "bytes": 256512
+                },
+                {
+                  "sha256": "5341e6b2646979a70e57653007a1f310169421ec9bdd9f1a5648f75ade005af1",
+                  "bytes": 256
+                },
+                {
+                  "sha256": "95e29f02e657ef713c9ac9a54d474dd70cef4844ec040f20a188b13856f8223f",
+                  "bytes": 256512
+                },
+                {
+                  "sha256": "a852ae9c937190395c2a5a1b7534a003ee578f5b1664d43edc74310feccbd5e0",
+                  "bytes": 256512
+                },
+                {
+                  "sha256": "d51aec6ed3177775894357d82376311fab52cb231260b78d79453c72827b9d27",
+                  "bytes": 256512
+                }
+              ],
+              "headCount": 1,
+              "backupCount": 5,
+              "receiptCount": 5
+            }
+          }
+        ],
+        "addedBlobBytes": 1282560,
+        "naiveSixCompleteSnapshotPayloadBytes": 1540608
+      },
+      "queue": {
+        "setup": {
+          "payloadBytes": 256768,
+          "callerInputBytes": 256768
+        },
+        "baselineAfterGc": {
+          "usedSize": 878516,
+          "totalSize": 1572864,
+          "embedderHeapUsedSize": 329056,
+          "backingStorageSize": 561661,
+          "backingStorageSupported": true
+        },
+        "stalledAfterGc": {
+          "usedSize": 897620,
+          "totalSize": 1835008,
+          "embedderHeapUsedSize": 329056,
+          "backingStorageSize": 1075197,
+          "backingStorageSupported": true
+        },
+        "stalled": {
+          "submissions": 100,
+          "saveCallsWhileStalled": 1,
+          "supersededWhileStalled": 98,
+          "unsettled": 2,
+          "sourceDerivedRetainedCoordinatorPayloadBytes": 513536
+        },
+        "completion": {
+          "saved": 2,
+          "superseded": 98,
+          "publishedValues": [
+            1,
+            100
+          ]
+        }
+      }
+    },
+    {
+      "profile": "large-a",
+      "setup": {
+        "name": "triptych-measure-ca4fc6ea-dcff-46e9-9535-c25b0619b20b",
+        "payloadBytes": 8388864,
+        "changedDrive": "A",
+        "changedImageBytes": 8388608
+      },
+      "autosave": {
+        "samplesMs": [
+          32.90000057220459,
+          32.5,
+          32.39999961853027,
+          29.199999809265137,
+          30.40000057220459
+        ],
+        "medianMs": 32.39999961853027,
+        "madMs": 0.5000009536743164
+      },
+      "manual": {
+        "samplesMs": [
+          249.89999961853027,
+          260.0999994277954,
+          255.89999961853027,
+          248.4000005722046,
+          249.30000019073486
+        ],
+        "medianMs": 249.89999961853027,
+        "madMs": 1.4999990463256836,
+        "before": {
+          "blobCount": 2,
+          "blobBytes": 8388864,
+          "blobs": [
+            {
+              "sha256": "19058566d2e517cda70170fa22632d8f35dce3cee3161698fb280ee80ac37aac",
+              "bytes": 8388608
+            },
+            {
+              "sha256": "5341e6b2646979a70e57653007a1f310169421ec9bdd9f1a5648f75ade005af1",
+              "bytes": 256
+            }
+          ],
+          "headCount": 1,
+          "backupCount": 0,
+          "receiptCount": 0
+        },
+        "samples": [
+          {
+            "elapsedMs": 249.89999961853027,
+            "raw": {
+              "blobCount": 3,
+              "blobBytes": 16777472,
+              "blobs": [
+                {
+                  "sha256": "19058566d2e517cda70170fa22632d8f35dce3cee3161698fb280ee80ac37aac",
+                  "bytes": 8388608
+                },
+                {
+                  "sha256": "5341e6b2646979a70e57653007a1f310169421ec9bdd9f1a5648f75ade005af1",
+                  "bytes": 256
+                },
+                {
+                  "sha256": "cb5076bf0f34ac13e4558c5a49548946aa2ca2a49cbaeaa93ec5c679eb2e53c7",
+                  "bytes": 8388608
+                }
+              ],
+              "headCount": 1,
+              "backupCount": 1,
+              "receiptCount": 1
+            }
+          },
+          {
+            "elapsedMs": 260.0999994277954,
+            "raw": {
+              "blobCount": 4,
+              "blobBytes": 25166080,
+              "blobs": [
+                {
+                  "sha256": "15909167daa9cdb23ac916f70c7858ae16f6399cc5a4f36b230adde062ad6bef",
+                  "bytes": 8388608
+                },
+                {
+                  "sha256": "19058566d2e517cda70170fa22632d8f35dce3cee3161698fb280ee80ac37aac",
+                  "bytes": 8388608
+                },
+                {
+                  "sha256": "5341e6b2646979a70e57653007a1f310169421ec9bdd9f1a5648f75ade005af1",
+                  "bytes": 256
+                },
+                {
+                  "sha256": "cb5076bf0f34ac13e4558c5a49548946aa2ca2a49cbaeaa93ec5c679eb2e53c7",
+                  "bytes": 8388608
+                }
+              ],
+              "headCount": 1,
+              "backupCount": 2,
+              "receiptCount": 2
+            }
+          },
+          {
+            "elapsedMs": 255.89999961853027,
+            "raw": {
+              "blobCount": 5,
+              "blobBytes": 33554688,
+              "blobs": [
+                {
+                  "sha256": "15909167daa9cdb23ac916f70c7858ae16f6399cc5a4f36b230adde062ad6bef",
+                  "bytes": 8388608
+                },
+                {
+                  "sha256": "19058566d2e517cda70170fa22632d8f35dce3cee3161698fb280ee80ac37aac",
+                  "bytes": 8388608
+                },
+                {
+                  "sha256": "5341e6b2646979a70e57653007a1f310169421ec9bdd9f1a5648f75ade005af1",
+                  "bytes": 256
+                },
+                {
+                  "sha256": "cb5076bf0f34ac13e4558c5a49548946aa2ca2a49cbaeaa93ec5c679eb2e53c7",
+                  "bytes": 8388608
+                },
+                {
+                  "sha256": "e626bde2e210e0acb30184852d82173d806a818220b4d9d661f5211a9d8a04e4",
+                  "bytes": 8388608
+                }
+              ],
+              "headCount": 1,
+              "backupCount": 3,
+              "receiptCount": 3
+            }
+          },
+          {
+            "elapsedMs": 248.4000005722046,
+            "raw": {
+              "blobCount": 6,
+              "blobBytes": 41943296,
+              "blobs": [
+                {
+                  "sha256": "15909167daa9cdb23ac916f70c7858ae16f6399cc5a4f36b230adde062ad6bef",
+                  "bytes": 8388608
+                },
+                {
+                  "sha256": "19058566d2e517cda70170fa22632d8f35dce3cee3161698fb280ee80ac37aac",
+                  "bytes": 8388608
+                },
+                {
+                  "sha256": "5341e6b2646979a70e57653007a1f310169421ec9bdd9f1a5648f75ade005af1",
+                  "bytes": 256
+                },
+                {
+                  "sha256": "6c78af3bb55f68ce98cac476b6ee74ef39b21bb25de1add89ead58bc3ed99b78",
+                  "bytes": 8388608
+                },
+                {
+                  "sha256": "cb5076bf0f34ac13e4558c5a49548946aa2ca2a49cbaeaa93ec5c679eb2e53c7",
+                  "bytes": 8388608
+                },
+                {
+                  "sha256": "e626bde2e210e0acb30184852d82173d806a818220b4d9d661f5211a9d8a04e4",
+                  "bytes": 8388608
+                }
+              ],
+              "headCount": 1,
+              "backupCount": 4,
+              "receiptCount": 4
+            }
+          },
+          {
+            "elapsedMs": 249.30000019073486,
+            "raw": {
+              "blobCount": 7,
+              "blobBytes": 50331904,
+              "blobs": [
+                {
+                  "sha256": "15909167daa9cdb23ac916f70c7858ae16f6399cc5a4f36b230adde062ad6bef",
+                  "bytes": 8388608
+                },
+                {
+                  "sha256": "19058566d2e517cda70170fa22632d8f35dce3cee3161698fb280ee80ac37aac",
+                  "bytes": 8388608
+                },
+                {
+                  "sha256": "5341e6b2646979a70e57653007a1f310169421ec9bdd9f1a5648f75ade005af1",
+                  "bytes": 256
+                },
+                {
+                  "sha256": "6c78af3bb55f68ce98cac476b6ee74ef39b21bb25de1add89ead58bc3ed99b78",
+                  "bytes": 8388608
+                },
+                {
+                  "sha256": "b4205f1079c139acf229caf7e2b40b2d7900e79b1ed0a3d7e18af41562a18d5e",
+                  "bytes": 8388608
+                },
+                {
+                  "sha256": "cb5076bf0f34ac13e4558c5a49548946aa2ca2a49cbaeaa93ec5c679eb2e53c7",
+                  "bytes": 8388608
+                },
+                {
+                  "sha256": "e626bde2e210e0acb30184852d82173d806a818220b4d9d661f5211a9d8a04e4",
+                  "bytes": 8388608
+                }
+              ],
+              "headCount": 1,
+              "backupCount": 5,
+              "receiptCount": 5
+            }
+          }
+        ],
+        "addedBlobBytes": 41943040,
+        "naiveSixCompleteSnapshotPayloadBytes": 50333184
+      },
+      "queue": {
+        "setup": {
+          "payloadBytes": 8388864,
+          "callerInputBytes": 8388864
+        },
+        "baselineAfterGc": {
+          "usedSize": 928492,
+          "totalSize": 1835008,
+          "embedderHeapUsedSize": 319840,
+          "backingStorageSize": 16825853,
+          "backingStorageSupported": true
+        },
+        "stalledAfterGc": {
+          "usedSize": 935640,
+          "totalSize": 1835008,
+          "embedderHeapUsedSize": 319840,
+          "backingStorageSize": 33603581,
+          "backingStorageSupported": true
+        },
+        "stalled": {
+          "submissions": 100,
+          "saveCallsWhileStalled": 1,
+          "supersededWhileStalled": 98,
+          "unsettled": 2,
+          "sourceDerivedRetainedCoordinatorPayloadBytes": 16777728
+        },
+        "completion": {
+          "saved": 2,
+          "superseded": 98,
+          "publishedValues": [
+            1,
+            100
+          ]
+        }
+      }
+    },
+    {
+      "profile": "large-ab",
+      "setup": {
+        "name": "triptych-measure-1384f68e-5615-4f4e-abde-96c9de0a69c4",
+        "payloadBytes": 16777472,
+        "changedDrive": "B",
+        "changedImageBytes": 8388608
+      },
+      "autosave": {
+        "samplesMs": [
+          116.80000019073486,
+          120.40000057220459,
+          122,
+          118.09999942779541,
+          117.19999980926514
+        ],
+        "medianMs": 118.09999942779541,
+        "madMs": 1.2999992370605469
+      },
+      "manual": {
+        "samplesMs": [
+          484.5,
+          503,
+          511,
+          544.8999996185303,
+          487.5
+        ],
+        "medianMs": 503,
+        "madMs": 15.5,
+        "before": {
+          "blobCount": 3,
+          "blobBytes": 16777472,
+          "blobs": [
+            {
+              "sha256": "5341e6b2646979a70e57653007a1f310169421ec9bdd9f1a5648f75ade005af1",
+              "bytes": 256
+            },
+            {
+              "sha256": "73061f1f91e908f4939a59bd816018745e21c98cb1922ef04bba41824f7ba763",
+              "bytes": 8388608
+            },
+            {
+              "sha256": "cb5076bf0f34ac13e4558c5a49548946aa2ca2a49cbaeaa93ec5c679eb2e53c7",
+              "bytes": 8388608
+            }
+          ],
+          "headCount": 1,
+          "backupCount": 0,
+          "receiptCount": 0
+        },
+        "samples": [
+          {
+            "elapsedMs": 484.5,
+            "raw": {
+              "blobCount": 4,
+              "blobBytes": 25166080,
+              "blobs": [
+                {
+                  "sha256": "5341e6b2646979a70e57653007a1f310169421ec9bdd9f1a5648f75ade005af1",
+                  "bytes": 256
+                },
+                {
+                  "sha256": "62de7768210d793bae59d6e0f6a97cfd599289c36235837a13b719e7494e0ab8",
+                  "bytes": 8388608
+                },
+                {
+                  "sha256": "73061f1f91e908f4939a59bd816018745e21c98cb1922ef04bba41824f7ba763",
+                  "bytes": 8388608
+                },
+                {
+                  "sha256": "cb5076bf0f34ac13e4558c5a49548946aa2ca2a49cbaeaa93ec5c679eb2e53c7",
+                  "bytes": 8388608
+                }
+              ],
+              "headCount": 1,
+              "backupCount": 1,
+              "receiptCount": 1
+            }
+          },
+          {
+            "elapsedMs": 503,
+            "raw": {
+              "blobCount": 5,
+              "blobBytes": 33554688,
+              "blobs": [
+                {
+                  "sha256": "303c6bbe4426ba8dc5194de97b6e77a571bc28551c05d4181f4d3243a9e9cdaf",
+                  "bytes": 8388608
+                },
+                {
+                  "sha256": "5341e6b2646979a70e57653007a1f310169421ec9bdd9f1a5648f75ade005af1",
+                  "bytes": 256
+                },
+                {
+                  "sha256": "62de7768210d793bae59d6e0f6a97cfd599289c36235837a13b719e7494e0ab8",
+                  "bytes": 8388608
+                },
+                {
+                  "sha256": "73061f1f91e908f4939a59bd816018745e21c98cb1922ef04bba41824f7ba763",
+                  "bytes": 8388608
+                },
+                {
+                  "sha256": "cb5076bf0f34ac13e4558c5a49548946aa2ca2a49cbaeaa93ec5c679eb2e53c7",
+                  "bytes": 8388608
+                }
+              ],
+              "headCount": 1,
+              "backupCount": 2,
+              "receiptCount": 2
+            }
+          },
+          {
+            "elapsedMs": 511,
+            "raw": {
+              "blobCount": 6,
+              "blobBytes": 41943296,
+              "blobs": [
+                {
+                  "sha256": "303c6bbe4426ba8dc5194de97b6e77a571bc28551c05d4181f4d3243a9e9cdaf",
+                  "bytes": 8388608
+                },
+                {
+                  "sha256": "34351fc5aa35762551b2d4b8e2e169d711229c9b39382ceacf155c0f59023a0e",
+                  "bytes": 8388608
+                },
+                {
+                  "sha256": "5341e6b2646979a70e57653007a1f310169421ec9bdd9f1a5648f75ade005af1",
+                  "bytes": 256
+                },
+                {
+                  "sha256": "62de7768210d793bae59d6e0f6a97cfd599289c36235837a13b719e7494e0ab8",
+                  "bytes": 8388608
+                },
+                {
+                  "sha256": "73061f1f91e908f4939a59bd816018745e21c98cb1922ef04bba41824f7ba763",
+                  "bytes": 8388608
+                },
+                {
+                  "sha256": "cb5076bf0f34ac13e4558c5a49548946aa2ca2a49cbaeaa93ec5c679eb2e53c7",
+                  "bytes": 8388608
+                }
+              ],
+              "headCount": 1,
+              "backupCount": 3,
+              "receiptCount": 3
+            }
+          },
+          {
+            "elapsedMs": 544.8999996185303,
+            "raw": {
+              "blobCount": 7,
+              "blobBytes": 50331904,
+              "blobs": [
+                {
+                  "sha256": "303c6bbe4426ba8dc5194de97b6e77a571bc28551c05d4181f4d3243a9e9cdaf",
+                  "bytes": 8388608
+                },
+                {
+                  "sha256": "34351fc5aa35762551b2d4b8e2e169d711229c9b39382ceacf155c0f59023a0e",
+                  "bytes": 8388608
+                },
+                {
+                  "sha256": "443d907b803e2c1aec635f806edc9ebe0b5813004f9d026ee65d81ad16947ce0",
+                  "bytes": 8388608
+                },
+                {
+                  "sha256": "5341e6b2646979a70e57653007a1f310169421ec9bdd9f1a5648f75ade005af1",
+                  "bytes": 256
+                },
+                {
+                  "sha256": "62de7768210d793bae59d6e0f6a97cfd599289c36235837a13b719e7494e0ab8",
+                  "bytes": 8388608
+                },
+                {
+                  "sha256": "73061f1f91e908f4939a59bd816018745e21c98cb1922ef04bba41824f7ba763",
+                  "bytes": 8388608
+                },
+                {
+                  "sha256": "cb5076bf0f34ac13e4558c5a49548946aa2ca2a49cbaeaa93ec5c679eb2e53c7",
+                  "bytes": 8388608
+                }
+              ],
+              "headCount": 1,
+              "backupCount": 4,
+              "receiptCount": 4
+            }
+          },
+          {
+            "elapsedMs": 487.5,
+            "raw": {
+              "blobCount": 8,
+              "blobBytes": 58720512,
+              "blobs": [
+                {
+                  "sha256": "303c6bbe4426ba8dc5194de97b6e77a571bc28551c05d4181f4d3243a9e9cdaf",
+                  "bytes": 8388608
+                },
+                {
+                  "sha256": "34351fc5aa35762551b2d4b8e2e169d711229c9b39382ceacf155c0f59023a0e",
+                  "bytes": 8388608
+                },
+                {
+                  "sha256": "443d907b803e2c1aec635f806edc9ebe0b5813004f9d026ee65d81ad16947ce0",
+                  "bytes": 8388608
+                },
+                {
+                  "sha256": "5341e6b2646979a70e57653007a1f310169421ec9bdd9f1a5648f75ade005af1",
+                  "bytes": 256
+                },
+                {
+                  "sha256": "62de7768210d793bae59d6e0f6a97cfd599289c36235837a13b719e7494e0ab8",
+                  "bytes": 8388608
+                },
+                {
+                  "sha256": "73061f1f91e908f4939a59bd816018745e21c98cb1922ef04bba41824f7ba763",
+                  "bytes": 8388608
+                },
+                {
+                  "sha256": "cb5076bf0f34ac13e4558c5a49548946aa2ca2a49cbaeaa93ec5c679eb2e53c7",
+                  "bytes": 8388608
+                },
+                {
+                  "sha256": "ce7c3d5f14c5f760eb537aebc9cb711a84a108d6a1a0e264a92ac71f16f4c7a3",
+                  "bytes": 8388608
+                }
+              ],
+              "headCount": 1,
+              "backupCount": 5,
+              "receiptCount": 5
+            }
+          }
+        ],
+        "addedBlobBytes": 41943040,
+        "naiveSixCompleteSnapshotPayloadBytes": 100664832
+      },
+      "queue": {
+        "setup": {
+          "payloadBytes": 16777472,
+          "callerInputBytes": 16777472
+        },
+        "baselineAfterGc": {
+          "usedSize": 938108,
+          "totalSize": 1310720,
+          "embedderHeapUsedSize": 344912,
+          "backingStorageSize": 33603069,
+          "backingStorageSupported": true
+        },
+        "stalledAfterGc": {
+          "usedSize": 945492,
+          "totalSize": 1572864,
+          "embedderHeapUsedSize": 344912,
+          "backingStorageSize": 67158013,
+          "backingStorageSupported": true
+        },
+        "stalled": {
+          "submissions": 100,
+          "saveCallsWhileStalled": 1,
+          "supersededWhileStalled": 98,
+          "unsettled": 2,
+          "sourceDerivedRetainedCoordinatorPayloadBytes": 33554944
+        },
+        "completion": {
+          "saved": 2,
+          "superseded": 98,
+          "publishedValues": [
+            1,
+            100
+          ]
+        }
+      }
+    }
+  ]
+}

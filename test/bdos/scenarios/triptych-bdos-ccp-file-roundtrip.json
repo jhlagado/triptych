@@ -3,7 +3,7 @@
   "id": "triptych-bdos-ccp-file-roundtrip",
   "description": "Run SMOKE.COM through the Triptych BDOS, then display its persisted file through CCP TYPE in a fresh machine",
   "systemBdos": "triptych",
-  "expectedInitialDriveSha256": "80ad44feca933feff04556f6df6dda61be1960af5ff378463b0aa8e7576f9c69",
+  "expectedInitialDriveSha256": "3fec1f2b6ad65f03a6776a36f30bdbcbe04fce55738c1435aff82eff59e7b940",
   "sessions": [
     {
       "id": "create-with-smoke",
@@ -20,7 +20,7 @@
         }
       ],
       "expectedTranscript": "\r\nA>SMOKE\r\r\nWrote RESULT.TXT\r\n\r\nA>",
-      "expectedDriveSha256": "aa36aec04d0611e6af1564d9b677da537c2976f0189cb56063e4eb877296e9a4",
+      "expectedDriveSha256": "bf5a201591cf54b53be492a047d815ba04c66daf5b4ea4f38038badb262e61b7",
       "expectedTerminal": {
         "text": "\nA>SMOKE\nWrote RESULT.TXT\n\nA>",
         "cursorRow": 4,
@@ -46,7 +46,7 @@
         }
       ],
       "expectedTranscript": "\r\nA>TYPE RESULT.TXT\r\r\nCP/M file services are working\r\n\r\nA>",
-      "expectedDriveSha256": "aa36aec04d0611e6af1564d9b677da537c2976f0189cb56063e4eb877296e9a4",
+      "expectedDriveSha256": "bf5a201591cf54b53be492a047d815ba04c66daf5b4ea4f38038badb262e61b7",
       "expectedTerminal": {
         "text": "\nA>TYPE RESULT.TXT\nCP/M file services are working\n\nA>",
         "cursorRow": 4,

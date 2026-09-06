@@ -19,6 +19,8 @@ import {
 
 const revision = "a".repeat(40);
 const systemAsset = "system-triptych-cpm-8m-v1.bin";
+const abSystemAsset = "system-triptych-cpm-8m-ab-v1.bin";
+const abBootstrapAsset = "bootstrap-triptych-cpm-8m-ab-v1.bin";
 const sha256 = (bytes) => createHash("sha256").update(bytes).digest("hex");
 let root, source, archive, manifest;
 const options = () => ({
@@ -35,10 +37,18 @@ beforeEach(async () => {
   archive = join(root, "archive");
   await mkdir(source);
   const disk = Buffer.alloc(256512, 0xe5);
+  disk.fill(0x11, 0, 0x800);
+  disk.fill(0x22, 0x800, 0x1600);
+  disk.fill(0x33, 0x1600, 0x1a00);
   const bootstrap = Buffer.alloc(256, 0xc3);
   const largeSystem = Buffer.alloc(16384);
   disk.copy(largeSystem, 0, 0, 0x1600);
   largeSystem.fill(0x44, 0x1600, 0x1a00);
+  const abSystem = Buffer.alloc(16384);
+  abSystem.fill(0x55, 0, 0x800);
+  abSystem.fill(0x66, 0x800, 0x1600);
+  abSystem.fill(0x77, 0x1600, 0x1900);
+  const abBootstrap = Buffer.alloc(256, 0x88);
   const assets = new Map([
     ["bootstrap.bin", bootstrap],
     ["ccp.bin", disk.subarray(0, 0x800)],
@@ -46,6 +56,8 @@ beforeEach(async () => {
     ["bios.bin", disk.subarray(0x1600, 0x1a00)],
     ["cpm22.img", disk],
     [systemAsset, largeSystem],
+    [abSystemAsset, abSystem],
+    [abBootstrapAsset, abBootstrap],
   ]);
   for (const name of [
     "index.html",
@@ -56,6 +68,8 @@ beforeEach(async () => {
     "working-disk-revisions.js",
     "disk-workspace.js",
     "disk-profile.js",
+    "drive-set.js",
+    "drive-set-store.js",
     "tool-catalog.js",
     "tool-catalog.json",
     "source-bundle.js",
@@ -66,13 +80,17 @@ beforeEach(async () => {
     ".nojekyll",
     "triptych_host_wasm.js",
     "triptych_host_wasm_bg.wasm",
+    "triptych_host_wasm.d.ts",
+    "triptych_host_wasm_bg.wasm.d.ts",
   ])
     assets.set(name, Buffer.from(`synthetic ${name}\n`));
+  expect(assets.size).toBe(30);
   manifest = {
     schema: "triptych-browser-deployment-v1",
     distribution: {
       schema: "triptych-cpm-distribution-v1",
       triptych: { revision, dirty: false },
+      targetProfile: "triptych-cpu-v0.1",
       disk: { bytes: disk.length, sha256: sha256(disk) },
       bootstrap: { bytes: bootstrap.length, sha256: sha256(bootstrap) },
     },
@@ -93,6 +111,26 @@ beforeEach(async () => {
           sha256: sha256(largeSystem.subarray(0x1600, 0x1a00)),
         },
       },
+      {
+        id: "triptych-cpm-8m-v1",
+        residentProfile: "triptych-cpu-v0.1-8m-ab",
+        imageBytes: 8388608,
+        systemBytes: 16384,
+        drives: 2,
+        systemAsset: abSystemAsset,
+        systemSha256: sha256(abSystem),
+        bootstrapAsset: abBootstrapAsset,
+        bootstrapSha256: sha256(abBootstrap),
+        residentLockSha256: "c".repeat(64),
+        ccpSha256: sha256(abSystem.subarray(0, 0x800)),
+        bdosSha256: sha256(abSystem.subarray(0x800, 0x1600)),
+        bios: {
+          source: "system/cpm/bios-8m-ab.asm",
+          sourceSha256: "d".repeat(64),
+          sha256: sha256(abSystem.subarray(0x1600, 0x1a00)),
+          liveEnd: 0xfc00,
+        },
+      },
     ],
     assets: [...assets].map(([path, bytes]) => ({
       path,
@@ -108,7 +146,10 @@ afterEach(async () => {
   await rm(root, { recursive: true, force: true });
 });
 
-describe("exact browser recovery archive", () => {
+// This fixture represents the current v3-capable build, not an older retained
+// site. Historical archives use their corresponding release verifier; runtime
+// compatibility is separately proved, never inferred from this byte archive.
+describe("exact current-build browser recovery archive", () => {
   it("retains every exact served byte and external identity without claiming runtime proof", async () => {
     const receipt = await archiveBrowserRecovery(options());
     expect(receipt).toEqual({
@@ -120,7 +161,7 @@ describe("exact browser recovery archive", () => {
         await readFile(join(source, "deployment-manifest.json")),
       ),
       assetCount: manifest.assets.length,
-      intendedStorageSchema: "triptych-working-disk-v2",
+      intendedStorageSchema: "triptych-drive-set-v3",
       runtimeQualification: "not-performed",
     });
     expect((await readdir(archive)).sort()).toEqual([
@@ -278,4 +319,39 @@ describe("exact browser recovery archive", () => {
       /ENOENT/,
     );
   });
+
+  it.each(["drive-set.js", "drive-set-store.js", abBootstrapAsset])(
+    "rejects missing current-build asset %s before reserving an archive",
+    async (name) => {
+      manifest.assets = manifest.assets.filter((asset) => asset.path !== name);
+      await rm(join(source, name));
+      await saveManifest();
+      await expect(archiveBrowserRecovery(options())).rejects.toThrow(
+        /missing required asset/,
+      );
+      expect(await readdir(root)).toEqual(["source"]);
+    },
+  );
+
+  it.each([0, 0x800, 0x1600, 0x1900, 0x3fff])(
+    "rejects rehashed A/B slot or reserved-tail corruption at offset %i",
+    async (offset) => {
+      const bytes = await readFile(join(source, abSystemAsset));
+      bytes[offset] ^= 1;
+      await writeFile(join(source, abSystemAsset), bytes);
+      const profile = manifest.diskProfiles[1];
+      profile.systemSha256 = sha256(bytes);
+      manifest.assets.find((asset) => asset.path === abSystemAsset).sha256 =
+        profile.systemSha256;
+      // Even updating the BIOS slot hash cannot legitimize nonzero bytes above
+      // liveEnd inside the cold-loaded BIOS artifact's dead padding.
+      if (offset === 0x1900)
+        profile.bios.sha256 = sha256(bytes.subarray(0x1600, 0x1a00));
+      await saveManifest();
+      await expect(archiveBrowserRecovery(options())).rejects.toThrow(
+        /A\/B resident slots or reserved bytes differ/,
+      );
+      expect(await readdir(root)).toEqual(["source"]);
+    },
+  );
 });
