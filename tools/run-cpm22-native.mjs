@@ -21,8 +21,22 @@ const hostExecutable = join(
 );
 const sourceImagePath = process.env.TRIPTYCH_CPM22_IMAGE;
 const workingImagePath = process.env.TRIPTYCH_CPM22_WORK_DISK;
+const workingImagePathB = process.env.TRIPTYCH_CPM22_WORK_DISK_B;
 const bootstrapProfile = process.env.TRIPTYCH_CPM_BOOTSTRAP_PROFILE;
 const systemCcp = process.env.TRIPTYCH_CPM_CCP ?? "triptych";
+if (workingImagePathB !== undefined && workingImagePath === undefined) {
+  throw new Error(
+    "drive B requires saved drive A through TRIPTYCH_CPM22_WORK_DISK",
+  );
+}
+if (
+  workingImagePathB !== undefined &&
+  bootstrapProfile !== "triptych-cpu-v0.1-8m-ab"
+) {
+  throw new Error(
+    "drive B requires explicit TRIPTYCH_CPM_BOOTSTRAP_PROFILE=triptych-cpu-v0.1-8m-ab",
+  );
+}
 if (systemCcp !== "oracle" && systemCcp !== "triptych") {
   throw new Error("TRIPTYCH_CPM_CCP must be oracle or triptych");
 }
@@ -83,6 +97,7 @@ try {
     ? await prepareNativeCpm22WorkingImage({
         repositoryRoot,
         workingImagePath,
+        workingImagePathB,
         outputDirectory: temporary,
         bootstrapProfile,
       })
@@ -95,13 +110,15 @@ try {
   console.log("Triptych native CP/M 2.2 terminal");
   console.log(`Rust host: ${hostExecutable}`);
   if (persistent) {
-    console.log(`Working disk: ${resolve(workingImagePath)}`);
-    console.log(`Pre-launch SHA-256: ${prepared.sourceImageSha256}`);
+    for (const drive of prepared.drives) {
+      console.log(`Working drive ${drive.letter}: ${drive.path}`);
+      console.log(`Drive ${drive.letter} pre-launch SHA-256: ${drive.sha256}`);
+    }
     console.log(`Selected bootstrap profile: ${prepared.bootstrapProfile}`);
     console.log(
       "Saved system and application bytes are preserved exactly; resident compatibility is the caller's selection, not inferred from disk capacity.",
     );
-    console.log("Flushed guest writes remain in this working image.");
+    console.log("Flushed guest writes remain in their named working images.");
   } else if (sourceImagePath !== undefined) {
     console.log(
       `CCP: ${systemCcp === "triptych" ? "pinned Portable CP/M release" : "retained compatibility oracle"}`,
@@ -136,9 +153,13 @@ try {
     "isig",
   ]);
 
-  child = spawn(hostExecutable, [prepared.bootRomPath, prepared.diskPath], {
-    stdio: "inherit",
-  });
+  child = spawn(
+    hostExecutable,
+    [prepared.bootRomPath, ...(prepared.diskPaths ?? [prepared.diskPath])],
+    {
+      stdio: "inherit",
+    },
+  );
   for (const signal of ["SIGINT", "SIGTERM"]) {
     const handler = () => {
       receivedSignal ??= signal;

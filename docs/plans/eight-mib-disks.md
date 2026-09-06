@@ -129,10 +129,17 @@ its bootstrap profile explicitly; a fresh creator publishes new media separately
 The [A/B integration report](../reports/eight-mib-ab-integration.md) records the
 release identities, execution measurements and proof limits.
 
-Next gates are maximum tool-capacity and generated terminal paths, interactive
-native B attachment and a coherent browser drive set. Browser
-publication must preserve the complete preceding drive set and compare all
-expected revisions before publishing replacements.
+The [storage and native-B report](../reports/eight-mib-drive-set-storage.md)
+records the next local checkpoint: native B attachment, source/output/text
+capacity and generated-failure paths, plus the standalone browser drive-set
+codec and transaction store. The complete check passed 392 code tests and
+80 browser tests; a subsequent focused run passed all 22 storage cases.
+
+The next integration is the [browser drive-set coordinator](browser-drive-sets.md)
+and verified A/B assets, followed by selected-drive operations and complete-set
+recovery. Publication must preserve the complete preceding drive set and compare
+the expected whole-set revision before replacing it. Additional tool-arena
+qualification and browser memory/latency measurements remain explicit proof gaps.
 
 The earlier one-drive foundation pinned Portable CP/M 0.1.2 and passed
 336 TypeScript tests, 59 browser tests, native/WASM application workflows and

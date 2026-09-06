@@ -360,6 +360,103 @@ describe("native distribution inputs", () => {
     );
   });
 
+  it("prepares optional drive B only under explicit A/B profile and preserves both saved images", async () => {
+    const outputDirectory = await directory();
+    const paths = ["a.img", "b.img"].map((name) => join(outputDirectory, name));
+    const images = [Buffer.alloc(8388608, 0x41), Buffer.alloc(8388608, 0x42)];
+    await Promise.all(paths.map((path, i) => writeFile(path, images[i])));
+    const before = await Promise.all(paths.map((path) => stat(path)));
+    const prepared = await prepareNativeCpm22WorkingImage({
+      repositoryRoot: root,
+      workingImagePath: paths[0],
+      workingImagePathB: paths[1],
+      outputDirectory,
+      bootstrapProfile: "triptych-cpu-v0.1-8m-ab",
+    });
+    expect(prepared.diskPaths).toEqual(paths);
+    expect(prepared.diskPath).toBe(paths[0]);
+    expect(prepared.drives.map((drive) => drive.letter)).toEqual(["A", "B"]);
+    expect(prepared.drives[0].sha256).toBe(prepared.sourceImageSha256);
+    expect(prepared.drives[1].sha256).not.toBe(prepared.sourceImageSha256);
+    for (const [i, path] of paths.entries()) {
+      expect((await readFile(path)).equals(images[i])).toBe(true);
+      const after = await stat(path);
+      expect(after.ino).toBe(before[i].ino);
+      expect(after.mtimeMs).toBe(before[i].mtimeMs);
+    }
+  });
+
+  it.each([undefined, "triptych-cpu-v0.1", "triptych-cpu-v0.1-8m-a"])(
+    "rejects drive B without explicit A/B profile: %s",
+    async (bootstrapProfile) => {
+      const outputDirectory = await directory();
+      await expect(
+        prepareNativeCpm22WorkingImage({
+          repositoryRoot: root,
+          workingImagePath: join(outputDirectory, "absent-a.img"),
+          workingImagePathB: join(outputDirectory, "absent-b.img"),
+          outputDirectory,
+          bootstrapProfile,
+        }),
+      ).rejects.toThrow(/drive B requires.*8m-ab/i);
+      expect(await readdir(outputDirectory)).toEqual([]);
+    },
+  );
+
+  it.each([0, 512, 8388607, 8389120])(
+    "rejects drive B capacity %i before writing artifacts",
+    async (length) => {
+      const outputDirectory = await directory();
+      const a = join(outputDirectory, "a.img"),
+        b = join(outputDirectory, "b.img");
+      const originalA = Buffer.alloc(8388608, 0x41),
+        originalB = Buffer.alloc(length, 0x42);
+      await Promise.all([writeFile(a, originalA), writeFile(b, originalB)]);
+      await expect(
+        prepareNativeCpm22WorkingImage({
+          repositoryRoot: root,
+          workingImagePath: a,
+          workingImagePathB: b,
+          outputDirectory,
+          bootstrapProfile: "triptych-cpu-v0.1-8m-ab",
+        }),
+      ).rejects.toThrow(/drive B.*(length|sector)/i);
+      expect((await readFile(a)).equals(originalA)).toBe(true);
+      expect((await readFile(b)).equals(originalB)).toBe(true);
+      expect((await readdir(outputDirectory)).sort()).toEqual([
+        "a.img",
+        "b.img",
+      ]);
+    },
+  );
+
+  it.each(["same", "relative", "symlink", "hardlink"])(
+    "rejects A/B disk aliases: %s",
+    async (kind) => {
+      const outputDirectory = await directory();
+      const a = join(outputDirectory, "a.img");
+      const original = Buffer.alloc(8388608, 0x41);
+      await writeFile(a, original);
+      let b = a;
+      if (kind === "relative") b = `${outputDirectory}/./a.img`;
+      if (kind === "symlink" || kind === "hardlink") {
+        b = join(outputDirectory, "b.img");
+        await (kind === "symlink" ? symlink(a, b) : link(a, b));
+      }
+      await expect(
+        prepareNativeCpm22WorkingImage({
+          repositoryRoot: root,
+          workingImagePath: a,
+          workingImagePathB: b,
+          outputDirectory,
+          bootstrapProfile: "triptych-cpu-v0.1-8m-ab",
+        }),
+      ).rejects.toThrow(/distinct|same file/i);
+      expect((await readFile(a)).equals(original)).toBe(true);
+      expect(await readdir(outputDirectory)).not.toContain("bootstrap.bin");
+    },
+  );
+
   it("requires an explicit source for historical CCP selection", async () => {
     await expect(
       prepareNativeCpm22Image({
@@ -371,6 +468,14 @@ describe("native distribution inputs", () => {
   });
 
   it.each([
+    [{ TRIPTYCH_CPM22_WORK_DISK_B: "b.img" }, /drive B requires.*WORK_DISK/i],
+    [
+      {
+        TRIPTYCH_CPM22_WORK_DISK: "a.img",
+        TRIPTYCH_CPM22_WORK_DISK_B: "b.img",
+      },
+      /drive B requires.*8m-ab/i,
+    ],
     [
       { TRIPTYCH_CPM22_WORK_DISK: "saved.img", TRIPTYCH_CPM_CCP: "triptych" },
       /cannot replace the CCP/,
@@ -392,6 +497,7 @@ describe("native distribution inputs", () => {
       const environment = { ...process.env };
       for (const name of [
         "TRIPTYCH_CPM22_WORK_DISK",
+        "TRIPTYCH_CPM22_WORK_DISK_B",
         "TRIPTYCH_CPM22_IMAGE",
         "TRIPTYCH_CPM_CCP",
         "TRIPTYCH_CPM_BOOTSTRAP_PROFILE",

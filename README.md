@@ -148,6 +148,20 @@ the image or replace residents. The default profile remains the small E400
 machine. `TRIPTYCH_CPM_CCP` and `TRIPTYCH_CPM22_IMAGE` cannot be combined with a
 saved working disk.
 
+For two distinct saved eight MiB images using the A/B resident layout:
+
+```sh
+TRIPTYCH_CPM22_WORK_DISK=/path/to/drive-a.img \
+TRIPTYCH_CPM22_WORK_DISK_B=/path/to/drive-b.img \
+TRIPTYCH_CPM_BOOTSTRAP_PROFILE=triptych-cpu-v0.1-8m-ab \
+npm run run:cpm22-native
+```
+
+The launcher rejects incorrect capacities and paths that identify the same file,
+including hard links and symbolic links. These checks run before launch; they
+do not lock images against another process changing them. Use `B:` at the CP/M
+prompt to select B, or an explicit filename such as `TYPE B:README.TXT`.
+
 The Stage 5 WebAssembly proof additionally needs the exactly matching
 `wasm-bindgen` 0.2.127 command-line tool:
 
