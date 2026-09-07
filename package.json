@@ -70,7 +70,7 @@
     "test": "vitest run",
     "test:wasm-browser": "npm run build:wasm-browser && playwright test --config=playwright.config.mjs",
     "test:cpu-conformance": "vitest run test/cpu/conformance.test.ts",
-    "check:wasm-browser-ui": "node --check crates/triptych-host-wasm/web/app.js && node --check crates/triptych-host-wasm/web/terminal.js && node --check tools/build-wasm-host.mjs && node --check tools/serve-wasm-browser.mjs && node tools/check-wasm-browser-ui.mjs && node --test test/wasm/committed-cache.node.mjs test/wasm/disk-workspace.node.mjs test/wasm/drive-set.node.mjs test/wasm/tool-catalog.node.mjs test/wasm/source-bundle.node.mjs tools/lib/large-disk-system.test.mjs tools/lib/large-ab-system.test.mjs",
+    "check:wasm-browser-ui": "node --check crates/triptych-host-wasm/web/app.js && node --check crates/triptych-host-wasm/web/terminal.js && node --check tools/build-wasm-host.mjs && node --check tools/serve-wasm-browser.mjs && node tools/check-wasm-browser-ui.mjs && node --test test/wasm/committed-cache.node.mjs test/wasm/disk-workspace.node.mjs test/wasm/saved-machine-workspace.node.mjs test/wasm/drive-set.node.mjs test/wasm/tool-catalog.node.mjs test/wasm/source-bundle.node.mjs tools/lib/large-disk-system.test.mjs tools/lib/large-ab-system.test.mjs",
     "check:saved-machine-codecs": "node --test test/wasm/drive-set.node.mjs test/wasm/drive-set-v4.node.mjs test/wasm/saved-machine.node.mjs",
     "check:rust": "cargo fmt --all -- --check && cargo clippy --workspace --all-targets --all-features -- -D warnings && cargo test --workspace --all-features && cargo build -p triptych-host-wasm --target wasm32-unknown-unknown --release",
     "proof:cpm22": "npm run build && node tools/prove-cpm22.mjs",

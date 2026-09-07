@@ -1,7 +1,7 @@
 # Two-MiB Portable CP/M release consumer
 
-Date: 2026-09-07. Status: retained-input validation implemented; the new
-all-profile Triptych ATOM rebuild gate is pending coordinated execution.
+Date: 2026-09-07. Status: retained-input validation and the all-profile
+Triptych ATOM rebuild gate passed. Browser activation remains pending.
 
 The new consumer family retains Portable CP/M 0.1.4 at
 `d28fc52774c967d1422b3b814d51c069247504c1`, with sixteen independent target locks.
@@ -31,8 +31,16 @@ also passed.
 
 `test/distribution/two-mib-release-assembly.test.mjs` is the separate,
 heavier gate: ATOM rebuilds CCP and BDOS for all sixteen profiles and compares
-every output byte with the release. It has not been executed for this slice.
-Upstream release verification does not substitute for that consumer gate.
+every output byte with the release. The integrated input and assembly gates
+passed together at Triptych `569d51d`: 48 tests across two files in 47.63 seconds,
+using `VITEST_MAX_WORKERS=2` on macOS. This is the consumer rebuild evidence,
+separate from upstream release verification.
+
+```sh
+VITEST_MAX_WORKERS=2 npx vitest run \
+  test/distribution/two-mib-release-inputs.test.mjs \
+  test/distribution/two-mib-release-assembly.test.mjs
+```
 
 This change does not construct Triptych system images, define runtime
 descriptors, admit browser profiles or alter native launching. BIOS/bootstrap
