@@ -2,6 +2,160 @@ import { expect, test } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 
 const pageErrors = new WeakMap();
+
+for (const version of [1, 2])
+  test(`historical bootstrap signal identifies validated v${version} without changing rows`, async ({
+    page,
+  }) => {
+    expect(
+      await page.evaluate(async (version) => {
+        (await seed(version)).close();
+        let store = await openNew({ name: dbName });
+        const before = await allRaw();
+        const missing = await store.load();
+        const unchanged = same(before, await allRaw());
+        store.close();
+        store = await open();
+        const ready = await store.load();
+        const recovered =
+          ready.kind === "ready" &&
+          ready.snapshot.drives.A.bytes.every(
+            (value) => value === (version === 1 ? 7 : 8),
+          );
+        const preserved = same(before, await allRaw());
+        store.close();
+        return { missing, unchanged, recovered, preserved };
+      }, version),
+    ).toEqual({
+      missing: {
+        kind: "recovery",
+        error: "Saved machine store: historical bootstrap required.",
+        code: "HISTORICAL_BOOTSTRAP_REQUIRED",
+      },
+      unchanged: true,
+      recovered: true,
+      preserved: true,
+    });
+  });
+
+for (const damage of [
+  "v1-schema",
+  "v1-bytes",
+  "v2-schema",
+  "v2-bytes",
+  "v2-recovery",
+  "v2-revision",
+  "v3-head",
+  "marker",
+  "head",
+  "stray-state",
+  "stray-blob",
+])
+  test(`historical bootstrap signal is absent for ${damage}`, async ({
+    page,
+  }) => {
+    expect(
+      await page.evaluate(async (damage) => {
+        if (damage === "v3-head") await seedV3();
+        else (await seed(damage.startsWith("v1") ? 1 : 2)).close();
+        const store = await openNew({ name: dbName });
+        if (damage.startsWith("v1") || damage.startsWith("v2")) {
+          const target = damage.startsWith("v1")
+            ? "working-disks"
+            : "disk-revisions";
+          const row = (await allRaw())[target][0];
+          if (damage.endsWith("schema")) row.schema = "unknown";
+          if (damage.endsWith("bytes")) row.bytes = new Uint8Array(511);
+          if (damage.endsWith("recovery")) row.recovery = true;
+          if (damage.endsWith("revision")) row.revision = 0;
+          await putRaw(target, row);
+        } else if (damage === "v3-head") {
+          await putRaw("drive-set-state", { key: "head", schema: "unknown" });
+        } else if (damage === "stray-blob") {
+          await putRaw(BLOBS, {
+            sha256: "a".repeat(64),
+            bytes: new Uint8Array(1),
+          });
+        } else {
+          await putRaw(
+            STATE,
+            damage === "marker"
+              ? { key: "activation", schema: "triptych-drive-set-authority-v4" }
+              : { key: damage === "head" ? "head" : "unexpected" },
+          );
+        }
+        const before = await allRaw();
+        const loaded = await store.load();
+        const result = {
+          recovery: loaded.kind === "recovery",
+          hasCode: Object.hasOwn(loaded, "code"),
+          unchanged: same(before, await allRaw()),
+        };
+        store.close();
+        return result;
+      }, damage),
+    ).toEqual({ recovery: true, hasCode: false, unchanged: true });
+  });
+
+test("historical bootstrap signal does not forward a crypto error code", async ({
+  page,
+}) => {
+  expect(
+    await page.evaluate(async () => {
+      (await seed()).close();
+      const store = await open({
+        crypto: {
+          subtle: {
+            digest() {
+              throw Object.assign(new Error("crypto unavailable"), {
+                code: "HISTORICAL_BOOTSTRAP_REQUIRED",
+              });
+            },
+          },
+        },
+      });
+      const before = await allRaw();
+      const loaded = await store.load();
+      const unchanged = same(before, await allRaw());
+      store.close();
+      return { loaded, unchanged };
+    }),
+  ).toEqual({
+    loaded: { kind: "recovery", error: "crypto unavailable" },
+    unchanged: true,
+  });
+});
+
+test("historical bootstrap signal is unnecessary for empty and valid v3 authority", async ({
+  page,
+}) => {
+  expect(
+    await page.evaluate(async () => {
+      let store = await openNew({ name: dbName });
+      const empty = await store.load();
+      store.close();
+      dbName = `saved-machine-${crypto.randomUUID()}`;
+      await seedV3();
+      store = await openNew({ name: dbName });
+      const before = await allRaw();
+      const loaded = await store.load();
+      const result = {
+        empty,
+        ready: loaded.kind === "ready",
+        hasCode: Object.hasOwn(loaded, "code"),
+        unchanged: same(before, await allRaw()),
+      };
+      store.close();
+      return result;
+    }),
+  ).toEqual({
+    empty: { kind: "empty", token: { kind: "empty" } },
+    ready: true,
+    hasCode: false,
+    unchanged: true,
+  });
+});
+
 test.afterEach(async ({ page }) => {
   expect(pageErrors.get(page)).toEqual([]);
 });
