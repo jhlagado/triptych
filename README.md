@@ -176,6 +176,26 @@ locks exclude cooperating owners, including the CLI, but not arbitrary file
 editors. Use `B:` at the CP/M prompt to select B, or an explicit filename such
 as `TYPE B:README.TXT`.
 
+The development archive launcher opens a browser-exported `.tds` machine in a
+new native session, preserving its saved bootstrap, configured slots and media:
+
+```sh
+cargo build --locked -p triptych-host-native
+node tools/run-saved-machine-native.mjs \
+  --archive /path/to/machine.tds \
+  --session /path/to/new-session \
+  --deployment /path/to/retained/deployment-manifest.json
+```
+
+The destination must not already exist. The original archive and all extracted
+files remain after exit. Two-MiB archives require matching profile metadata;
+historical archives need no `--deployment` argument. This launcher performs no
+system upgrade. Session disk files are raw recovery data, not last-flush
+checkpoint archives, and are not automatically repacked. The
+[native archive plan](docs/plans/native-saved-archives.md) explains that boundary;
+the [verification report](docs/reports/native-saved-archive-sessions.md) records
+local macOS tests and the outstanding Linux and release checks.
+
 The Stage 5 WebAssembly proof additionally needs the exactly matching
 `wasm-bindgen` 0.2.127 command-line tool:
 
