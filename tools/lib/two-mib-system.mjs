@@ -30,6 +30,14 @@ const OS_REVISION = "d28fc52774c967d1422b3b814d51c069247504c1";
 const OS_REPOSITORY = "https://github.com/jhlagado/portable-cpm.git";
 const SHA256 = /^[0-9a-f]{64}$/;
 
+function validateGenerator(bytes) {
+  assert.deepEqual(
+    Uint8Array.from(bytes),
+    RUNNING_GENERATOR_BYTES,
+    "root generator differs from running implementation",
+  );
+}
+
 function paths(profile) {
   const suffix = `n${String(profile.count).padStart(2, "0")}`;
   return {
@@ -351,6 +359,7 @@ function machineLayout(machine, profile) {
 }
 
 function describe(evidence, profile) {
+  validateGenerator(evidence.generatorBytes);
   const names = paths(profile);
   const lock = lockFor(evidence.lockBytes, profile);
   const atom = atomFor(lock, evidence);
@@ -531,11 +540,7 @@ export async function buildTwoMibSystem(
     exec("git", ["rev-parse", "HEAD"], { cwd: root }),
     exec("git", ["status", "--porcelain"], { cwd: root }),
   ]);
-  assert.deepEqual(
-    Uint8Array.from(generatorBytes),
-    RUNNING_GENERATOR_BYTES,
-    "root generator differs from running implementation",
-  );
+  validateGenerator(generatorBytes);
   const dirty = statusResult.stdout.length !== 0;
   assert.ok(
     allowDirty || !dirty,
