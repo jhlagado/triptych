@@ -6,6 +6,7 @@ import { execFileSync } from "node:child_process";
 import { chromium, expect } from "@playwright/test";
 import { installCpm22File, readCpm22File } from "./lib/cpm22-disk.mjs";
 import { decodeDriveSet } from "../crates/triptych-host-wasm/web/drive-set.js";
+import { decodeSavedMachineArchive } from "../crates/triptych-host-wasm/web/saved-machine.js";
 import { checkServedTwoMibAssets } from "./lib/served-two-mib-assets.mjs";
 
 // The directory must be the downloaded CI artifact, not a local rebuild.
@@ -37,6 +38,11 @@ const expectedManifest = await readFile(
   join(directory, "deployment-manifest.json"),
 );
 const manifest = JSON.parse(expectedManifest);
+assert.equal(
+  manifest.storageSchema,
+  "triptych-drive-set-v4",
+  "this active-app proof requires declared v4 durable authority",
+);
 const digest = (bytes) => createHash("sha256").update(bytes).digest("hex");
 async function download(name) {
   const response = await fetch(new URL(name, base), {
@@ -144,12 +150,18 @@ try {
     assert.deepEqual(
       requested.filter(
         (name) =>
-          ["config.json", "cpm22.img"].includes(name) ||
+          [
+            "config.json",
+            "cpm22.img",
+            "ccp.bin",
+            "bdos.bin",
+            "bios.bin",
+          ].includes(name) ||
           /^bootstrap.*\.bin$/.test(name) ||
           /^system-.*\.bin$/.test(name),
       ),
       [],
-      "Saved v3 navigation must use retained media/bootstrap, not fresh assets",
+      "Saved navigation must use retained media/bootstrap, not fresh assets",
     );
   }
   async function send(page, value, drive = "A") {
@@ -175,17 +187,16 @@ try {
   async function stored(page) {
     return page.evaluate(
       async ({ url, historicalBootstrap }) => {
-        const { openDriveSetStore } = await import(url);
-        let store = await openDriveSetStore();
+        const { openSavedMachineStore } = await import(url);
+        let store = await openSavedMachineStore();
         try {
           let head = await store.load();
           if (
             head.kind === "recovery" &&
-            head.error ===
-              "Historical bootstrap is required to reopen the saved legacy disk."
+            head.code === "HISTORICAL_BOOTSTRAP_REQUIRED"
           ) {
             store.close();
-            store = await openDriveSetStore({
+            store = await openSavedMachineStore({
               legacyBootstrap: Uint8Array.from(historicalBootstrap),
             });
             head = await store.load();
@@ -215,7 +226,7 @@ try {
             backups: await Promise.all(
               backups.map(async (entry) => {
                 const reader = entry.id.startsWith("v2:")
-                  ? await openDriveSetStore({
+                  ? await openSavedMachineStore({
                       legacyBootstrap: Uint8Array.from(historicalBootstrap),
                     })
                   : store;
@@ -248,7 +259,7 @@ try {
         }
       },
       {
-        url: new URL("drive-set-store.js", base).href,
+        url: new URL("saved-machine-store.js", base).href,
         historicalBootstrap: Array.from(
           await readFile(join(directory, "bootstrap.bin")),
         ),
@@ -310,6 +321,11 @@ try {
   const freshSeen = observe(page, "fresh");
   const terminal = page.locator("#terminal");
   await boot(page);
+  assert.equal(
+    (await stored(page)).token.kind,
+    "v4",
+    "fresh publication uses v4 authority",
+  );
   await checkServedTwoMibAssets(page, base.href, manifest);
   await command(page, "ATOM HELLO.ASM");
   await expect(terminal).toContainText("HELLO.COM written");
@@ -519,14 +535,25 @@ try {
   );
   assert.deepEqual(
     retainedLegacy,
-    { version: 3, bytes: Array.from(legacyBytes) },
-    "version 3 preserves legacy record",
+    { version: 4, bytes: Array.from(legacyBytes) },
+    "version 4 preserves the original legacy record",
   );
   await command(migrated, "TYPE KEEP.TXT");
   await expect(migrated.locator("#terminal")).toContainText(
     "Hosted migration keeps this file",
   );
   await manage(migrated);
+  const migratedCheckpoint = await stored(migrated);
+  assert.equal(migratedCheckpoint.backups.length, 1);
+  assert.match(migratedCheckpoint.backups[0].operationId, /^checkpoint:/);
+  assert.deepEqual(
+    migratedCheckpoint.backups[0].bytes,
+    Array.from(legacyBytes),
+  );
+  assert.deepEqual(
+    migratedCheckpoint.backups[0].bootstrap,
+    migratedCheckpoint.bootstrap,
+  );
   await migrated.locator("#file-import").setInputFiles({
     name: "AFTER.TXT",
     mimeType: "text/plain",
@@ -537,8 +564,15 @@ try {
   );
   await apply(migrated);
   const migratedSaved = await stored(migrated);
-  assert.equal(migratedSaved.backups.length, 1);
-  assert.deepEqual(migratedSaved.backups[0].bytes, Array.from(legacyBytes));
+  assert.equal(migratedSaved.backups.length, 2);
+  assert.deepEqual(migratedSaved.backups[1], migratedCheckpoint.backups[0]);
+  assert.deepEqual(migratedSaved.backups[0].bytes, migratedCheckpoint.bytes);
+  assert.deepEqual(
+    migratedSaved.backups[0].bootstrap,
+    migratedCheckpoint.bootstrap,
+  );
+  assert.equal(migratedSaved.backups[0].revision, migratedCheckpoint.revision);
+  assert.doesNotMatch(migratedSaved.backups[0].operationId, /^checkpoint:/);
   await migrated.locator("#close-files").click();
   await savedBoot(migrated);
   assert.deepEqual(
@@ -552,7 +586,7 @@ try {
   );
 
   // Seed a genuine historical v2 head/change through its published API, then
-  // verify the v3 adapter does not rewrite either original record.
+  // verify the v4 authority adapter does not rewrite either original record.
   const migratedV2 = await newPage();
   await migratedV2.route(appUrl, (route) => route.abort());
   await migratedV2.goto(base.href);
@@ -649,6 +683,14 @@ try {
   );
   await manage(migratedV2);
   await expect(migratedV2.locator("#file-import")).toBeEnabled();
+  const v2Checkpoint = await stored(migratedV2);
+  assert.equal(v2Checkpoint.backups.length, 2);
+  const promotedV2 = v2Checkpoint.backups.find((backup) =>
+    backup.id.startsWith("v4:"),
+  );
+  assert.match(promotedV2.operationId, /^checkpoint:/);
+  assert.deepEqual(promotedV2.bytes, Array.from(v2HeadBytes));
+  assert.deepEqual(promotedV2.bootstrap, v2Checkpoint.bootstrap);
   await migratedV2.locator("#file-import").setInputFiles({
     name: "AFTER.TXT",
     mimeType: "text/plain",
@@ -659,11 +701,19 @@ try {
   );
   await apply(migratedV2);
   const v2Saved = await stored(migratedV2);
-  assert.equal(v2Saved.backups.length, 2);
-  assert.deepEqual(
-    v2Saved.backups.find((b) => b.id.startsWith("v3:")).bytes,
-    Array.from(v2HeadBytes),
+  assert.equal(v2Saved.backups.length, 3);
+  for (const backup of v2Checkpoint.backups)
+    assert.deepEqual(
+      v2Saved.backups.find((entry) => entry.id === backup.id),
+      backup,
+    );
+  const manualV2 = v2Saved.backups.find(
+    (entry) => !v2Checkpoint.backups.some((backup) => backup.id === entry.id),
   );
+  assert.deepEqual(manualV2.bytes, v2Checkpoint.bytes);
+  assert.deepEqual(manualV2.bootstrap, v2Checkpoint.bootstrap);
+  assert.equal(manualV2.revision, v2Checkpoint.revision);
+  assert.doesNotMatch(manualV2.operationId, /^checkpoint:/);
   assert.deepEqual(
     v2Saved.backups.find((b) => b.id === "v2:hosted-v2-change").bytes,
     Array.from(legacyBytes),
@@ -684,7 +734,7 @@ try {
   async function setState(page) {
     return page.evaluate(
       async ({ storeUrl, wasmUrl }) => {
-        const { openDriveSetStore } = await import(storeUrl);
+        const { openSavedMachineStore } = await import(storeUrl);
         const { CpmDisk } = await import(wasmUrl);
         const hash = async (bytes) =>
           Array.from(
@@ -728,7 +778,7 @@ try {
             drives,
           };
         };
-        const store = await openDriveSetStore();
+        const store = await openSavedMachineStore();
         try {
           const head = await store.load();
           if (head.kind !== "ready") throw new Error(JSON.stringify(head));
@@ -752,7 +802,7 @@ try {
         }
       },
       {
-        storeUrl: new URL("drive-set-store.js", base).href,
+        storeUrl: new URL("saved-machine-store.js", base).href,
         wasmUrl: new URL("triptych_host_wasm.js", base).href,
       },
     );
@@ -940,6 +990,8 @@ try {
   await command(ab, "B:", "A", "B");
   await command(ab, "INPUT", "B");
   await expect(ab.locator("#terminal")).toContainText("YK");
+  // Durable authority is v4, but these historical A/B snapshots deliberately
+  // retain the canonical v3 archive format and its independent decoder.
   const abArchiveBytes = await archiveDownload(ab, "#download-set");
   checkArchive(await decodeDriveSet(abArchiveBytes), workedAb);
   await manage(ab);
@@ -1057,13 +1109,143 @@ try {
   await command(abReopened, "INPUT", "B");
   await expect(abReopened.locator("#terminal")).toContainText("YK");
 
+  // This context must actually configure and run the advertised two-MiB
+  // profile. The asset-fetch probe above does not establish UI activation.
+  async function twoMibState(page) {
+    return page.evaluate(async (storeUrl) => {
+      const { openSavedMachineStore } = await import(storeUrl);
+      const hash = async (bytes) =>
+        Array.from(
+          new Uint8Array(await crypto.subtle.digest("SHA-256", bytes)),
+          (value) => value.toString(16).padStart(2, "0"),
+        ).join("");
+      const store = await openSavedMachineStore();
+      try {
+        const head = await store.load();
+        if (head.kind !== "ready" || head.token.kind !== "v4")
+          throw new Error(`Expected v4 authority: ${JSON.stringify(head)}`);
+        const snapshot = head.snapshot;
+        if (snapshot.schema !== "triptych-drive-set-v4")
+          throw new Error("Expected a two-MiB saved snapshot");
+        const slots = [];
+        for (const slot of snapshot.slots)
+          slots.push(
+            slot
+              ? {
+                  instanceId: slot.instanceId,
+                  name: slot.name,
+                  bytes: slot.bytes.length,
+                  sha256: await hash(slot.bytes),
+                }
+              : null,
+          );
+        return {
+          schema: snapshot.schema,
+          configuredCount: snapshot.configuredCount,
+          bootstrap: {
+            profile: snapshot.bootstrap.profile,
+            bytes: snapshot.bootstrap.bytes.length,
+            sha256: await hash(snapshot.bootstrap.bytes),
+          },
+          slots,
+        };
+      } finally {
+        store.close();
+      }
+    }, new URL("saved-machine-store.js", base).href);
+  }
+  const twoMib = await newPage();
+  const twoMibSeen = observe(twoMib, "two-mib-sixteen");
+  await boot(twoMib);
+  await manage(twoMib);
+  await twoMib.locator("#configured-count").fill("16");
+  await twoMib.locator("#configure-drives").click();
+  await expect(twoMib.locator("#files-status")).toContainText(
+    "16 two-MiB slots staged",
+  );
+  await twoMib.locator("#file-drive").selectOption("P");
+  await twoMib.locator("#blank-drive").click();
+  await expect(twoMib.locator("#files-status")).toContainText("Blank P staged");
+  await twoMib.locator("#file-import").setInputFiles({
+    name: "PKEEP.TXT",
+    mimeType: "text/plain",
+    buffer: Buffer.from("Hosted P sentinel\r\n"),
+  });
+  await expect(twoMib.locator("#files-status")).toContainText(
+    "Staged PKEEP.TXT",
+  );
+  await apply(twoMib);
+  await prompt(twoMib);
+  const sixteenState = await twoMibState(twoMib);
+  assert.equal(sixteenState.configuredCount, 16);
+  assert.equal(sixteenState.slots.length, 16);
+  assert.deepEqual(sixteenState.slots.slice(1, 15), Array(14).fill(null));
+  for (const index of [0, 15]) {
+    assert.ok(sixteenState.slots[index]?.instanceId);
+    assert.equal(sixteenState.slots[index].bytes, 2097152);
+  }
+  assert.notEqual(
+    sixteenState.slots[0].instanceId,
+    sixteenState.slots[15].instanceId,
+  );
+  const sixteenDescriptor = manifest.twoMibProfiles.find(
+    (profile) => profile.configuredCount === 16,
+  );
+  assert.equal(
+    sixteenState.bootstrap.profile,
+    sixteenDescriptor.residentProfile,
+  );
+  assert.equal(sixteenState.bootstrap.bytes, sixteenDescriptor.bootstrap.bytes);
+  assert.equal(
+    sixteenState.bootstrap.sha256,
+    sixteenDescriptor.bootstrap.sha256,
+  );
+  await twoMib.locator("#close-files").click();
+  await command(twoMib, "TYPE P:PKEEP.TXT");
+  await expect(twoMib.locator("#terminal")).toContainText("Hosted P sentinel");
+  await savedBoot(twoMib);
+  assert.deepEqual(
+    await twoMibState(twoMib),
+    sixteenState,
+    "two-MiB reload preserves count, slot identities and every saved byte",
+  );
+  await command(twoMib, "TYPE P:PKEEP.TXT");
+  await expect(twoMib.locator("#terminal")).toContainText("Hosted P sentinel");
+  const twoMibArchiveBytes = await archiveDownload(twoMib, "#download-set");
+  const twoMibArchive = await decodeSavedMachineArchive(twoMibArchiveBytes);
+  assert.deepEqual(
+    {
+      schema: twoMibArchive.schema,
+      configuredCount: twoMibArchive.configuredCount,
+      bootstrap: {
+        profile: twoMibArchive.bootstrap.profile,
+        bytes: twoMibArchive.bootstrap.bytes.length,
+        sha256: digest(twoMibArchive.bootstrap.bytes),
+      },
+      slots: twoMibArchive.slots.map(
+        (slot) =>
+          slot && {
+            instanceId: slot.instanceId,
+            name: slot.name,
+            bytes: slot.bytes.length,
+            sha256: digest(slot.bytes),
+          },
+      ),
+    },
+    sixteenState,
+    "download preserves the complete v4 sparse machine",
+  );
+
   for (const { label, seen } of profiles)
     for (const name of [
       "index.html",
       "app.js",
       "triptych_host_wasm.js",
       "triptych_host_wasm_bg.wasm",
-      "drive-set-store.js",
+      "saved-machine-store.js",
+      "saved-machine-workspace.js",
+      "saved-machine-runtime.js",
+      "saved-machine.js",
       "drive-set.js",
       "disk-workspace.js",
       "source-bundle.js",
@@ -1110,6 +1292,13 @@ try {
   ])
     assert.ok(abSeen.has(name), `A/B UI consumed verified ${name}`);
   for (const name of [
+    "two-mib-system.js",
+    "drive-set-v4.js",
+    sixteenDescriptor.system.asset,
+    sixteenDescriptor.bootstrap.asset,
+  ])
+    assert.ok(twoMibSeen.has(name), `two-MiB UI consumed verified ${name}`);
+  for (const name of [
     "adventure-IO.NU",
     "adventure-MAIN.NU",
     "adventure-BUILD.JSN",
@@ -1133,12 +1322,15 @@ try {
         "Files/starter/prepare/compile/win/Edit/rebuild/selected-NUC-update/reload/download/separate-profile-reopen",
         "unmodified hosted app: v1 migration/exact legacy retention/backed-up import/reload/read",
         "hosted A/B migration/blank B/selected B import/tools/ATOM/Edit/NUC/save/reload/full archive/remove B/restore/reload/run with complete backups",
+        "hosted two-MiB configure sixteen/blank P/import P/Apply/TYPE P/reload without fresh assets/exact v4 archive",
       ],
       adventureDiskSha256: digest(downloadedBytes),
       migratedDiskSha256: digest(Buffer.from(migratedSaved.bytes)),
       migratedBackupSha256: digest(Buffer.from(migratedSaved.backups[0].bytes)),
       abArchiveSha256: digest(abArchiveBytes),
       abMedia: media(workedAb),
+      twoMibArchiveSha256: digest(twoMibArchiveBytes),
+      twoMibMedia: sixteenState,
     }),
   );
 } finally {

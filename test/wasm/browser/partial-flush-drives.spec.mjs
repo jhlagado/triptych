@@ -15,13 +15,13 @@ const image = (byte = 0) => {
 
 async function saved(page) {
   return page.evaluate(async () => {
-    const { openDriveSetStore } = await import("/drive-set-store.js");
+    const { openSavedMachineStore } = await import("/saved-machine-store.js");
     const digest = async (bytes) =>
       Array.from(
         new Uint8Array(await crypto.subtle.digest("SHA-256", bytes)),
         (value) => value.toString(16).padStart(2, "0"),
       ).join("");
-    const store = await openDriveSetStore();
+    const store = await openSavedMachineStore();
     try {
       const value = await store.load();
       if (value.kind !== "ready") throw new Error(JSON.stringify(value));
@@ -64,8 +64,8 @@ for (const selected of [0, 1]) {
     );
     await page.goto("/partial-flush-seed");
     await page.evaluate(async (boot) => {
-      const { openDriveSetStore } = await import("/drive-set-store.js");
-      const store = await openDriveSetStore();
+      const { openSavedMachineStore } = await import("/saved-machine-store.js");
+      const store = await openSavedMachineStore();
       try {
         await store.saveCheckpoint(
           { kind: "empty" },

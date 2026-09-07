@@ -45,7 +45,7 @@ const [applicationSource, indexSource, persistenceSource, storeSource] =
   ]);
 assert.ok(applicationSource.includes('"ccp.bin"'));
 assert.ok(applicationSource.includes("disk.set(ccp, CCP_SYSTEM_OFFSET)"));
-assert.ok(applicationSource.includes("machine.drive_flush_count(0)"));
+assert.ok(applicationSource.includes("runtime.flushCounts()"));
 assert.ok(applicationSource.includes("workspace.saveCheckpoint"));
 assert.ok(persistenceSource.includes("createDiskWorkspace"));
 assert.ok(storeSource.includes('const STORE = "disk-revisions"'));

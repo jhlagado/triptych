@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { readFile } from "node:fs/promises";
+import { cp, readFile, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { decodeDriveSet } from "../../../crates/triptych-host-wasm/web/drive-set.js";
 import { resolve, join, extname } from "node:path";
@@ -11,20 +11,19 @@ import { installCpm22File } from "../../../tools/lib/cpm22-disk.mjs";
 
 async function stored(page) {
   return page.evaluate(async () => {
-    const { openDriveSetStore } = await import("/drive-set-store.js");
-    let store = await openDriveSetStore();
+    const { openSavedMachineStore } = await import("/saved-machine-store.js");
+    let store = await openSavedMachineStore();
     try {
       let head = await store.load();
       if (
         head.kind === "recovery" &&
-        head.error ===
-          "Historical bootstrap is required to reopen the saved legacy disk."
+        head.code === "HISTORICAL_BOOTSTRAP_REQUIRED"
       ) {
         store.close();
         const legacyBootstrap = new Uint8Array(
           await (await fetch("/bootstrap.bin")).arrayBuffer(),
         );
-        store = await openDriveSetStore({ legacyBootstrap });
+        store = await openSavedMachineStore({ legacyBootstrap });
         head = await store.load();
       }
       if (head.kind !== "ready")
@@ -82,7 +81,8 @@ test("a retained deployment reopens migrated work and backups at the same origin
     allowDevelopment: manifest.distribution.triptych.dirty,
   };
   const receipt = await archiveBrowserRecovery(options);
-  expect(receipt.intendedStorageSchema).toBe("triptych-drive-set-v3");
+  expect(receipt.intendedStorageSchema).toBe("triptych-drive-set-v4");
+  expect(receipt.runtimeQualification).toBe("not-performed");
   const original = installCpm22File(
     await readFile(join(sourceDirectory, "cpm22.img")),
     {
@@ -133,6 +133,15 @@ test("a retained deployment reopens migrated work and backups at the same origin
   await page.locator("#saved-and-exited").check();
   await page.locator("#begin-management").click();
   await expect(page.locator("#file-import")).toBeEnabled();
+  // Entering management checkpoints the historical machine. Its first v4
+  // publication must retain the complete historical predecessor, even before
+  // the later manual file import creates its own independent undo point.
+  const checkpointed = await stored(page);
+  expect(checkpointed.token.kind).toBe("v4");
+  expect(checkpointed.backups).toHaveLength(1);
+  expect(checkpointed.backups[0].operationId).toMatch(/^checkpoint:/);
+  expect(checkpointed.backups[0].bytes).toEqual(Array.from(original));
+  expect(checkpointed.backups[0].bootstrap).toEqual(checkpointed.bootstrap);
   await page.locator("#file-import").setInputFiles({
     name: "AFTER.TXT",
     mimeType: "text/plain",
@@ -142,7 +151,14 @@ test("a retained deployment reopens migrated work and backups at the same origin
   await page.locator("#commit-disk").click();
   await expect(page.locator("#files-status")).toContainText("Disk committed");
   const saved = await stored(page);
-  expect(saved.backups).toHaveLength(1);
+  expect(saved.token.kind).toBe("v4");
+  expect(saved.backups).toHaveLength(2);
+  expect(saved.backups[1]).toEqual(checkpointed.backups[0]);
+  expect(saved.backups[0].bytes).toEqual(checkpointed.bytes);
+  expect(saved.backups[0].bootstrap).toEqual(checkpointed.bootstrap);
+  expect(saved.backups[0].name).toBe(checkpointed.name);
+  expect(saved.backups[0].revision).toBe(checkpointed.token.revision);
+  expect(saved.backups[0].operationId).not.toMatch(/^checkpoint:/);
   await page.unrouteAll();
   const files = new Set([
     "deployment-manifest.json",
@@ -177,14 +193,27 @@ test("a retained deployment reopens migrated work and backups at the same origin
   for (const name of [
     "index.html",
     "app.js",
-    "drive-set-store.js",
+    "saved-machine-store.js",
+    "saved-machine-workspace.js",
+    "saved-machine-runtime.js",
     "triptych_host_wasm_bg.wasm",
   ])
     expect(served.has(name), `${name} served from archive`).toBe(true);
   expect(
-    served.has("cpm22.img"),
-    "saved work must not be replaced with distribution",
-  ).toBe(false);
+    [...served].filter(
+      (name) =>
+        [
+          "config.json",
+          "cpm22.img",
+          "ccp.bin",
+          "bdos.bin",
+          "bios.bin",
+        ].includes(name) ||
+        /^bootstrap.*\.bin$/.test(name) ||
+        /^system-.*\.bin$/.test(name),
+    ),
+    "saved work must not fetch replacement bootstrap, residents or media",
+  ).toEqual([]);
   await page.locator("#terminal").focus();
   await page.keyboard.type("TYPE KEEP.TXT");
   await page.keyboard.press("Enter");
@@ -193,16 +222,21 @@ test("a retained deployment reopens migrated work and backups at the same origin
   );
   await page.locator("#files").click();
   await expect(page.locator("#file-list")).toContainText("AFTER.TXT");
-  await expect(page.locator("#backup-list [data-restore]")).toHaveCount(1);
+  await expect(page.locator("#backup-list [data-restore]")).toHaveCount(2);
   await verifyBrowserRecoveryArchive(options);
 });
 
 const recoveryDigest = (bytes) =>
   createHash("sha256").update(bytes).digest("hex");
 
-async function completeRecoveryState(page) {
-  return page.evaluate(async () => {
-    const { openDriveSetStore } = await import("/drive-set-store.js");
+async function completeRecoveryState(page, storageSchema) {
+  return page.evaluate(async (storageSchema) => {
+    // Select the reader declared by the exact retained deployment. Merely
+    // shipping a new module does not authorize upgrading an older app's DB.
+    const openStore =
+      storageSchema === "triptych-drive-set-v4"
+        ? (await import("/saved-machine-store.js")).openSavedMachineStore
+        : (await import("/drive-set-store.js")).openDriveSetStore;
     const digest = async (bytes) =>
       Array.from(
         new Uint8Array(await crypto.subtle.digest("SHA-256", bytes)),
@@ -229,8 +263,9 @@ async function completeRecoveryState(page) {
         },
       };
     };
-    // Deliberately no legacy-bootstrap fallback: these are complete v3 heads/backups.
-    const store = await openDriveSetStore();
+    // Deliberately no legacy-bootstrap fallback: these are complete historical
+    // A/B snapshots; the archive format stays v3 under either store authority.
+    const store = await openStore();
     try {
       const head = await store.load();
       if (head.kind !== "ready")
@@ -256,7 +291,7 @@ async function completeRecoveryState(page) {
     } finally {
       store.close();
     }
-  });
+  }, storageSchema);
 }
 
 async function recoveryPrompt(page, drive = "A") {
@@ -383,7 +418,9 @@ test("a retained deployment alone reopens complete A/B work and exact complete-s
     allowDevelopment: manifest.distribution.triptych.dirty,
   };
   const receipt = await archiveBrowserRecovery(options);
-  expect(receipt.intendedStorageSchema).toBe("triptych-drive-set-v3");
+  const storageSchema = manifest.storageSchema ?? "triptych-drive-set-v3";
+  expect(receipt.intendedStorageSchema).toBe(storageSchema);
+  expect(receipt.runtimeQualification).toBe("not-performed");
   const files = new Set([
     "deployment-manifest.json",
     ...manifest.assets.map((asset) => asset.path),
@@ -409,8 +446,9 @@ test("a retained deployment alone reopens complete A/B work and exact complete-s
     }
     if (
       recovering &&
-      (name === "cpm22.img" ||
-        name === "config.json" ||
+      (["config.json", "cpm22.img", "ccp.bin", "bdos.bin", "bios.bin"].includes(
+        name,
+      ) ||
         /^bootstrap.*\.bin$/.test(name) ||
         /^system-.*\.bin$/.test(name))
     ) {
@@ -457,7 +495,7 @@ test("a retained deployment alone reopens complete A/B work and exact complete-s
     );
   }
   await recoveryApply(page);
-  const beforeSecondChange = await completeRecoveryState(page);
+  const beforeSecondChange = await completeRecoveryState(page, storageSchema);
   expect(beforeSecondChange.snapshot.bootstrap.profile).toBe(
     "triptych-cpu-v0.1-8m-ab",
   );
@@ -475,7 +513,10 @@ test("a retained deployment alone reopens complete A/B work and exact complete-s
   });
   await expect(page.locator("#files-status")).toContainText("Staged AFTER.TXT");
   await recoveryApply(page);
-  const saved = await completeRecoveryState(page);
+  const saved = await completeRecoveryState(page, storageSchema);
+  expect(saved.token.kind).toBe(
+    storageSchema === "triptych-drive-set-v4" ? "v4" : "v3",
+  );
   expect(saved.snapshot.drives.A).toEqual(beforeSecondChange.snapshot.drives.A);
   expect(saved.snapshot.bootstrap).toEqual(
     beforeSecondChange.snapshot.bootstrap,
@@ -498,11 +539,17 @@ test("a retained deployment alone reopens complete A/B work and exact complete-s
   await page.reload();
   await recoveryPrompt(page);
   expect(new URL(page.url()).origin).toBe(origin);
-  expect(await completeRecoveryState(page)).toEqual(saved);
+  expect(await completeRecoveryState(page, storageSchema)).toEqual(saved);
   for (const name of [
     "index.html",
     "app.js",
-    "drive-set-store.js",
+    ...(storageSchema === "triptych-drive-set-v4"
+      ? [
+          "saved-machine-store.js",
+          "saved-machine-workspace.js",
+          "saved-machine-runtime.js",
+        ]
+      : ["drive-set-store.js"]),
     "drive-set.js",
     "triptych_host_wasm_bg.wasm",
   ])
@@ -517,7 +564,7 @@ test("a retained deployment alone reopens complete A/B work and exact complete-s
   await expect(page.locator("#terminal")).toContainText(
     "B after backup sentinel",
   );
-  const afterReads = await completeRecoveryState(page);
+  const afterReads = await completeRecoveryState(page, storageSchema);
   expect(afterReads.snapshot).toEqual(saved.snapshot);
   expect(afterReads.backups).toEqual(saved.backups);
   const recoveredDownloads = await completeRecoveryDownloads(
@@ -534,7 +581,7 @@ test("a retained deployment alone reopens complete A/B work and exact complete-s
   ]);
   for (const [id, bytes] of originalDownloads.backups)
     expect(recoveredDownloads.backups.get(id)).toEqual(bytes);
-  const afterDownloads = await completeRecoveryState(page);
+  const afterDownloads = await completeRecoveryState(page, storageSchema);
   expect(afterDownloads.snapshot).toEqual(saved.snapshot);
   expect(afterDownloads.backups).toEqual(saved.backups);
   expect(
@@ -546,4 +593,47 @@ test("a retained deployment alone reopens complete A/B work and exact complete-s
     "every HTTP asset must come from the identified closed site",
   ).toEqual([]);
   await verifyBrowserRecoveryArchive(options);
+});
+
+test("archive intent defaults to historical v3 and rejects unknown declarations", async ({}, info) => {
+  // This is a metadata fixture, not a runtime-compatibility claim. Retain exact
+  // asset bodies while varying only the optional declaration in a private copy.
+  const sourceDirectory = info.outputPath("intent-fixture");
+  await cp(resolve("dist/wasm-browser"), sourceDirectory, {
+    recursive: true,
+    force: false,
+    errorOnExist: true,
+  });
+  const path = join(sourceDirectory, "deployment-manifest.json");
+  const manifest = JSON.parse(await readFile(path, "utf8"));
+  const options = {
+    sourceDirectory,
+    expectedRevision: manifest.distribution.triptych.revision,
+    allowDevelopment: true,
+  };
+  for (const declaration of [undefined, "triptych-drive-set-v3"]) {
+    if (declaration === undefined) delete manifest.storageSchema;
+    else manifest.storageSchema = declaration;
+    await writeFile(path, JSON.stringify(manifest));
+    const historical = {
+      ...options,
+      archiveDirectory: info.outputPath(
+        `historical-intent-${declaration ?? "implicit"}`,
+      ),
+    };
+    const receipt = await archiveBrowserRecovery(historical);
+    expect(receipt.intendedStorageSchema).toBe("triptych-drive-set-v3");
+    expect(receipt.runtimeQualification).toBe("not-performed");
+    await verifyBrowserRecoveryArchive(historical);
+  }
+  for (const declaration of [null, "unknown-authority"]) {
+    manifest.storageSchema = declaration;
+    await writeFile(path, JSON.stringify(manifest));
+    await expect(
+      archiveBrowserRecovery({
+        ...options,
+        archiveDirectory: info.outputPath(`invalid-intent-${declaration}`),
+      }),
+    ).rejects.toThrow(/storage schema/);
+  }
 });

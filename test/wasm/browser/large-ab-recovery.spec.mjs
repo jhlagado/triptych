@@ -36,22 +36,25 @@ async function setup(page) {
 
 async function rawState(page) {
   return page.evaluate(async () => {
-    const { openDriveSetStore } = await import("/drive-set-store.js");
-    const store = await openDriveSetStore();
+    const { openSavedMachineStore } = await import("/saved-machine-store.js");
+    const store = await openSavedMachineStore();
     const hash = async (bytes) =>
       Array.from(
         new Uint8Array(await crypto.subtle.digest("SHA-256", bytes)),
         (byte) => byte.toString(16).padStart(2, "0"),
       ).join("");
     try {
-      const head = await store.readRawRecovery("drive-set-state", "head");
+      const head = await store.readRawRecovery("drive-set-state-v4", "head");
       const images = {};
       for (const [name, ref] of [
         ["bootstrap", head.manifest.bootstrap.image],
         ["A", head.manifest.drives.A.image],
         ["B", head.manifest.drives.B.image],
       ]) {
-        const raw = await store.readRawRecovery("drive-set-blobs", ref.sha256);
+        const raw = await store.readRawRecovery(
+          "drive-set-blobs-v4",
+          ref.sha256,
+        );
         images[name] = {
           length: raw.bytes.length,
           hash: await hash(raw.bytes),
@@ -101,19 +104,19 @@ for (const corruption of ["head digest", "B payload"]) {
     expect(backup).toBeDefined();
     await page.evaluate(async (corruption) => {
       const db = await new Promise((resolve, reject) => {
-        const request = indexedDB.open("triptych-cpu", 3);
+        const request = indexedDB.open("triptych-cpu", 4);
         request.onsuccess = () => resolve(request.result);
         request.onerror = () => reject(request.error);
       });
       try {
         await new Promise((resolve, reject) => {
           const tx = db.transaction(
-            ["drive-set-state", "drive-set-blobs"],
+            ["drive-set-state-v4", "drive-set-blobs-v4"],
             "readwrite",
           );
           tx.oncomplete = resolve;
           tx.onabort = () => reject(tx.error);
-          const state = tx.objectStore("drive-set-state");
+          const state = tx.objectStore("drive-set-state-v4");
           const get = state.get("head");
           get.onsuccess = () => {
             const head = get.result;
@@ -124,7 +127,7 @@ for (const corruption of ["head digest", "B payload"]) {
                   : "0".repeat(64);
               state.put(head);
             } else {
-              const blobs = tx.objectStore("drive-set-blobs");
+              const blobs = tx.objectStore("drive-set-blobs-v4");
               const image = blobs.get(head.manifest.drives.B.image.sha256);
               image.onsuccess = () => {
                 const raw = image.result;
@@ -158,7 +161,10 @@ for (const corruption of ["head digest", "B payload"]) {
       const bytes = await downloaded(
         page,
         info,
-        page.getByRole("button", { name: `Download raw ${name}`, exact: true }),
+        page.getByRole("button", {
+          name: `Download raw v4 ${name}`,
+          exact: true,
+        }),
         `raw-${name}.bin`,
       );
       expect(bytes.length).toBe(corrupt.images[name].length);
@@ -167,7 +173,7 @@ for (const corruption of ["head digest", "B payload"]) {
     const manifest = await downloaded(
       page,
       info,
-      page.getByRole("button", { name: "Download raw saved manifest" }),
+      page.getByRole("button", { name: "Download raw v4 saved manifest" }),
       "raw-head.json",
     );
     expect(JSON.parse(manifest.toString())).toEqual(corrupt.head);
@@ -196,9 +202,9 @@ for (const action of ["tool", "file", "image"]) {
     await setup(page);
     const before = await rawState(page);
     const expectedB = await page.evaluate(async () => {
-      const { openDriveSetStore } = await import("/drive-set-store.js");
+      const { openSavedMachineStore } = await import("/saved-machine-store.js");
       const { CpmDisk } = await import("/triptych_host_wasm.js");
-      const store = await openDriveSetStore();
+      const store = await openSavedMachineStore();
       let disk;
       try {
         const head = await store.load();

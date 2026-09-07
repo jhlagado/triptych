@@ -26,8 +26,8 @@ test("autosave and recovery download exclude writes after the last guest flush",
 
   const savedBytes = () =>
     page.evaluate(async () => {
-      const { openDriveSetStore } = await import("/drive-set-store.js");
-      const store = await openDriveSetStore();
+      const { openSavedMachineStore } = await import("/saved-machine-store.js");
+      const store = await openSavedMachineStore();
       try {
         const head = await store.load();
         return head.kind === "ready"

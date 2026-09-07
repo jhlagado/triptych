@@ -204,6 +204,11 @@ try {
         "drive-set-v4.js",
         "drive-set.js",
         "drive-set-store.js",
+        "saved-machine.js",
+        "saved-machine-store.js",
+        "saved-machine-workspace.js",
+        "saved-machine-runtime.js",
+        "saved-machine-configuration.js",
         "working-disk-revisions.js",
         "tool-catalog.js",
         "source-bundle.js",
@@ -275,6 +280,7 @@ try {
       `${JSON.stringify(
         {
           schema: "triptych-browser-deployment-v1",
+          storageSchema: "triptych-drive-set-v4",
           distribution: distribution.manifest,
           diskProfiles: [largeSystem.profile, largeAbSystem.profile],
           twoMibProfiles,

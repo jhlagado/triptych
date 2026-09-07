@@ -50,6 +50,14 @@ async function snapshot(directory, expectedRevision, allowDevelopment) {
   const manifestBytes = await regularBytes(join(directory, MANIFEST));
   const manifest = JSON.parse(manifestBytes.toString("utf8"));
   assert.equal(manifest.schema, "triptych-browser-deployment-v1");
+  const storageSchema =
+    manifest.storageSchema === undefined
+      ? "triptych-drive-set-v3"
+      : manifest.storageSchema;
+  assert.ok(
+    ["triptych-drive-set-v3", "triptych-drive-set-v4"].includes(storageSchema),
+    "unrecognized deployment storage schema",
+  );
   assert.equal(
     manifest.distribution?.triptych?.revision,
     expectedRevision,
@@ -114,7 +122,7 @@ async function snapshot(directory, expectedRevision, allowDevelopment) {
       deploymentSchema: manifest.schema,
       deploymentManifestSha256: hash(manifestBytes),
       assetCount: manifest.assets.length,
-      intendedStorageSchema: "triptych-drive-set-v3",
+      intendedStorageSchema: storageSchema,
       runtimeQualification: "not-performed",
     },
   };
@@ -122,7 +130,7 @@ async function snapshot(directory, expectedRevision, allowDevelopment) {
 
 /** Verify current-build retained bytes, not runtime compatibility. Older
  * archives require their corresponding release verifier; this checker does not
- * infer that an old page can reopen v3 state. A separate same-origin
+ * infer that an old page can reopen newer saved authority. A separate same-origin
  * migrated-profile browser proof is required before calling this a rollback.
  */
 export async function verifyBrowserRecoveryArchive({

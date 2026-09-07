@@ -14,6 +14,13 @@ const manifest = JSON.parse(
   await readFile(join(directory, "deployment-manifest.json"), "utf8"),
 );
 assert.equal(manifest.schema, "triptych-browser-deployment-v1");
+if (Object.hasOwn(manifest, "storageSchema"))
+  assert.ok(
+    ["triptych-drive-set-v3", "triptych-drive-set-v4"].includes(
+      manifest.storageSchema,
+    ),
+    "unsupported declared storage schema",
+  );
 assert.equal(manifest.distribution.schema, "triptych-cpm-distribution-v1");
 if (expectedRevision && !expectedRevision.startsWith("--")) {
   assert.equal(
@@ -86,6 +93,18 @@ for (const name of [
   "bootstrap-triptych-cpm-8m-ab-v1.bin",
 ]) {
   assert.ok(names.has(name), `missing required asset ${name}`);
+}
+if (manifest.storageSchema === "triptych-drive-set-v4") {
+  for (const name of [
+    "saved-machine.js",
+    "saved-machine-store.js",
+    "saved-machine-workspace.js",
+    "saved-machine-runtime.js",
+    "saved-machine-configuration.js",
+    "drive-set-v4.js",
+    "two-mib-system.js",
+  ])
+    assert.ok(names.has(name), `missing saved-machine asset ${name}`);
 }
 const disk = await readFile(join(directory, "cpm22.img"));
 assert.equal(disk.length, manifest.distribution.disk.bytes);

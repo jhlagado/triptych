@@ -26,14 +26,14 @@ async function manage(page) {
 
 async function state(page) {
   return page.evaluate(async () => {
-    const { openDriveSetStore } = await import("/drive-set-store.js");
+    const { openSavedMachineStore } = await import("/saved-machine-store.js");
     const { CpmDisk } = await import("/triptych_host_wasm.js");
     const hash = async (bytes) =>
       Array.from(
         new Uint8Array(await crypto.subtle.digest("SHA-256", bytes)),
         (byte) => byte.toString(16).padStart(2, "0"),
       ).join("");
-    const store = await openDriveSetStore();
+    const store = await openSavedMachineStore();
     let disk;
     try {
       const head = await store.load();
@@ -270,7 +270,7 @@ test("quota failure atomically preserves legacy head and backup, then retries on
     IDBObjectStore.prototype.add = function (value, ...rest) {
       if (
         globalThis.failMigration &&
-        this.name === "drive-set-state" &&
+        this.name === "drive-set-state-v4" &&
         value?.key?.startsWith("backup:")
       ) {
         globalThis.failMigration = false;

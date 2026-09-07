@@ -1,17 +1,19 @@
 # Browser development session
 
-This guide describes the eight-MiB A/B interface and version-three drive-set
-storage. The [published releases](https://github.com/jhlagado/triptych/releases)
-record qualified revisions, hosted test results and recovery downloads for the
+This guide describes the configurable two-MiB interface, its version-four saved
+machine storage, and the retained eight-MiB A/B controls. The two-MiB controls
+are in development and have not yet passed hosted release qualification. The
+[published releases](https://github.com/jhlagado/triptych/releases) record
+qualified revisions, hosted test results and recovery downloads for the
 [Triptych website](https://jhlagado.github.io/triptych/). A development checkout
 can contain changes that have not yet been deployed. The
-[browser A/B report](reports/eight-mib-browser-ab.md) records implementation
-and pre-release acceptance evidence.
+[browser A/B report](reports/eight-mib-browser-ab.md) records implementation and
+pre-release acceptance evidence.
 
 In a desktop browser, wait for `A>` and click the terminal to type. A fresh
 profile starts with the supplied single-drive disk. Previously saved media
-reopen automatically, so their files and drive layout may differ. Opening a
-new website release does not silently replace their operating system or tools.
+reopen automatically, so their files and drive layout may differ. Opening a new
+website release does not silently replace their operating system or tools.
 
 ## Assemble and run
 
@@ -40,35 +42,65 @@ browser profile.
 7. After reload, enter `EDIT INPUT.NU`. The changed line should remain. Quit
    with Ctrl-Q and enter `INPUT` again; it should still print `YK`.
 
-Use Ctrl, including on macOS, rather than Command for the editor shortcuts.
-If the sample already contains `'Y'`, it was saved by an earlier session;
-choose a different output character for another trial.
+Use Ctrl, including on macOS, rather than Command for the editor shortcuts. If
+the sample already contains `'Y'`, it was saved by an earlier session; choose a
+different output character for another trial.
 
 Ctrl-S saves into the emulated disk. The browser save-status message confirms
-the separate persistent-storage operation. After a storage error, use
-**Download latest checkpoint set** before leaving the page. It includes each
-drive's last successful guest flush, which may be newer than browser storage.
-It excludes unsaved editor text and unflushed writes. A checkpoint set can
-contain a newer A checkpoint and an older B checkpoint; guest writes across
-both drives are not a single transaction.
+the separate persistent-storage operation. After a storage error, use **Download
+latest checkpoint set** before leaving the page. It includes each drive's last
+successful guest flush, which may be newer than browser storage. It excludes
+unsaved editor text and unflushed writes. A checkpoint set can contain a newer A
+checkpoint and an older B checkpoint; guest writes across both drives are not a
+single transaction.
 
 ## Files and verified tool updates
 
 Save and exit the guest program, open **Files and recovery**, acknowledge that
 the program has exited, and choose **Enter disk management**. Use **Drive to
-view or edit** to select A or B for file imports, tool updates, source projects
-and diagnostic mapping. This selector does not change CP/M's current drive.
-Enter `B:` in the terminal to run guest commands on B; enter `A:` to return.
+view or edit** to select a configured drive for file imports, tool updates,
+source projects and diagnostic mapping. This selector does not change CP/M's
+current drive. Enter `B:` in the terminal to run guest commands on B; enter `A:`
+to return.
 
-File imports and ATOM, NUC or Edit updates are staged privately. Select
-**Stage file imports** or a tool's **Stage update**, then **Apply and restart**.
+File imports and ATOM, NUC or Edit updates are staged privately. Select **Stage
+file imports** or a tool's **Stage update**, then **Apply and restart**.
 Applying preserves the preceding complete drive set as a backup before
 restarting CP/M. **Cancel changes** resumes the original machine. The file
-listing shows committed files in user area 0, not the staged changes. Files
-use CP/M 8.3 names; downloads include 128-byte record padding. Empty imports
-and read-only replacements are rejected.
+listing shows committed files in user area 0, not the staged changes. Files use
+CP/M 8.3 names; downloads include 128-byte record padding. Empty imports and
+read-only replacements are rejected.
 
-### Add capacity and drive B
+### Configure two-MiB drives
+
+Download the saved drive set before changing the layout. In disk management, set
+**Target two-MiB drive slots** to a number from 1 to 16 and choose **Stage drive
+configuration**. Two or four slots are useful starting points. The confirmation
+shows the new COM load capacity and identifies inserted media that a smaller
+configuration would remove. **Apply and restart** retains the complete preceding
+machine as a backup and installs the selected resident system on A. Tool
+binaries are unchanged.
+
+Existing two-MiB filesystems retain their bytes. Historical small and eight-MiB
+media are migrated by filename only when all retained files fit. A failed
+migration leaves the original machine unchanged. This conversion is explicit;
+reloading a newer website does not convert saved disks.
+
+Slots and inserted disks are separate. For example, sixteen slots permit A–P
+while only A and P contain disks. Select an empty slot, choose **Stage blank
+selected drive**, import files as needed, then apply. A blank data disk has no
+tools or source files. **Stage ejection of selected drive** removes its medium
+on apply while preserving it in the preceding backup. Ejection leaves the slot
+count and application RAM unchanged; boot drive A cannot be ejected.
+
+The active-machine summary lists configured slots, inserted media and the COM
+load capacity. More configured slots reserve more guest memory, regardless of
+whether disks are inserted. Two slots permit 58,368 bytes of COM loading;
+sixteen permit 56,576 bytes. These are loader limits, not guarantees that every
+program's stack and work buffers fit. The
+[tool-lifetime report](reports/two-mib-tool-lifetimes.md) records tested cases.
+
+### Retained eight-MiB A/B profiles
 
 Download the saved drive set before changing the disk layout. In disk
 management, select A and choose one of these explicit changes:
@@ -79,11 +111,10 @@ management, select A and choose one of these explicit changes:
   files are migrated to eight MiB; an existing eight-MiB A retains its file
   area. Files in all user areas are preserved, although Files displays user 0.
 
-For two drives, follow the A/B operation with **Stage blank B**, then
-**Apply and restart**. Each drive has eight MiB of image capacity, with
-8,355,840 bytes initially available for files after system and directory space.
-Blank B has
-no tools, source files or operating-system bytes. Select B in Files to import
+For two drives, follow the A/B operation with **Stage blank B**, then **Apply
+and restart**. Each drive has eight MiB of image capacity, with 8,355,840 bytes
+initially available for files after system and directory space. Blank B has no
+tools, source files or operating-system bytes. Select B in Files to import
 sources and stage the tools you need, apply, then enter `B:` in the terminal.
 The assemble/edit/compile workflow above also works on B once those files and
 tools are present there.
@@ -96,37 +127,43 @@ and A/B resident profile remain unchanged.
 ## Backup and restore
 
 **Download saved drive set** exports a `.tds` archive containing the exact
-bootstrap, resident-profile label, A image and optional B image. This is the
+bootstrap, resident-profile label and every inserted image. Two-MiB archives
+also preserve configured empty slots and each medium's identity. This is the
 complete backup for reopening the same disk arrangement. **Download saved disk
-A** or **Download saved disk B** exports only the selected disk image; it does
-not include the bootstrap or profile. The corresponding checkpoint downloads
-use guest-flushed data rather than the last durable browser copy.
+A** or **Download saved disk B** (or the selected C–P drive) exports only that
+disk image; it does not include the bootstrap or profile. The corresponding
+checkpoint downloads use guest-flushed data rather than the last durable browser
+copy.
 
-To test a `.tds` backup, open Triptych in a separate browser profile. Enter
-disk management, choose **Stage complete drive-set archive**, select the file,
-then **Apply and restart** and close Files. Inspect the source and run the
-program on its original drive. Restoring replaces the complete set, including
-whether B is attached; it is not a merge. A backup row's **Stage restore** also
-restores the complete set, regardless of the Files drive selector.
+To test a `.tds` backup, open Triptych in a separate browser profile. Enter disk
+management, choose **Stage complete drive-set archive**, select the file, then
+**Apply and restart** and close Files. Inspect the source and run the program on
+its original drive. Restoring replaces the complete set, including the
+configured count and empty slots; it is not a merge. A backup row's **Stage
+restore** also restores the complete set, regardless of the Files drive
+selector.
 
-For a single `.img` backup, use **Stage disk image** on the intended drive.
-For A, explicitly select its **A image resident profile** if it differs from
-the current one. A historical single-drive image needs **Legacy E400, one
-drive**; first stage removal of B if B is attached. Leave **Adapt external
-image with this release's CCP/BDOS/BIOS (changes system bytes)** unchecked for
-exact disk-byte restoration. Image size alone does not identify its resident
-system. A `.tds` archive avoids this manual bootstrap/profile selection.
+For a single `.img` backup, use **Stage disk image** on the intended drive. For
+a two-MiB machine, configure its slots first; a raw image does not carry a
+machine profile or medium identity. Importing it creates a new medium identity.
+For historical A images, explicitly select the **A image resident profile** if
+it differs from the current one. A historical single-drive image needs **Legacy
+E400, one drive**; first stage removal of B if B is attached. Leave **Adapt
+external image with this release's CCP/BDOS/BIOS (changes system bytes)**
+unchecked for exact disk-byte restoration. Image size alone does not identify
+its resident system. A `.tds` archive avoids this manual bootstrap/profile
+selection.
 
-Select adaptation only for a deliberate system update: it replaces A's
-resident system bytes with this release's verified system for the selected
-profile while preserving its file area. Applying retains the preceding set as
-a backup.
+Select adaptation only for a deliberate system update: it replaces A's resident
+system bytes with this release's verified system for the selected profile while
+preserving its file area. Applying retains the preceding set as a backup.
 
 If the guest is stuck or cannot boot, **Recover from saved disk** permits
 replacement after explicit consent to discard unsaved state on apply. The
-[recovery guide](browser-recovery.md) covers this path, raw downloads and website
-redeployment. Do not clear site data, delete IndexedDB or downgrade storage to
-recover work. **Reset machine** is a machine reset, not a backup operation.
+[recovery guide](browser-recovery.md) covers this path, raw downloads and
+website redeployment. Do not clear site data, delete IndexedDB or downgrade
+storage to recover work. **Reset machine** is a machine reset, not a backup
+operation.
 
 ### Multi-source adventure
 
@@ -138,15 +175,15 @@ restart**, close Files, select that drive in CP/M, then run `NUC GAME.NU` and
 
 To change the program, use `EDIT MAIN.NU`, find `CAVE` with Ctrl-F and replace
 it with `BASE` using Ctrl-R. Save with Ctrl-S and quit with Ctrl-Q. Enter disk
-management again on the same drive, prepare the build, apply, and recompile.
-The game now prints `BASE>`. Edit the maintained sources, not the generated
-build file.
+management again on the same drive, prepare the build, apply, and recompile. The
+game now prints `BASE>`. Edit the maintained sources, not the generated build
+file.
 
 If compilation reports an error, paste the full Nucleus diagnostic into Files
 and choose **Locate in saved sources** on the same drive. Mapping is available
 only while source records and the generated build match the saved map. It does
-not identify an older diagnostic's build automatically or include unsaved
-editor RAM.
+not identify an older diagnostic's build automatically or include unsaved editor
+RAM.
 
 ## Commands and limits
 
@@ -155,10 +192,11 @@ For normal development, start with `DIR`, `TYPE filename`, `ATOM source.asm`,
 `NUC source.nu`, `EDIT filename`, and a program name without `.COM`. `ERA`
 deletes files; keep backups before experimenting with disk-changing commands.
 
-The baseline is drive A and an 80×24 terminal. The explicit large-disk profiles
+The baseline is drive A and an 80×24 terminal. The configurable profile supports
+one to sixteen slots with two-MiB media. The retained large-disk profiles
 support eight-MiB A alone or A with optional eight-MiB B. Compatibility covers
 the published feature matrix and tested application corpus, not every CP/M
 application. See the [tool-arena report](reports/eight-mib-tool-arenas.md) for
 the measured tool boundaries and exclusions. Physical mobile-keyboard behavior
-and ESP32 storage/power-loss behavior remain unqualified. No board is needed
-for this browser session.
+and ESP32 storage/power-loss behavior remain unqualified. No board is needed for
+this browser session.
