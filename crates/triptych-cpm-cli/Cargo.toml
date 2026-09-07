@@ -1,0 +1,13 @@
+[package]
+name = "triptych-cpm-cli"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+rust-version = "1.89"
+
+[[bin]]
+name = "triptych-cpm"
+path = "src/main.rs"
+
+[dependencies]
+triptych-cpm-image = { path = "../triptych-cpm-image" }
