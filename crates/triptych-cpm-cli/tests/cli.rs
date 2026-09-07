@@ -236,3 +236,94 @@ fn two_mib_capacity_failure_keeps_source_and_destination_unpublished() {
     // No candidate or partial publication remains beside the inputs.
     assert_eq!(fs::read_dir(&temporary.0).unwrap().count(), 2);
 }
+
+#[test]
+fn active_media_rejects_import_and_list_without_replacing_the_locked_inode() {
+    let temporary = TemporaryDirectory::new();
+    let image = temporary.join("active.img");
+    let input = temporary.join("input.txt");
+    let original = CpmImage::blank(CpmGeometry::Ibm3740).into_working_bytes();
+    fs::write(&image, &original).unwrap();
+    fs::write(&input, b"do not install").unwrap();
+    let owner = fs::File::open(&image).unwrap();
+    owner.try_lock().unwrap();
+    for arguments in [
+        vec![Path::new("list"), image.as_path()],
+        vec![Path::new("import"), &image, &input, Path::new("INPUT.TXT")],
+    ] {
+        let result = run(&arguments);
+        assert!(!result.status.success(), "active image was accepted");
+        assert_eq!(fs::read(&image).unwrap(), original);
+    }
+    owner.unlock().unwrap();
+    assert!(run(&[Path::new("list"), &image]).status.success());
+}
+
+#[test]
+fn force_export_cannot_replace_another_active_image() {
+    let temporary = TemporaryDirectory::new();
+    let source = temporary.join("source.img");
+    let target = temporary.join("active.img");
+    let source_bytes = CpmImage::blank(CpmGeometry::Ibm3740)
+        .install("INPUT.TXT", b"do not overwrite a mounted drive")
+        .unwrap()
+        .into_working_bytes();
+    let before = CpmImage::blank(CpmGeometry::Ibm3740).into_working_bytes();
+    fs::write(&source, &source_bytes).unwrap();
+    fs::write(&target, &before).unwrap();
+    let owner = fs::File::open(&target).unwrap();
+    owner.try_lock().unwrap();
+    let result = run(&[
+        Path::new("export"),
+        Path::new("--force"),
+        &source,
+        Path::new("INPUT.TXT"),
+        &target,
+    ]);
+    assert!(!result.status.success(), "active destination was replaced");
+    assert_eq!(fs::read(&target).unwrap(), before);
+    assert_eq!(fs::read(&source).unwrap(), source_bytes);
+    owner.unlock().unwrap();
+}
+
+#[cfg(unix)]
+#[test]
+fn failed_import_inputs_and_export_aliases_preserve_media_and_release_locks() {
+    use std::os::unix::fs::symlink;
+    let temporary = TemporaryDirectory::new();
+    let image = temporary.join("source.img");
+    let hard = temporary.join("hard.img");
+    let symbolic = temporary.join("symbolic.img");
+    let missing = temporary.join("missing.txt");
+    let original = CpmImage::blank(CpmGeometry::Ibm3740)
+        .install("INPUT.TXT", b"preserve me")
+        .unwrap()
+        .into_working_bytes();
+    fs::write(&image, &original).unwrap();
+    fs::hard_link(&image, &hard).unwrap();
+    symlink(&image, &symbolic).unwrap();
+    for input in [&image, &hard, &symbolic, &missing] {
+        assert!(
+            !run(&[Path::new("import"), &image, input, Path::new("INPUT.TXT")])
+                .status
+                .success()
+        );
+        assert_eq!(fs::read(&image).unwrap(), original);
+        assert!(run(&[Path::new("list"), &image]).status.success());
+    }
+    for output in [&image, &hard, &symbolic] {
+        assert!(!run(&[
+            Path::new("export"),
+            Path::new("--force"),
+            &image,
+            Path::new("INPUT.TXT"),
+            output
+        ])
+        .status
+        .success());
+        assert_eq!(fs::read(output).unwrap(), original);
+        assert!(run(&[Path::new("list"), &image]).status.success());
+    }
+    assert_eq!(fs::read_link(&symbolic).unwrap(), image);
+    assert_eq!(fs::read_dir(&temporary.0).unwrap().count(), 3);
+}

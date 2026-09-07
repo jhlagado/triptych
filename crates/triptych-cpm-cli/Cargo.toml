@@ -11,3 +11,6 @@ path = "src/main.rs"
 
 [dependencies]
 triptych-cpm-image = { path = "../triptych-cpm-image" }
+
+[dev-dependencies]
+triptych-host-native = { path = "../triptych-host-native" }

@@ -1,15 +1,13 @@
 use std::env;
 use std::error::Error;
 use std::ffi::OsString;
-use std::fs::{self, OpenOptions};
-use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use std::process;
-use std::sync::atomic::{AtomicU64, Ordering};
 
 use triptych_cpm_image::{CpmGeometry, CpmImage, CpmName};
 
-static TEMPORARY_SEQUENCE: AtomicU64 = AtomicU64::new(0);
+mod native_file;
+use native_file::{LockedFile, Output};
 
 fn main() {
     if let Err(error) = run() {
@@ -59,9 +57,11 @@ fn next_geometry(
 fn format_image(mut arguments: impl Iterator<Item = OsString>) -> Result<(), Box<dyn Error>> {
     let geometry = next_geometry(&mut arguments)?;
     let paths = parse_exact_paths(arguments, 2, "format")?;
-    let system = fs::read(&paths[0])?;
+    let output = Output::new(&paths[1])?;
+    let system_file = LockedFile::open(&paths[0])?;
+    let system = system_file.read()?;
     let image = CpmImage::blank(geometry).migrate_to(geometry, &system)?;
-    write_atomic(&paths[1], &image.into_working_bytes(), Publication::New)?;
+    output.publish(&image.into_working_bytes(), &[&system_file])?;
     println!("Formatted {} as {}.", paths[1].display(), geometry.id());
     Ok(())
 }
@@ -69,10 +69,15 @@ fn format_image(mut arguments: impl Iterator<Item = OsString>) -> Result<(), Box
 fn migrate_image(mut arguments: impl Iterator<Item = OsString>) -> Result<(), Box<dyn Error>> {
     let geometry = next_geometry(&mut arguments)?;
     let paths = parse_exact_paths(arguments, 3, "migrate")?;
-    let source = load_image(&paths[0])?;
-    let system = fs::read(&paths[1])?;
+    let output = Output::new(&paths[2])?;
+    let (source_file, source) = load_image(&paths[0])?;
+    let system_file = LockedFile::open(&paths[1])?;
+    let system = system_file.read()?;
     let candidate = source.migrate_to(geometry, &system)?;
-    write_atomic(&paths[2], &candidate.into_working_bytes(), Publication::New)?;
+    output.publish(
+        &candidate.into_working_bytes(),
+        &[&source_file, &system_file],
+    )?;
     println!(
         "Migrated {} to {} as {}; the source image is unchanged.",
         paths[0].display(),
@@ -83,9 +88,10 @@ fn migrate_image(mut arguments: impl Iterator<Item = OsString>) -> Result<(), Bo
 }
 
 fn create(paths: Vec<PathBuf>) -> Result<(), Box<dyn Error>> {
-    let source = load_image(&paths[0])?;
+    let output = Output::new(&paths[1])?;
+    let (source_file, source) = load_image(&paths[0])?;
     let bytes = source.into_working_bytes();
-    write_atomic(&paths[1], &bytes, Publication::New)?;
+    output.publish(&bytes, &[&source_file])?;
     println!(
         "Created {} from {} ({} bytes).",
         paths[1].display(),
@@ -96,7 +102,7 @@ fn create(paths: Vec<PathBuf>) -> Result<(), Box<dyn Error>> {
 }
 
 fn list(paths: Vec<PathBuf>) -> Result<(), Box<dyn Error>> {
-    let image = load_image(&paths[0])?;
+    let (_source_file, image) = load_image(&paths[0])?;
     println!("Name          Records       Bytes");
     for file in image.files()? {
         println!(
@@ -130,13 +136,14 @@ fn import(mut arguments: impl Iterator<Item = OsString>) -> Result<(), Box<dyn E
             .to_owned(),
     };
     let canonical = CpmName::parse(&cpm_name)?.canonical().to_owned();
-    let contents = fs::read(&mac_path)?;
-    let image = load_image(&image_path)?;
+    let (image_file, image) = load_image(&image_path)?;
+    let input_file = LockedFile::open(&mac_path)?;
+    let contents = input_file.read()?;
     let replacement = image.install(&canonical, &contents)?;
     let stored = replacement
         .read(&canonical)?
         .ok_or("installed file was not found")?;
-    write_atomic(&image_path, replacement.as_bytes(), Publication::Replace)?;
+    Output::replace(&image_file).publish(replacement.as_bytes(), &[&input_file])?;
     println!(
         "Imported {} as {} ({} source bytes; {} CP/M records).",
         mac_path.display(),
@@ -170,7 +177,12 @@ fn export(mut arguments: impl Iterator<Item = OsString>) -> Result<(), Box<dyn E
         .into_string()
         .map_err(|_| "CP/M name must be UTF-8")?;
     let mac_path = PathBuf::from(&positional[2]);
-    let image = load_image(&image_path)?;
+    let (image_file, image) = load_image(&image_path)?;
+    let output = if force {
+        Output::replace_or_new(&mac_path)?
+    } else {
+        Output::new(&mac_path)?
+    };
     let file = image
         .read(&cpm_name)?
         .ok_or_else(|| format!("CP/M disk: {} was not found", cpm_name.to_ascii_uppercase()))?;
@@ -184,15 +196,7 @@ fn export(mut arguments: impl Iterator<Item = OsString>) -> Result<(), Box<dyn E
     } else {
         file.bytes.as_slice()
     };
-    write_atomic(
-        &mac_path,
-        bytes,
-        if force {
-            Publication::Replace
-        } else {
-            Publication::New
-        },
-    )?;
+    output.publish(bytes, &[&image_file])?;
     println!(
         "Exported {} to {} ({} bytes{}).",
         file.name,
@@ -203,8 +207,10 @@ fn export(mut arguments: impl Iterator<Item = OsString>) -> Result<(), Box<dyn E
     Ok(())
 }
 
-fn load_image(path: &Path) -> Result<CpmImage, Box<dyn Error>> {
-    CpmImage::from_bytes(fs::read(path)?).map_err(Into::into)
+fn load_image(path: &Path) -> Result<(LockedFile, CpmImage), Box<dyn Error>> {
+    let file = LockedFile::open(path)?;
+    let image = CpmImage::from_bytes(file.read()?)?;
+    Ok((file, image))
 }
 
 fn parse_exact_paths(
@@ -227,50 +233,4 @@ fn next_path(
         .next()
         .map(PathBuf::from)
         .ok_or_else(|| format!("missing {label}\n{USAGE}").into())
-}
-
-#[derive(Clone, Copy)]
-enum Publication {
-    New,
-    Replace,
-}
-
-fn write_atomic(path: &Path, bytes: &[u8], publication: Publication) -> io::Result<()> {
-    let parent = path.parent().unwrap_or_else(|| Path::new("."));
-    let name = path.file_name().ok_or_else(|| {
-        io::Error::new(io::ErrorKind::InvalidInput, "output path has no filename")
-    })?;
-    if matches!(publication, Publication::New) && path.exists() {
-        return Err(io::Error::new(
-            io::ErrorKind::AlreadyExists,
-            format!("{} already exists", path.display()),
-        ));
-    }
-    let sequence = TEMPORARY_SEQUENCE.fetch_add(1, Ordering::Relaxed);
-    let temporary = parent.join(format!(
-        ".{}.triptych-cpm-{}-{sequence}.tmp",
-        name.to_string_lossy(),
-        process::id()
-    ));
-    let result = (|| {
-        let mut file = OpenOptions::new()
-            .write(true)
-            .create_new(true)
-            .open(&temporary)?;
-        file.write_all(bytes)?;
-        file.sync_all()?;
-        if matches!(publication, Publication::Replace) {
-            if let Ok(metadata) = fs::metadata(path) {
-                fs::set_permissions(&temporary, metadata.permissions())?;
-            }
-            fs::rename(&temporary, path)
-        } else {
-            fs::hard_link(&temporary, path)?;
-            fs::remove_file(&temporary)
-        }
-    })();
-    if result.is_err() {
-        let _ = fs::remove_file(&temporary);
-    }
-    result
 }
