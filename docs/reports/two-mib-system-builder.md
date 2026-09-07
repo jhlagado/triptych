@@ -101,10 +101,25 @@ node --test --test-concurrency=1 tools/lib/two-mib-system.test.mjs
 npx vitest run test/distribution/two-mib-release-inputs.test.mjs test/distribution/verified-release.test.mjs --maxWorkers=2
 ```
 
-The new suite contains eight tests, including a sequential sixteen-profile
+The new suite contains nine tests, including a sequential sixteen-profile
 build matrix. Existing release-input and release-verifier tests exercise the
 unchanged consumer defaults. At most two assemblies run concurrently. No full
 distribution, server, browser deployment or hardware test ran in this slice.
+
+The standalone validator's generator-evidence regression failed before the
+correction with `Missing expected exception`: replacing the captured generator
+with one zero byte and updating its descriptor digest had been accepted. The
+shared verification now compares generator bytes against the implementation
+captured at module initialization on every validation, including standalone
+calls. The same regression passes after the correction. This remains a
+synchronous consistency check; it does not reassemble supplied evidence.
+
+For browser qualification, the test process can retain its already-built
+artifacts when `TRIPTYCH_TWO_MIB_FIXTURE_ROOT` names a fresh `mktemp -d` directory.
+Each `nNN` subdirectory receives `descriptor.json`, `system.bin` and
+`bootstrap.bin`. The test rejects existing profile directories and uses
+exclusive file creation, so it never replaces earlier captures. This optional
+test-output hook does not change the production builder interface.
 
 ## Limits and next proof
 

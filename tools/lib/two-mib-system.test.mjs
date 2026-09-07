@@ -14,11 +14,30 @@ const exec = promisify(execFile);
 const hash = (bytes) => createHash("sha256").update(bytes).digest("hex");
 const builds = new Map();
 async function build(count) {
-  if (!builds.has(count))
-    builds.set(
-      count,
-      await buildTwoMibSystem(root, count, { allowDirty: true }),
-    );
+  if (!builds.has(count)) {
+    const result = await buildTwoMibSystem(root, count, { allowDirty: true });
+    if (process.env.TRIPTYCH_TWO_MIB_FIXTURE_ROOT) {
+      const directory = join(
+        process.env.TRIPTYCH_TWO_MIB_FIXTURE_ROOT,
+        `n${String(count).padStart(2, "0")}`,
+      );
+      // The caller supplies a fresh mktemp root. Refuse existing profile
+      // directories and files; qualification never overwrites prior fixtures.
+      await mkdir(directory);
+      await Promise.all([
+        writeFile(
+          join(directory, "descriptor.json"),
+          JSON.stringify(result.descriptor),
+          { flag: "wx" },
+        ),
+        writeFile(join(directory, "system.bin"), result.system, { flag: "wx" }),
+        writeFile(join(directory, "bootstrap.bin"), result.bootstrap, {
+          flag: "wx",
+        }),
+      ]);
+    }
+    builds.set(count, result);
+  }
   return builds.get(count);
 }
 
@@ -379,4 +398,16 @@ test("fresh verification binds raw/prepared OS and machine evidence and actual A
     mutate(candidate.evidence);
     assert.throws(() => validateTwoMibSystem(candidate, 3));
   }
+});
+
+test("fresh verification rejects rehashed replacement generator evidence", async () => {
+  const candidate = structuredClone(await build(3));
+  candidate.evidence.generatorBytes = Uint8Array.of(0);
+  candidate.descriptor.machine.generatorSha256 = hash(
+    candidate.evidence.generatorBytes,
+  );
+  assert.throws(
+    () => validateTwoMibSystem(candidate, 3),
+    /generator differs from running implementation/,
+  );
 });
