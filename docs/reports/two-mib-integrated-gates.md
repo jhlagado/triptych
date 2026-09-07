@@ -100,3 +100,16 @@ Browser activation is integrated at `5113515`; its
 Chromium cases, candidate preparation, independent review and sixteen-media
 measurements. The full expanded check and released-site qualification remain
 separate requirements.
+
+The first expanded run at `165e71a` passed 647 Vitest tests and reached the
+browser UI gate, then failed because the committed-cache regression harness
+still extracted the old workspace constructor and publication shape. The
+correction changes that test only: it extracts the current application
+functions, checks the returned authority token and retains every original
+stale-read/save assertion. A new sparse A/P case checks capture of medium IDs,
+bootstrap and full disk bytes before storage completion. Its first fixture used
+invalid non-UUID IDs and was corrected without changing the validator. All seven
+cache cases and all 117 UI-gate cases then passed; independent review cleared
+the correction. The failed full-run log remains
+`/tmp/triptych-two-mib-host-smoke.Te931B/browser-activation-integrated-full-check.log`.
+Another complete invocation is required for the corrected integrated revision.
