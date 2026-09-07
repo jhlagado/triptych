@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
 
 // Pinned NUC 0.3.1 source-admitted arenas and generated-program lifetimes.
-export function createSuite() {
+export function createSuite(
+  _kind,
+  { workLetter = "B", ccpBase = 0xe300 } = {},
+) {
+  assert.match(workLetter, /^[A-P]$/);
+  const prompt = `\r\n${workLetter}>`;
   const recursion = (n, fail = false) =>
     `sub descend(n as u8) fails\nvar local as u8 = n + 65\nwriteOutputByte(local) else fail\nif n > 0\ndescend(n - 1) else fail\nend\n${fail ? "fail 7" : "writeOutputByte(local) else fail"}\nend\nsub main() fails\ndescend(${n}) else fail\nwriteOutputByte(33) else fail\nend\n`;
   const writable = (n) =>
@@ -61,7 +66,7 @@ export function createSuite() {
   const cmd = (id, text, tool, required, check) => ({
     id,
     input: text + "\r",
-    suffix: "\r\nB>",
+    suffix: prompt,
     tool,
     required,
     check,
@@ -72,21 +77,21 @@ export function createSuite() {
           text +
             "\r\r\n" +
             (required ? "\r\n" + required + "\r\n" : "") +
-            "\r\nB>",
+            prompt,
         );
       else if (generated.has(tool))
         assert.equal(
           Buffer.from(bytes).toString("latin1"),
-          text + "\r\r\n" + outcome[tool.slice(0, -4)] + "\r\nB>",
+          text + "\r\r\n" + outcome[tool.slice(0, -4)] + prompt,
         );
     },
   });
   const steps = [
     { id: "boot", input: "", suffix: "\r\nA>" },
-    cmd("select-b", "B:"),
+    cmd("select-work-drive", `${workLetter}:`),
   ];
   const run = (name, id = "run-" + name) =>
-    cmd(id, name, name + ".COM", "\r\n" + outcome[name] + "\r\nB>");
+    cmd(id, name, name + ".COM", "\r\n" + outcome[name] + prompt);
   for (const name of Object.keys(src)) {
     steps.push(
       cmd(
@@ -156,12 +161,12 @@ export function createSuite() {
           afterWritable: cpu.read_ram(0x604d, 1)[0],
         });
       }
-      if (pc >= 0x100 && pc < 0xe300)
+      if (pc >= 0x100 && pc < ccpBase)
         assert(
-          sp >= 0xea97,
+          sp >= lifetime.entrySp - 84,
           "generated stack crossed qualified caller-frame floor",
         );
-      if (pc >= 0x800 && pc < 0xe300)
+      if (pc >= 0x800 && pc < ccpBase)
         lifetime.activationMaximum = Math.max(
           lifetime.activationMaximum ?? 0,
           cpu.read_ram(0x582a, 1)[0],
