@@ -113,3 +113,20 @@ cache cases and all 117 UI-gate cases then passed; independent review cleared
 the correction. The failed full-run log remains
 `/tmp/triptych-two-mib-host-smoke.Te931B/browser-activation-integrated-full-check.log`.
 Another complete invocation is required for the corrected integrated revision.
+
+## Complete browser activation run
+
+The corrected full `npm run check` at `cc037d2` completed successfully. It passed
+647 Vitest cases, all 180 packaged browser cases, the complete 31-job lifetime
+matrix, historical small/eight-MiB checks, native terminal/parity checks, the
+Nucleus adventure and the final Rust gate. The matrix completed in 853,071 ms
+with two concurrent proofs. The full log remains at:
+
+```text
+/tmp/triptych-two-mib-host-smoke.Te931B/browser-activation-corrected-full-check.log
+```
+
+This qualifies the integrated browser activation locally. The new native
+saved-archive launcher was developed separately and was not part of that run;
+its integration requires another complete check. Linux CI and actual hosted
+release/recovery verification also remain open.
