@@ -21,6 +21,11 @@ const STORES = [STATE, BLOBS, V3, OLD_BLOBS, V2, V1];
 const isHash = (value) =>
   typeof value === "string" && /^[a-f0-9]{64}$/.test(value);
 const message = (error) => String(error?.message ?? error);
+class HistoricalBootstrapRequired extends Error {
+  constructor() {
+    super("Saved machine store: historical bootstrap required.");
+  }
+}
 function requireValue(condition, description) {
   if (!condition) throw new Error(`Saved machine store: ${description}.`);
 }
@@ -509,8 +514,8 @@ export async function openSavedMachineStore({
             },
           };
     }
-    requireValue(bootstrap, "historical bootstrap required");
     const disk = legacy(evidence.raw, evidence.store);
+    if (!bootstrap) throw new HistoricalBootstrapRequired();
     const prepared = await prepareSavedMachine(
       {
         bootstrap,
@@ -773,7 +778,13 @@ export async function openSavedMachineStore({
               ...(value.receipt ? { receipt: value.receipt } : {}),
             };
       } catch (error) {
-        return { kind: "recovery", error: message(error) };
+        return {
+          kind: "recovery",
+          error: message(error),
+          ...(error instanceof HistoricalBootstrapRequired
+            ? { code: "HISTORICAL_BOOTSTRAP_REQUIRED" }
+            : {}),
+        };
       }
     },
     saveCheckpoint: (expected, snapshot) =>
