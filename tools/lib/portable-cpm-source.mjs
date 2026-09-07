@@ -7,6 +7,7 @@ import { assembleAtomFile } from "./assemble-atom.mjs";
 import { validateComponentLock } from "./component-lock.mjs";
 import { validateDistributionManifest } from "./distribution-manifests.mjs";
 import { readVerifiedRelease } from "./verified-release.mjs";
+import { twoMibResidentProfile } from "./cpm-two-mib-profile.mjs";
 
 const hash = (bytes) => createHash("sha256").update(bytes).digest("hex");
 const PROFILES = {
@@ -24,6 +25,29 @@ const PROFILES = {
   },
 };
 
+// Only named, reviewed release inputs are admissible. No checkout discovery,
+// network acquisition, or geometry-based substitution occurs in this consumer.
+for (let count = 1; count <= 16; count++) {
+  const profile = twoMibResidentProfile(count);
+  const suffix = String(count).padStart(2, "0");
+  PROFILES[profile.id] = {
+    lock: `distribution/residents-2m/n${suffix}.lock.json`,
+    snapshots: "third_party/portable-cpm/2m/v0.1.4",
+    preamble:
+      Object.entries({
+        CCPBAS: profile.ccp,
+        BDOSBAS: profile.bdos,
+        BIOSBAS: profile.bios,
+        BIOSEND: profile.end,
+      })
+        .map(
+          ([name, value]) => `${name} EQU $${value.toString(16).toUpperCase()}`,
+        )
+        .join("\n") + "\n",
+    twoMib: true,
+  };
+}
+
 async function verifiedSource(repositoryRoot, id, targetProfile) {
   assert.ok(
     Object.hasOwn(PROFILES, targetProfile),
@@ -36,6 +60,30 @@ async function verifiedSource(repositoryRoot, id, targetProfile) {
     { recipes: new Set(["verified-release", "atom-binary", "atom-cpm22"]) },
   );
   assert.equal(lock.targetProfile, targetProfile, "resident lock profile");
+  if (profile.twoMib) {
+    assert.deepEqual(
+      lock.disk,
+      { bytes: 2097152, recordBytes: 128, systemRecords: 128 },
+      "two-MiB resident disk",
+    );
+    assert.deepEqual(
+      lock.components.map(({ id }) => id),
+      ["ccp", "bdos"],
+      "two-MiB resident components",
+    );
+    assert.equal(
+      lock.components[0].artifact.manifest,
+      lock.components[1].artifact.manifest,
+      "one OS profile manifest",
+    );
+    for (const entry of lock.components) {
+      assert.equal(
+        entry.source.revision,
+        "d28fc52774c967d1422b3b814d51c069247504c1",
+        "two-MiB released source revision",
+      );
+    }
+  }
   const component = lock.components.find((entry) => entry.id === id);
   assert.ok(component, `missing Portable CP/M ${id} component`);
   const released = await readVerifiedRelease(repositoryRoot, component);

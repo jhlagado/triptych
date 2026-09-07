@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { twoMibResidentProfile } from "./cpm-two-mib-profile.mjs";
 
 const REPOSITORY = "https://github.com/jhlagado/";
 const OS = {
@@ -42,10 +43,17 @@ export function validateDistributionManifest(
   targetProfile = "triptych-cpu-v0.1",
 ) {
   const offsets = { "triptych-cpu-v0.1": 0, "triptych-cpu-v0.1-8m-ab": -256 };
+  const countMatch = /^triptych-cpu-v0\.1-2m-n(0[1-9]|1[0-6])$/.exec(
+    targetProfile,
+  );
+  const twoMib = countMatch
+    ? twoMibResidentProfile(Number(countMatch[1]))
+    : undefined;
   assert.ok(
-    Object.hasOwn(offsets, targetProfile),
+    Object.hasOwn(offsets, targetProfile) || twoMib,
     "unsupported resident profile",
   );
+  const offset = twoMib ? twoMib.ccp - 0xe400 : offsets[targetProfile];
   assert.equal(
     component.recipe,
     "verified-release",
@@ -67,8 +75,8 @@ export function validateDistributionManifest(
   if (Object.hasOwn(OS, component.id)) {
     const expected = {
       ...OS[component.id],
-      origin: OS[component.id].origin + offsets[targetProfile],
-      entry: OS[component.id].entry + offsets[targetProfile],
+      origin: OS[component.id].origin + offset,
+      entry: OS[component.id].entry + offset,
     };
     const source = `src/${component.id}.asm`;
     assert.equal(
@@ -99,6 +107,14 @@ export function validateDistributionManifest(
       "OS manifest schema",
     );
     assert.equal(manifest.targetProfile, targetProfile, "OS target profile");
+    if (twoMib) {
+      assert.equal(manifest.version, "0.1.4", "two-MiB OS release version");
+      assert.equal(
+        component.source.revision,
+        "d28fc52774c967d1422b3b814d51c069247504c1",
+        "two-MiB OS release revision",
+      );
+    }
     assert.equal(
       manifest.atom.repository,
       `${REPOSITORY}atom`,
@@ -150,7 +166,7 @@ export function validateDistributionManifest(
     assert.ok(
       Number.isSafeInteger(component.target.capacity) &&
         component.target.capacity > 0 &&
-        component.target.capacity <= 0xe300 + offsets[targetProfile],
+        component.target.capacity <= 0xe300 + offset,
       "application capacity must fit the TPA",
     );
     assert.ok(
