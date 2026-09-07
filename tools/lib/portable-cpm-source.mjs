@@ -55,10 +55,10 @@ async function verifiedSource(repositoryRoot, id, targetProfile) {
   );
   const profile = PROFILES[targetProfile];
   assert.ok(id === "ccp" || id === "bdos", "Portable CP/M component id");
-  const lock = validateComponentLock(
-    JSON.parse(await readFile(join(repositoryRoot, profile.lock))),
-    { recipes: new Set(["verified-release", "atom-binary", "atom-cpm22"]) },
-  );
+  const lockBytes = await readFile(join(repositoryRoot, profile.lock));
+  const lock = validateComponentLock(JSON.parse(lockBytes), {
+    recipes: new Set(["verified-release", "atom-binary", "atom-cpm22"]),
+  });
   assert.equal(lock.targetProfile, targetProfile, "resident lock profile");
   if (profile.twoMib) {
     assert.deepEqual(
@@ -86,7 +86,9 @@ async function verifiedSource(repositoryRoot, id, targetProfile) {
   }
   const component = lock.components.find((entry) => entry.id === id);
   assert.ok(component, `missing Portable CP/M ${id} component`);
-  const released = await readVerifiedRelease(repositoryRoot, component);
+  const released = await readVerifiedRelease(repositoryRoot, component, {
+    captureEvidence: true,
+  });
   validateDistributionManifest(
     component,
     released.manifest,
@@ -110,7 +112,13 @@ async function verifiedSource(repositoryRoot, id, targetProfile) {
     metadata.preparedSourceSha256,
     `${id} profiled source digest`,
   );
-  return { prepared, released, component };
+  return {
+    prepared,
+    released,
+    component,
+    lockBytes: Uint8Array.from(lockBytes),
+    sourceBytes: Uint8Array.from(source),
+  };
 }
 
 /** Prepare the pinned source with its released Triptych profile for guest proofs. */
@@ -128,11 +136,23 @@ export async function assemblePortableCpmSource(
   id,
   targetProfile = "triptych-cpu-v0.1",
 ) {
-  const { prepared, released, component } = await verifiedSource(
-    repositoryRoot,
-    id,
-    targetProfile,
-  );
+  const { evidence, ...assembled } =
+    await assemblePortableCpmSourceWithEvidence(
+      repositoryRoot,
+      id,
+      targetProfile,
+    );
+  return assembled;
+}
+
+/** Reproduce a release and retain the exact captured inputs for independent proof. */
+export async function assemblePortableCpmSourceWithEvidence(
+  repositoryRoot,
+  id,
+  targetProfile = "triptych-cpu-v0.1",
+) {
+  const { prepared, released, component, lockBytes, sourceBytes } =
+    await verifiedSource(repositoryRoot, id, targetProfile);
   const temporary = await mkdtemp(join(tmpdir(), "triptych-portable-cpm-"));
   try {
     const source = join(temporary, `${id}.asm`);
@@ -144,7 +164,15 @@ export async function assemblePortableCpmSource(
       released.bytes,
       `${id} source/release byte identity`,
     );
-    return result;
+    return {
+      ...result,
+      evidence: {
+        lockBytes,
+        sourceBytes,
+        preparedSource: prepared,
+        release: released,
+      },
+    };
   } finally {
     await rm(temporary, { recursive: true, force: true });
   }

@@ -54,7 +54,11 @@ async function containedFile(root, path, label) {
  * mutation; realpath/stat/read checks are containment checks, not a sandbox.
  * Upstream manifest formats and target compatibility belong to the caller.
  */
-export async function readVerifiedRelease(repositoryRoot, component) {
+export async function readVerifiedRelease(
+  repositoryRoot,
+  component,
+  { captureEvidence = false } = {},
+) {
   assert.equal(component.recipe, "verified-release", "release recipe");
   assert.equal(component.source.kind, "git", "release source kind");
   const root = await realpath(repositoryRoot);
@@ -64,10 +68,10 @@ export async function readVerifiedRelease(repositoryRoot, component) {
       containedFile(root, artifact[field], `release artifact.${field}`),
     ),
   );
-  const [bytes, manifestBytes, provenanceText] = await Promise.all([
+  const [bytes, manifestBytes, provenanceBytes] = await Promise.all([
     readFile(paths[0]),
     readFile(paths[1]),
-    readFile(paths[2], "utf8"),
+    readFile(paths[2]),
   ]);
   assert.equal(bytes.length, artifact.bytes, "release artifact byte length");
   assert.equal(
@@ -75,7 +79,7 @@ export async function readVerifiedRelease(repositoryRoot, component) {
     artifact.sha256,
     "release artifact SHA-256",
   );
-  const provenance = JSON.parse(provenanceText);
+  const provenance = JSON.parse(provenanceBytes.toString("utf8"));
   closedObject(
     provenance,
     [
@@ -135,5 +139,15 @@ export async function readVerifiedRelease(repositoryRoot, component) {
       !Array.isArray(manifest),
     "release manifest must be a JSON object",
   );
-  return { bytes: Uint8Array.from(bytes), manifest };
+  // Evidence owns detached arrays; neither parsed metadata nor artifact output
+  // shares mutable storage with the exact bytes that were checked above.
+  const result = {
+    bytes: Uint8Array.from(bytes),
+    manifest,
+  };
+  if (captureEvidence) {
+    result.manifestBytes = Uint8Array.from(manifestBytes);
+    result.provenanceBytes = Uint8Array.from(provenanceBytes);
+  }
+  return result;
 }
