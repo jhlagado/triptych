@@ -1,7 +1,8 @@
 # Saved drive sets, version 4
 
-Status: selected contract, 2026-09-07. Codec implementation and verification are
-in progress. Transactional storage and browser activation are not yet qualified.
+Status: selected contract, 2026-09-07. The standalone codec and transactional
+store have focused tests. Application integration and browser activation remain
+unqualified; see the [backend report](../reports/two-mib-storage-backends.md).
 
 This format records a complete configured machine in the
 [two-MiB disk family](cpm-two-mib-v1.md). Configured slots and inserted media are
@@ -143,8 +144,36 @@ roots. Unknown or malformed roots, or missing referenced blobs, suspend garbage
 collection. Historical stores are never cleanup targets. Backup listing reads
 metadata rather than eagerly loading every image.
 
-Exact storage-envelope and token encodings require separate implementation
-tests before a writer is enabled; they are not part of the portable archive.
+The isolated store uses exact record fields:
+
+```text
+marker: { key: "activation", schema: "triptych-drive-set-authority-v4" }
+head: { key: "head", revision, operationId, digest, manifest }
+backup: { key: "backup:<operationId>", revision, operationId, digest, manifest }
+operation: { key: "operation:<operationId>", expected, digest, receipt }
+receipt: { authority: "v4", revision, operationId, digest }
+```
+
+Revisions are positive safe integers. Operation IDs are nonempty strings of at
+most 256 UTF-16 code units; digests are lowercase SHA-256 strings. Expected
+tokens are exactly `{ kind: "empty" }`,
+`{ kind: "historical", store, identity }`, or
+`{ kind: "v4", revision, digest }`. Historical store names are restricted to
+the three previous authority stores and their identities are SHA-256 strings.
+These encodings belong to local storage, not the portable archive.
+
+Each operation record binds its key to its receipt ID and its digest to the
+receipt digest. An empty predecessor produces revision 1; a v4 predecessor
+produces its revision plus one. Historical tokens do not expose a revision.
+No receipt may be newer than the head; an equal-revision receipt must match the
+head's digest and operation ID. Malformed operation history requires recovery
+before loading, writing, cleanup or retry. Malformed backups retain their
+separate raw-recovery and cleanup-suspension behavior.
+
+Checkpoints return receipts but do not create idempotency operation records.
+Their IDs are `checkpoint:<next revision>`. A first historical checkpoint still
+creates the complete preceding backup. A manual ID colliding with such a backup
+must fail atomically rather than replace it.
 
 ## Reconfiguration and resource limits
 

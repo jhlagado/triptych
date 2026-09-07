@@ -1,3 +1,4 @@
+import { deepStrictEqual } from "node:assert";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -21,23 +22,23 @@ describe("fresh IBM-3740 disk", () => {
     expect(disk).toBeInstanceOf(Uint8Array);
     expect(disk).toHaveLength(256512);
     expect(disk.length % 512).toBe(0);
-    expect(disk.slice(0, 6656)).toEqual(new Uint8Array(6656));
-    expect(disk.slice(6656, 8704)).toEqual(new Uint8Array(2048).fill(0xe5));
-    expect(disk.slice(8704, 256256)).toEqual(new Uint8Array(247552));
-    expect(disk.slice(256256)).toEqual(new Uint8Array(256));
+    deepStrictEqual(disk.slice(0, 6656), new Uint8Array(6656));
+    deepStrictEqual(disk.slice(6656, 8704), new Uint8Array(2048).fill(0xe5));
+    deepStrictEqual(disk.slice(8704, 256256), new Uint8Array(247552));
+    deepStrictEqual(disk.slice(256256), new Uint8Array(256));
     expect(() => readCpm22File(disk, "ABSENT.TXT")).toThrow(/absent/);
   });
 
   it("returns deterministic, independently owned storage", () => {
     const first = createBlankCpm22Disk();
     const second = createBlankCpm22Disk();
-    expect(first).toEqual(second);
+    deepStrictEqual(first, second);
     expect(first.buffer).not.toBe(second.buffer);
 
     first[0] = 0x11;
     first[6656] = 0;
     first[256511] = 0x22;
-    expect(second).toEqual(createBlankCpm22Disk());
+    deepStrictEqual(second, createBlankCpm22Disk());
   });
 
   it("installs and reads empty and multi-extent files without mutating inputs", () => {
@@ -64,17 +65,17 @@ describe("fresh IBM-3740 disk", () => {
     const expectedRecords = new Uint8Array(32896).fill(0xa7);
     expectedRecords.set(content);
 
-    expect(readCpm22File(withEmpty, "EMPTY.TXT")).toEqual(empty);
-    expect(readCpm22File(installed, "EMPTY.TXT")).toEqual(empty);
+    deepStrictEqual(readCpm22File(withEmpty, "EMPTY.TXT"), empty);
+    deepStrictEqual(readCpm22File(installed, "EMPTY.TXT"), empty);
     const read = readCpm22File(installed, "LARGE.BIN");
-    expect(read).toEqual(expectedRecords);
+    deepStrictEqual(read, expectedRecords);
     read.fill(0);
-    expect(installed).toEqual(installedBefore);
-    expect(blank).toEqual(blankBefore);
-    expect(withEmpty).toEqual(withEmptyBefore);
-    expect(content).toEqual(contentBefore);
+    deepStrictEqual(installed, installedBefore);
+    deepStrictEqual(blank, blankBefore);
+    deepStrictEqual(withEmpty, withEmptyBefore);
+    deepStrictEqual(content, contentBefore);
     expect(installed).toHaveLength(256512);
-    expect(installed.slice(0, 6656)).toEqual(new Uint8Array(6656));
-    expect(installed.slice(256256)).toEqual(new Uint8Array(256));
+    deepStrictEqual(installed.slice(0, 6656), new Uint8Array(6656));
+    deepStrictEqual(installed.slice(256256), new Uint8Array(256));
   });
 });
