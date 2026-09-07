@@ -149,7 +149,7 @@ test("A/B migration, B tool workflows, complete export and removal/restore prese
   await expect(page.locator("#files-status")).toContainText(
     "Staged HELLO.ASM, INPUT.NU",
   );
-  for (const name of ["ATOM.COM", "NUC.COM", "EDIT.COM"]) {
+  for (const name of ["ATOM.COM", "NUC.COM", "EDIT.COM", "CAVERNS.COM"]) {
     await page
       .locator("#tool-list li")
       .filter({ hasText: name })

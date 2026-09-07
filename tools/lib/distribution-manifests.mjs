@@ -18,6 +18,11 @@ const OS = {
   },
 };
 const APPLICATIONS = {
+  caverns80: {
+    format: "caverns-build-v1",
+    file: "CAVERNS.COM",
+    source: "src/main.asm",
+  },
   nucleus: {
     format: "nucleus-cpm22-artifact-v1",
     file: "NUC.COM",
@@ -194,6 +199,68 @@ export function validateDistributionManifest(
       atomRevision,
       "application assembler revision",
     );
+    if (component.id === "caverns80") {
+      assert.equal(
+        manifest.sourceFormat,
+        "native-atom",
+        "Caverns native source",
+      );
+      const memory = manifest.memory;
+      assert.ok(
+        memory && typeof memory === "object" && !Array.isArray(memory),
+        "Caverns memory report",
+      );
+      for (const field of [
+        "start",
+        "endExclusive",
+        "allocatedBytes",
+        "stackStart",
+        "stackEndExclusive",
+        "stackBytes",
+        "dynamicAllocationBytes",
+      ]) {
+        assert.ok(
+          Number.isSafeInteger(memory[field]) && memory[field] >= 0,
+          `Caverns memory ${field}`,
+        );
+      }
+      assert.equal(memory.start, manifest.loadAddress, "Caverns memory origin");
+      assert.equal(
+        memory.allocatedBytes,
+        memory.endExclusive - memory.start,
+        "Caverns allocation accounting",
+      );
+      assert.equal(
+        memory.allocatedBytes,
+        manifest.bytes,
+        "Caverns allocation is contained in COM",
+      );
+      assert.equal(
+        memory.dynamicAllocationBytes,
+        0,
+        "Caverns has no dynamic allocation",
+      );
+      assert.ok(
+        memory.endExclusive <=
+          component.target.origin + component.target.capacity,
+        "Caverns runtime allocation exceeds target",
+      );
+      assert.ok(
+        memory.endExclusive <= 0xe400 + offsets[targetProfile],
+        "Caverns runtime allocation overlaps residents",
+      );
+      assert.ok(
+        memory.stackStart >= memory.start &&
+          memory.stackEndExclusive <= memory.endExclusive,
+        "Caverns stack outside allocation",
+      );
+      assert.ok(memory.stackBytes > 0, "Caverns stack must be reserved");
+      assert.equal(
+        memory.stackBytes,
+        memory.stackEndExclusive - memory.stackStart,
+        "Caverns stack accounting",
+      );
+    }
     if (component.id === "nucleus") {
       assert.equal(
         manifest.source,

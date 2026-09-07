@@ -13,6 +13,25 @@ profile starts with the supplied single-drive disk. Previously saved media
 reopen automatically, so their files and drive layout may differ. Opening a
 new website release does not silently replace their operating system or tools.
 
+## Play Caverns
+
+Fresh disks include `CAVERNS.COM`, John Hardy's revised 1982–83 adventure.
+At `A>`, type `CAVERNS` and press Enter. The full story and current rules appear
+at startup; `HELP` repeats them. Space or Enter advances each page; Q or Escape
+skips the remaining explanation. `INVENTORY`, `INVENT`, `I` and `LIST` show what
+you carry.
+
+Use `SAVE CAMP` to save a position and `LOAD CAMP` to return to it. `QUIT`, then
+`N`, returns to CP/M. Wait for the browser's saved-disk status before closing or
+reloading the page, and download a disk backup to keep a copy outside the browser.
+
+An existing saved disk is preserved. If it lacks the game, use Files to install
+`CAVERNS.COM` from the supplied application catalogue, then apply the change.
+Back up your disk first. Installing the program does not require deleting your
+saved games. The [upstream player guide](https://github.com/jhlagado/caverns80/blob/cpm-caverns/docs/player-guide.md)
+is safe to read before playing; development audits and walkthrough tests contain
+spoilers.
+
 ## Assemble and run
 
 On the supplied disk, enter each command followed by Enter:

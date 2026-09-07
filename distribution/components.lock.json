@@ -185,6 +185,37 @@
         "spdx": "GPL-3.0-or-later",
         "provenance": "third_party/edit/README.md"
       }
+    },
+    {
+      "id": "caverns80",
+      "role": "application",
+      "source": {
+        "kind": "git",
+        "repository": "https://github.com/jhlagado/caverns80.git",
+        "revision": "c2926e2be370e574b80666ecbe6db5c459674fa5",
+        "path": "src/main.asm"
+      },
+      "recipe": "verified-release",
+      "artifact": {
+        "path": "third_party/caverns80/CAVERNS.COM",
+        "bytes": 22726,
+        "sha256": "662445028d6c55d58f5497032853803d181e128082ed1f1264db1e010cd162e3",
+        "manifest": "third_party/caverns80/manifest.json",
+        "provenance": "third_party/caverns80/release.provenance.json"
+      },
+      "target": {
+        "origin": 256,
+        "capacity": 58112
+      },
+      "install": {
+        "kind": "file",
+        "name": "CAVERNS.COM",
+        "padByte": 26
+      },
+      "licence": {
+        "spdx": "GPL-3.0-only",
+        "provenance": "third_party/caverns80/README.md"
+      }
     }
   ]
 }

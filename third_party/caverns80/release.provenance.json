@@ -1,0 +1,12 @@
+{
+  "schema": "triptych-release-provenance-v1",
+  "repository": "https://github.com/jhlagado/caverns80.git",
+  "revision": "c2926e2be370e574b80666ecbe6db5c459674fa5",
+  "bytes": 22726,
+  "sha256": "662445028d6c55d58f5497032853803d181e128082ed1f1264db1e010cd162e3",
+  "manifestSha256": "a3ec86b8fba0764f5cf8004f77dab245d9d22fd8482c9386af9b057047d0233c",
+  "origin": {
+    "kind": "ci-artifact",
+    "url": "https://github.com/jhlagado/caverns80/actions/runs/34141237364/artifacts/10025987211"
+  }
+}

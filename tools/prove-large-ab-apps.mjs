@@ -20,6 +20,7 @@ const TOOL_FLOORS = {
   "ATOM.COM": 0xd800,
   "NUC.COM": 0xd500,
   "EDIT.COM": 0xd800,
+  "CAVERNS.COM": 0x0100,
 };
 const prompt = (drive) => `\r\n${drive ? "B" : "A"}>`;
 const endSuffix = `AB-PROOF-END${prompt(1)}`;
@@ -53,6 +54,26 @@ function scenarios() {
         command("select-b", "B:"),
         command("b-identity", "TYPE SIDE.TXT", "DRIVE-B-ORIGINAL"),
         command("explicit-a-from-b", "TYPE A:SIDE.TXT", "DRIVE-A-ORIGINAL"),
+        command("caverns-start", "CAVERNS", "C A V E R N S", {
+          launch: "CAVERNS.COM",
+          suffix: "[Space/Enter: more, Q: skip] ",
+          staysOpen: true,
+        }),
+        { id: "caverns-skip", input: "q", suffix: "? ", staysOpen: true },
+        {
+          id: "caverns-inventory",
+          input: "inventory\r",
+          suffix: "? ",
+          required: "You are carrying",
+          staysOpen: true,
+        },
+        {
+          id: "caverns-quit",
+          input: "quit\r",
+          suffix: "Another adventure? ",
+          staysOpen: true,
+        },
+        { id: "caverns-return", input: "n\r", suffix: prompt(1) },
         command("exact-load-limit", "FIT", undefined, { launch: "FIT.COM" }),
         command("reject-over-limit", "OVER", "OVER?", { rejectLaunch: true }),
         command("atom-success", "ATOM HELLO.ASM", "HELLO.COM written", {
@@ -137,7 +158,7 @@ function scenarios() {
 /** Qualify caller-supplied, provenance-checked E300/EB00/F900 artifacts.
  * This function never locates source checkouts, selects releases, rebuilds hosts,
  * or installs component pins. The caller owns those boundaries.
- * components: [{name: "ATOM.COM" | "NUC.COM" | "EDIT.COM", bytes, sha256}].
+ * components: [{name: "ATOM.COM" | "NUC.COM" | "EDIT.COM" | "CAVERNS.COM", bytes, sha256}].
  * resident: {ccpBytes, ccpWritableStart, ccpStackGuardStart, ccpStackGuardEnd,
  * bdosBytes, bdosWritableStart, bdosStackBase, bdosStackTop,
  * biosImmutableRanges: [{start, end, bytes}]} (addresses are absolute).
@@ -340,10 +361,11 @@ export async function proveLargeAbApps({
     };
     function observe() {
       const state = machine.cpu_state();
-      let pc, sp;
+      let pc, sp, c;
       try {
         pc = state.pc();
         sp = state.sp();
+        c = state.c();
       } finally {
         state.free();
       }
@@ -393,6 +415,17 @@ export async function proveLargeAbApps({
         };
         pending = undefined;
       }
+      if (active?.name === "CAVERNS.COM" && pc === 5 && c === 0) {
+        immutable(false);
+        assert.equal(machine.read_ram(4, 1)[0], 1, "Caverns exit retains B");
+        active.returnPc = pc;
+        active.returnSp = sp;
+        active.exitMethod = "BDOS function 0";
+        active.driveAtWarmBoot = 1;
+        executions.push(active);
+        active = undefined;
+        awaitingReload = true;
+      }
       if (active) {
         assert.ok(
           pc < CCP || pc >= BDOS,
@@ -401,7 +434,14 @@ export async function proveLargeAbApps({
         if (pc >= 0x100 && pc < CCP) {
           active.minimumAppSp = Math.min(active.minimumAppSp, sp);
           active.sawE400 ||= sp === 0xe400;
-          const floor = TOOL_FLOORS[active.name];
+          // Caverns reserves its 512-byte stack at the end of the COM;
+          // the other tools use high TPA stack arenas.
+          const floor =
+            active.name === "CAVERNS.COM"
+              ? 0x0100 +
+                components.find((c) => c.name === active.name).bytes -
+                512
+              : TOOL_FLOORS[active.name];
           if (floor && sp < 0xe400)
             assert.ok(sp >= floor, `${active.name} stack floor`);
         }
