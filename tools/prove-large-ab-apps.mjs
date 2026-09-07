@@ -20,8 +20,8 @@ const TOOL_FLOORS = {
   "ATOM.COM": 0xd800,
   "NUC.COM": 0xd500,
   "EDIT.COM": 0xd800,
-  "CAVERNS.COM": 0x0100,
 };
+const PRIVATE_STACK_GAMES = new Set(["CAVERNS.COM", "HYPERDRV.COM"]);
 const prompt = (drive) => `\r\n${drive ? "B" : "A"}>`;
 const endSuffix = `AB-PROOF-END${prompt(1)}`;
 const editorCursor = "\x1b[2;21H";
@@ -74,6 +74,25 @@ function scenarios() {
           staysOpen: true,
         },
         { id: "caverns-return", input: "n\r", suffix: prompt(1) },
+        command("hyperdrive-start", "HYPERDRV", "Hyperdrive", {
+          launch: "HYPERDRV.COM",
+          suffix: "? ",
+          staysOpen: true,
+        }),
+        {
+          id: "hyperdrive-inventory",
+          input: "inventory\r",
+          suffix: "? ",
+          required: "You are carrying:",
+          staysOpen: true,
+        },
+        {
+          id: "hyperdrive-quit",
+          input: "quit\r",
+          suffix: "Return to CP/M? (Y/N) ",
+          staysOpen: true,
+        },
+        { id: "hyperdrive-return", input: "y\r", suffix: prompt(1) },
         command("exact-load-limit", "FIT", undefined, { launch: "FIT.COM" }),
         command("reject-over-limit", "OVER", "OVER?", { rejectLaunch: true }),
         command("atom-success", "ATOM HELLO.ASM", "HELLO.COM written", {
@@ -158,7 +177,7 @@ function scenarios() {
 /** Qualify caller-supplied, provenance-checked E300/EB00/F900 artifacts.
  * This function never locates source checkouts, selects releases, rebuilds hosts,
  * or installs component pins. The caller owns those boundaries.
- * components: [{name: "ATOM.COM" | "NUC.COM" | "EDIT.COM" | "CAVERNS.COM", bytes, sha256}].
+ * components: [{name: "ATOM.COM" | "NUC.COM" | "EDIT.COM" | "CAVERNS.COM" | "HYPERDRV.COM", bytes, sha256}].
  * resident: {ccpBytes, ccpWritableStart, ccpStackGuardStart, ccpStackGuardEnd,
  * bdosBytes, bdosWritableStart, bdosStackBase, bdosStackTop,
  * biosImmutableRanges: [{start, end, bytes}]} (addresses are absolute).
@@ -217,7 +236,7 @@ export async function proveLargeAbApps({
   }
   assert.deepEqual(
     components.map(({ name }) => name).sort(),
-    Object.keys(TOOL_FLOORS).sort(),
+    [...Object.keys(TOOL_FLOORS), ...PRIVATE_STACK_GAMES].sort(),
   );
   for (const component of components) {
     assert.ok(
@@ -415,9 +434,13 @@ export async function proveLargeAbApps({
         };
         pending = undefined;
       }
-      if (active?.name === "CAVERNS.COM" && pc === 5 && c === 0) {
+      if (PRIVATE_STACK_GAMES.has(active?.name) && pc === 5 && c === 0) {
         immutable(false);
-        assert.equal(machine.read_ram(4, 1)[0], 1, "Caverns exit retains B");
+        assert.equal(
+          machine.read_ram(4, 1)[0],
+          1,
+          `${active.name} exit retains B`,
+        );
         active.returnPc = pc;
         active.returnSp = sp;
         active.exitMethod = "BDOS function 0";
@@ -434,14 +457,13 @@ export async function proveLargeAbApps({
         if (pc >= 0x100 && pc < CCP) {
           active.minimumAppSp = Math.min(active.minimumAppSp, sp);
           active.sawE400 ||= sp === 0xe400;
-          // Caverns reserves its 512-byte stack at the end of the COM;
+          // The games reserve a 512-byte stack at the end of each COM;
           // the other tools use high TPA stack arenas.
-          const floor =
-            active.name === "CAVERNS.COM"
-              ? 0x0100 +
-                components.find((c) => c.name === active.name).bytes -
-                512
-              : TOOL_FLOORS[active.name];
+          const floor = PRIVATE_STACK_GAMES.has(active.name)
+            ? 0x0100 +
+              components.find((c) => c.name === active.name).bytes -
+              512
+            : TOOL_FLOORS[active.name];
           if (floor && sp < 0xe400)
             assert.ok(sp >= floor, `${active.name} stack floor`);
         }

@@ -13,6 +13,7 @@ const manifests = Object.fromEntries(
       ["nucleus", "nucleus/NUC.manifest.json"],
       ["edit", "edit/manifest.json"],
       ["caverns80", "caverns80/manifest.json"],
+      ["hyperdrive", "hyperdrive/manifest.json"],
     ].map(async ([id, path]) => [
       id,
       JSON.parse(await readFile(resolve(root, "third_party", path), "utf8")),
@@ -38,9 +39,11 @@ function fixture(id) {
         ? `src/${id}.asm`
         : id === "nucleus"
           ? "asm/vertical-slice/cpm22-native-compiler.asm"
-          : id === "caverns80"
-            ? "src/main.asm"
-            : "src/editor.asm",
+          : id === "hyperdrive"
+            ? "cpm/main.asm"
+            : id === "caverns80"
+              ? "src/main.asm"
+              : "src/editor.asm",
     },
     artifact: { bytes: entry.bytes, sha256: entry.sha256 },
     target: resident
@@ -60,9 +63,11 @@ function fixture(id) {
           name:
             id === "nucleus"
               ? "NUC.COM"
-              : id === "caverns80"
-                ? "CAVERNS.COM"
-                : "EDIT.COM",
+              : id === "hyperdrive"
+                ? "HYPERDRV.COM"
+                : id === "caverns80"
+                  ? "CAVERNS.COM"
+                  : "EDIT.COM",
           padByte: 26,
         },
   };
@@ -147,7 +152,7 @@ describe("distribution manifest target checks", () => {
     ).toEqual(f.manifest);
   });
 
-  it.each(["ccp", "bdos", "nucleus", "edit", "caverns80"])(
+  it.each(["ccp", "bdos", "nucleus", "edit", "caverns80", "hyperdrive"])(
     "accepts published %s metadata without mutation",
     (id) => {
       const f = fixture(id);
@@ -159,7 +164,7 @@ describe("distribution manifest target checks", () => {
     },
   );
 
-  it.each(["ccp", "bdos", "nucleus", "edit", "caverns80"])(
+  it.each(["ccp", "bdos", "nucleus", "edit", "caverns80", "hyperdrive"])(
     "rejects tampered %s lock identity and placement",
     (id) => {
       for (const mutate of [
@@ -265,7 +270,7 @@ describe("distribution manifest target checks", () => {
     }
   });
 
-  it.each(["nucleus", "edit", "caverns80"])(
+  it.each(["nucleus", "edit", "caverns80", "hyperdrive"])(
     "rejects wrong %s application metadata",
     (id) => {
       for (const mutate of [
@@ -312,79 +317,93 @@ describe("distribution manifest target checks", () => {
     },
   );
 
-  it("requires Caverns native source and complete bounded static memory", () => {
-    const mutations = [
-      (m) => {
-        m.sourceFormat = "legacy";
-      },
-      (m) => {
-        delete m.memory;
-      },
-      (m) => {
-        m.memory.start++;
-      },
-      (m) => {
-        m.memory.endExclusive++;
-      },
-      (m) => {
-        m.memory.allocatedBytes--;
-      },
-      (m) => {
-        m.memory.dynamicAllocationBytes = 1;
-      },
-      (m) => {
-        m.memory.stackStart = 0;
-      },
-      (m) => {
-        m.memory.stackEndExclusive = m.memory.endExclusive + 1;
-      },
-      (m) => {
-        m.memory.stackBytes = 0;
-      },
-      (m) => {
-        m.memory.stackBytes++;
-      },
-      (m) => {
-        m.memory.stackStart = 1.5;
-      },
-      (m) => {
-        m.memory.endExclusive = Number.MAX_SAFE_INTEGER + 1;
-      },
-    ];
-    for (const mutate of mutations) {
-      const f = fixture("caverns80");
-      mutate(f.manifest);
-      const before = structuredClone(f);
-      expect(() =>
-        validateDistributionManifest(f.component, f.manifest, atomRevision),
-      ).toThrow(/Caverns/);
-      expect(f).toEqual(before);
-    }
-  });
+  it.each(["caverns80", "hyperdrive"])(
+    "requires %s native source and complete bounded static memory",
+    (id) => {
+      const mutations = [
+        (m) => {
+          m.sourceFormat = "legacy";
+        },
+        (m) => {
+          delete m.memory;
+        },
+        (m) => {
+          m.memory.start++;
+        },
+        (m) => {
+          m.memory.endExclusive++;
+        },
+        (m) => {
+          m.memory.allocatedBytes--;
+        },
+        (m) => {
+          m.memory.dynamicAllocationBytes = 1;
+        },
+        (m) => {
+          m.memory.stackStart = 0;
+        },
+        (m) => {
+          m.memory.stackEndExclusive = m.memory.endExclusive + 1;
+        },
+        (m) => {
+          m.memory.stackBytes = 0;
+        },
+        (m) => {
+          m.memory.stackBytes++;
+        },
+        (m) => {
+          m.memory.stackStart += 256;
+          m.memory.stackBytes = 256;
+        },
+        (m) => {
+          m.memory.stackStart--;
+          m.memory.stackEndExclusive--;
+        },
+        (m) => {
+          m.memory.stackStart = 1.5;
+        },
+        (m) => {
+          m.memory.endExclusive = Number.MAX_SAFE_INTEGER + 1;
+        },
+      ];
+      for (const mutate of mutations) {
+        const f = fixture(id);
+        mutate(f.manifest);
+        const before = structuredClone(f);
+        expect(() =>
+          validateDistributionManifest(f.component, f.manifest, atomRevision),
+        ).toThrow(/Caverns|Hyperdrive/);
+        expect(f).toEqual(before);
+      }
+    },
+  );
 
-  it("admits Caverns on A/B only with an allocation inside that resident ceiling", () => {
-    const f = fixture("caverns80");
-    f.component.target.capacity = 0xe200;
-    expect(
-      validateDistributionManifest(
-        f.component,
-        f.manifest,
-        atomRevision,
-        "triptych-cpu-v0.1-8m-ab",
-      ),
-    ).toEqual(f.manifest);
-    // A tiny binary claim cannot hide an external stack or workspace.
-    f.manifest.memory.stackStart = 0xe300;
-    f.manifest.memory.stackEndExclusive = 0xe500;
-    expect(() =>
-      validateDistributionManifest(
-        f.component,
-        f.manifest,
-        atomRevision,
-        "triptych-cpu-v0.1-8m-ab",
-      ),
-    ).toThrow(/Caverns stack/);
-  });
+  it.each(["caverns80", "hyperdrive"])(
+    "admits %s on A/B only with an allocation inside that resident ceiling",
+    (id) => {
+      const f = fixture(id);
+      f.component.target.capacity = 0xe200;
+      expect(
+        validateDistributionManifest(
+          f.component,
+          f.manifest,
+          atomRevision,
+          "triptych-cpu-v0.1-8m-ab",
+        ),
+      ).toEqual(f.manifest);
+      // A tiny binary claim cannot hide an external stack or workspace.
+      f.manifest.memory.stackStart = 0xe300;
+      f.manifest.memory.stackEndExclusive = 0xe500;
+      expect(() =>
+        validateDistributionManifest(
+          f.component,
+          f.manifest,
+          atomRevision,
+          "triptych-cpu-v0.1-8m-ab",
+        ),
+      ).toThrow(/(?:Caverns|Hyperdrive) stack/);
+    },
+  );
 
   it("binds Nucleus source and end address", () => {
     for (const field of ["source", "endAddress"]) {

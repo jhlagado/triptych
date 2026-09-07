@@ -18,7 +18,7 @@ describe("pinned fresh CP/M distribution", () => {
     expect(first.disk).toHaveLength(256512);
     expect(sha(first.disk)).toBe(first.manifest.disk.sha256);
     expect(first.manifest.triptych.revision).toMatch(/^[0-9a-f]{40}$/);
-    for (const entry of first.manifest.components.slice(0, 7)) {
+    for (const entry of first.manifest.components.slice(0, 8)) {
       const bytes =
         entry.install.kind === "file"
           ? readCpm22File(first.disk, entry.install.name).slice(0, entry.bytes)
@@ -32,6 +32,10 @@ describe("pinned fresh CP/M distribution", () => {
       first.manifest.components.find(({ id }) => id === "caverns80").install
         .name,
     ).toBe("CAVERNS.COM");
+    expect(
+      first.manifest.components.find(({ id }) => id === "hyperdrive").install
+        .name,
+    ).toBe("HYPERDRV.COM");
     expect(first.disk.slice(256256)).toEqual(new Uint8Array(256));
     expect(
       Buffer.from(readCpm22File(first.disk, "INPUT.NU")).toString("ascii"),
