@@ -1,14 +1,13 @@
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { isDeepStrictEqual } from "node:util";
+import { isSharedArrayBuffer, isUint8Array } from "node:util/types";
 import { assembleAtomFile } from "./assemble-atom.mjs";
 
-const BIOS_SOURCE = new URL("../../system/cpm/bios-2m.asm", import.meta.url);
-const BOOTSTRAP_SOURCE = new URL(
-  "../../roms/cpu/bootstrap-2m.asm",
-  import.meta.url,
-);
+const DEFAULT_ROOT = fileURLToPath(new URL("../../", import.meta.url));
 const hex = (value) => `$${value.toString(16).toUpperCase()}`;
 
 /** The count selects resident addresses; inserted media do not change them. */
@@ -67,13 +66,69 @@ function equates(values) {
     .join("\n");
 }
 
-/** Produce flat, guest-assemblable ATOM text; no source substitution or relocation. */
-export async function prepareTwoMibSources(count) {
-  const profile = twoMibResidentProfile(count);
-  const [biosBody, bootstrapBody] = await Promise.all([
-    readFile(BIOS_SOURCE, "utf8"),
-    readFile(BOOTSTRAP_SOURCE, "utf8"),
+function sourcePaths(repositoryRoot) {
+  return Object.freeze({
+    bios: join(repositoryRoot, "system/cpm/bios-2m.asm"),
+    bootstrap: join(repositoryRoot, "roms/cpu/bootstrap-2m.asm"),
+  });
+}
+
+function copyBody(value) {
+  if (!isUint8Array(value) || isSharedArrayBuffer(value.buffer))
+    throw new TypeError(
+      "captured source bodies must be unshared Uint8Array bytes",
+    );
+  return Buffer.from(value);
+}
+
+const sha256 = (value) => createHash("sha256").update(value).digest("hex");
+
+function provenance(path, raw, prepared) {
+  return Object.freeze({
+    path,
+    rawByteLength: raw.byteLength,
+    rawSha256: sha256(raw),
+    preparedByteLength: Buffer.byteLength(prepared, "utf8"),
+    preparedSha256: sha256(Buffer.from(prepared, "utf8")),
+  });
+}
+
+/** Capture exact bytes from the selected root once; the default remains this
+ * module's repository. Later preparation/assembly never reads those paths. */
+export async function prepareTwoMibSources(
+  count,
+  { repositoryRoot = DEFAULT_ROOT } = {},
+) {
+  twoMibResidentProfile(count);
+  repositoryRoot = resolve(repositoryRoot);
+  const paths = sourcePaths(repositoryRoot);
+  const [bios, bootstrap] = await Promise.all([
+    readFile(paths.bios),
+    readFile(paths.bootstrap),
   ]);
+  return prepareTwoMibSourcesFromBodies(
+    count,
+    { bios, bootstrap },
+    { repositoryRoot },
+  );
+}
+
+/** Pure flat ATOM generation from owned byte copies; no filesystem reads,
+ * source substitution or relocation. Raw hashes cover input bytes, including
+ * line endings and invalid UTF-8; text decoding retains Node's prior behavior. */
+export function prepareTwoMibSourcesFromBodies(
+  count,
+  bodies,
+  { repositoryRoot = DEFAULT_ROOT } = {},
+) {
+  const profile = twoMibResidentProfile(count);
+  repositoryRoot = resolve(repositoryRoot);
+  const rawSources = Object.freeze({
+    bios: copyBody(bodies?.bios),
+    bootstrap: copyBody(bodies?.bootstrap),
+  });
+  const biosBody = rawSources.bios.toString("utf8");
+  const bootstrapBody = rawSources.bootstrap.toString("utf8");
   const biosEquates = equates({
     BIOSBASE: profile.bios,
     CCP_BASE: profile.ccp,
@@ -97,15 +152,25 @@ export async function prepareTwoMibSources(count) {
     CURREC: profile.bootstrapRecord,
     RECSLEFT: profile.bootstrapRemaining,
   });
-  return {
+  const biosSource = `${biosEquates}\n${biosBody}\n${headers}\nDPHEND:\n        DS      BIOSBASE+$400-$,0\n`;
+  const bootstrapSource = `${bootstrapEquates}\n${bootstrapBody}`;
+  const paths = sourcePaths(repositoryRoot);
+  return Object.freeze({
     profile,
-    biosSource: `${biosEquates}\n${biosBody}\n${headers}\nDPHEND:\n        DS      BIOSBASE+$400-$,0\n`,
-    bootstrapSource: `${bootstrapEquates}\n${bootstrapBody}`,
-    sourcePaths: {
-      bios: fileURLToPath(BIOS_SOURCE),
-      bootstrap: fileURLToPath(BOOTSTRAP_SOURCE),
-    },
-  };
+    biosSource,
+    bootstrapSource,
+    sourcePaths: paths,
+    repositoryRoot,
+    rawSources,
+    sourceProvenance: Object.freeze({
+      bios: provenance(paths.bios, rawSources.bios, biosSource),
+      bootstrap: provenance(
+        paths.bootstrap,
+        rawSources.bootstrap,
+        bootstrapSource,
+      ),
+    }),
+  });
 }
 
 function requireLayout(condition, message) {
@@ -114,8 +179,34 @@ function requireLayout(condition, message) {
 }
 
 /** Build only Triptych-owned machine artifacts, independently of CCP/BDOS checkouts. */
-export async function assembleTwoMibProfile(count) {
-  const prepared = await prepareTwoMibSources(count);
+export async function assembleTwoMibProfile(count, options) {
+  return assemblePreparedTwoMibProfile(
+    await prepareTwoMibSources(count, options),
+  );
+}
+
+/** Assemble the captured prepared strings, never their source-location paths.
+ * Copy and validate before the first await so caller mutation cannot retarget
+ * assembly or change the provenance returned beside its generated bytes. */
+export async function assemblePreparedTwoMibProfile(value) {
+  const prepared = prepareTwoMibSourcesFromBodies(
+    value?.profile?.count,
+    value?.rawSources,
+    {
+      repositoryRoot: value?.repositoryRoot,
+    },
+  );
+  for (const field of [
+    "profile",
+    "sourcePaths",
+    "sourceProvenance",
+    "biosSource",
+    "bootstrapSource",
+  ])
+    requireLayout(
+      isDeepStrictEqual(value[field], prepared[field]),
+      `captured ${field} disagrees with raw source bodies`,
+    );
   const { profile } = prepared;
   const temporary = await mkdtemp(join(tmpdir(), "triptych-2m-atom-"));
   try {
@@ -143,7 +234,7 @@ export async function assembleTwoMibProfile(count) {
     );
     requireLayout(bios.labels.DPHEADS === profile.dphBase, "DPH table origin");
     requireLayout(
-      bios.labels.DPHEND === profile.dphBase + count * 16,
+      bios.labels.DPHEND === profile.dphBase + profile.count * 16,
       "configured DPH count",
     );
     for (const { drive, start } of profile.allocationSlots) {
