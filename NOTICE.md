@@ -28,3 +28,8 @@ The independently released CCP/BDOS and NUC inputs under
 `third_party/portable-cpm/` and `third_party/nucleus/` include their upstream
 manifests, licences and immutable source provenance. They prepare the fresh
 distribution migration; the retained demonstration fixture is unchanged.
+
+Caverns is Copyright 1982–83 John Hardy. The native ATOM CP/M application under
+`third_party/caverns80/` is an identified upstream CI artifact, with its original
+manifest, GPLv3 licence and acquisition provenance. Triptych installs the
+verified COM; the game source remains independently maintained in Caverns80.
