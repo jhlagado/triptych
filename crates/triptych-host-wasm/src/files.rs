@@ -1,5 +1,6 @@
-//! Copy-only user-0 filesystem access. This boundary never changes a live CPU
-//! drive or publishes browser storage; the host owns that guarded transaction.
+//! Copy-only user-0 file access and all-user format migration. This boundary
+//! never changes a live CPU drive or publishes browser storage; the host owns
+//! that guarded transaction.
 
 use triptych_cpm_image::{CpmGeometry, CpmImage, CpmName, DirectoryFile, FileImport, FreeSpace};
 use wasm_bindgen::prelude::*;
@@ -105,12 +106,12 @@ impl DiskFiles {
             .ok_or_else(|| "CP/M disk: file disappeared".into())
     }
 
-    fn migrate_to_eight_mib(&self, system_area: &[u8]) -> Result<Vec<u8>, String> {
+    fn migrate_to(&self, geometry: CpmGeometry, system_area: &[u8]) -> Result<Vec<u8>, String> {
         if !self.imports.is_empty() {
             return Err("Clear staged imports before migrating the disk.".into());
         }
         self.source
-            .migrate_to(CpmGeometry::Triptych8M, system_area)
+            .migrate_to(geometry, system_area)
             .map(CpmImage::into_bytes)
             .map_err(|error| error.to_string())
     }
@@ -145,6 +146,14 @@ impl CpmDisk {
             .map_err(js_error)
     }
 
+    /// Create an independent empty 2 MiB data disk. Its reserved system area
+    /// contains zeroes; installing bootable residents is a separate operation.
+    pub fn create_two_mib() -> Result<CpmDisk, JsError> {
+        DiskFiles::from_image(CpmImage::blank(CpmGeometry::Triptych2M))
+            .map(|disk| Self { disk })
+            .map_err(js_error)
+    }
+
     pub fn canonical_name(name: &str) -> Result<String, JsError> {
         CpmName::parse(name)
             .map(|name| name.canonical().to_owned())
@@ -160,7 +169,16 @@ impl CpmDisk {
     /// obtain consent, preserve a backup and commit through its coordinator.
     pub fn migrate_to_eight_mib(&self, system_area: &[u8]) -> Result<Vec<u8>, JsError> {
         self.disk
-            .migrate_to_eight_mib(system_area)
+            .migrate_to(CpmGeometry::Triptych8M, system_area)
+            .map_err(js_error)
+    }
+
+    /// Return a private 2 MiB candidate, preserving every user's files and
+    /// attributes. Non-fitting input rejects the whole operation. This neither
+    /// publishes the candidate nor replaces the source or a running machine.
+    pub fn migrate_to_two_mib(&self, system_area: &[u8]) -> Result<Vec<u8>, JsError> {
+        self.disk
+            .migrate_to(CpmGeometry::Triptych2M, system_area)
             .map_err(js_error)
     }
 
@@ -237,15 +255,27 @@ mod tests {
 
     #[test]
     fn public_blank_eight_mib_is_data_only_and_matches_shared_geometry() {
-        let geometry = CpmGeometry::Triptych8M;
+        check_public_blank(
+            CpmDisk::create_eight_mib().unwrap(),
+            CpmGeometry::Triptych8M,
+        );
+    }
+
+    #[test]
+    fn public_blank_two_mib_is_data_only_and_matches_shared_geometry() {
+        check_public_blank(CpmDisk::create_two_mib().unwrap(), CpmGeometry::Triptych2M);
+    }
+
+    fn check_public_blank(disk: CpmDisk, geometry: CpmGeometry) {
         let expected = CpmImage::blank(geometry);
-        let disk = CpmDisk::create_eight_mib().unwrap();
         let source = disk.export_source();
         assert_eq!(source, expected.as_bytes());
         assert_eq!(source.len(), geometry.image_bytes());
-        assert!(source[..geometry.system_bytes()]
-            .iter()
-            .all(|byte| *byte == 0));
+        assert!(
+            source[..geometry.system_bytes()]
+                .iter()
+                .all(|byte| *byte == 0)
+        );
         assert_eq!(disk.geometry_id(), geometry.id());
         assert!(disk.file_names().is_empty());
         assert_eq!(disk.import_count(), 0);
@@ -265,8 +295,17 @@ mod tests {
 
     #[test]
     fn public_blank_eight_mib_keeps_instances_exports_and_staged_inputs_private() {
-        let mut first = CpmDisk::create_eight_mib().unwrap();
-        let second = CpmDisk::create_eight_mib().unwrap();
+        check_private_blank_instances(CpmDisk::create_eight_mib);
+    }
+
+    #[test]
+    fn public_blank_two_mib_keeps_instances_exports_and_staged_inputs_private() {
+        check_private_blank_instances(CpmDisk::create_two_mib);
+    }
+
+    fn check_private_blank_instances(create: fn() -> Result<CpmDisk, JsError>) {
+        let mut first = create().unwrap();
+        let second = create().unwrap();
         let original = second.export_source();
         let mut exported = first.export_source();
         exported.fill(0x55);
@@ -285,7 +324,7 @@ mod tests {
         let contents = reopened.read_file("HELLO.TXT").unwrap();
         assert_eq!(&contents[..129], &[0x41; 129]);
         assert_eq!(&contents[129..], &[0x1a; 127]);
-        let system_bytes = CpmGeometry::Triptych8M.system_bytes();
+        let system_bytes = first.disk.source.geometry().system_bytes();
         assert_eq!(&candidate[..system_bytes], &original[..system_bytes]);
         first.clear_imports();
         assert_eq!(first.export_candidate().unwrap(), original);
@@ -336,25 +375,48 @@ mod tests {
 
     #[test]
     fn migration_is_explicit_immutable_and_rejects_a_pending_batch() {
+        for geometry in [CpmGeometry::Triptych2M, CpmGeometry::Triptych8M] {
+            check_migration(geometry);
+        }
+    }
+
+    fn check_migration(geometry: CpmGeometry) {
         let image = CpmImage::from_bytes(blank())
             .unwrap()
             .install("INPUT.NU", b"sub main()\r\nend\r\n")
             .unwrap();
         let mut disk = DiskFiles::new(image.as_bytes()).unwrap();
-        let system = vec![0x52; CpmGeometry::Triptych8M.system_bytes()];
-        assert!(disk.migrate_to_eight_mib(&system[..128]).is_err());
-        let result = disk.migrate_to_eight_mib(&system).unwrap();
+        let system = vec![0x52; geometry.system_bytes()];
+        assert!(disk.migrate_to(geometry, &system[..128]).is_err());
+        let result = disk.migrate_to(geometry, &system).unwrap();
         let migrated = DiskFiles::new(&result).unwrap();
         assert_eq!(
             migrated.read("INPUT.NU").unwrap(),
             disk.read("INPUT.NU").unwrap()
         );
         assert_eq!(&result[..system.len()], &system);
+        assert_eq!(migrated.source.geometry(), geometry);
         assert_eq!(disk.source.as_bytes(), image.as_bytes());
         disk.add_import("OTHER.NU", b"pending").unwrap();
-        assert!(disk.migrate_to_eight_mib(&system).is_err());
+        assert!(disk.migrate_to(geometry, &system).is_err());
         assert_eq!(disk.imports.len(), 1);
         assert_eq!(disk.source.as_bytes(), image.as_bytes());
+    }
+
+    #[test]
+    fn non_fitting_two_mib_migration_keeps_source_and_all_files() {
+        let image = CpmImage::blank(CpmGeometry::Triptych8M)
+            .install("LARGE.BIN", &vec![0x59; 2_048_000 + 128])
+            .unwrap();
+        let disk = DiskFiles::new(image.as_bytes()).unwrap();
+        let system = vec![0x52; CpmGeometry::Triptych2M.system_bytes()];
+        let error = disk
+            .migrate_to(CpmGeometry::Triptych2M, &system)
+            .unwrap_err();
+        assert!(error.contains("insufficient capacity"));
+        assert_eq!(disk.source, image);
+        assert!(disk.imports.is_empty());
+        assert_eq!(disk.candidate().unwrap(), image.as_bytes());
     }
 
     #[test]
@@ -386,10 +448,11 @@ mod tests {
         bytes[SYSTEM_BYTES + 9] |= 0x80;
         let mut disk = DiskFiles::new(&bytes).unwrap();
         assert!(disk.file("LOCK.COM").unwrap().read_only);
-        assert!(disk
-            .add_import("LOCK.COM", &[8])
-            .unwrap_err()
-            .contains("read-only"));
+        assert!(
+            disk.add_import("LOCK.COM", &[8])
+                .unwrap_err()
+                .contains("read-only")
+        );
         assert_eq!(disk.candidate().unwrap(), bytes);
         bytes[SYSTEM_BYTES + 16] = 1;
         assert!(DiskFiles::new(&bytes).is_err());
