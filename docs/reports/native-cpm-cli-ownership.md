@@ -80,6 +80,13 @@ full helper, callers, tests and actual native acquisition path, with the same
 verdict. Triptych integrated the commits as `b8cc34e` and `fce29ee`; minimum
 Rust-version execution and Linux qualification remain unproved by this review.
 
+The first combined check then exposed one missed caller outside the reviewed
+worker slice: `files-binding.spec.mjs` still selected the old Cargo package.
+Its native/WASM comparison failed before reaching the filesystem assertions;
+the other 154 browser tests passed. Updating that caller to `triptych-cpm-cli`
+made both focused binding tests pass in 6.8 seconds. The assertions remain
+unchanged. This correction requires another complete integration check.
+
 ## Filesystem limits
 
 Locks are advisory: other programs must cooperate. The inode comparisons

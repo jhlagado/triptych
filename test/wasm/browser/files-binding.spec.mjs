@@ -33,7 +33,7 @@ test("WASM file API matches native filesystem bytes and keeps its source immutab
       "--quiet",
       "--locked",
       "-p",
-      "triptych-cpm-image",
+      "triptych-cpm-cli",
       "--bin",
       "triptych-cpm",
       "--",
