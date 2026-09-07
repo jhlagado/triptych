@@ -1,0 +1,82 @@
+{
+  "schema": "triptych-component-lock-v1",
+  "targetProfile": "triptych-cpu-v0.1-2m-n09",
+  "disk": {
+    "bytes": 2097152,
+    "recordBytes": 128,
+    "systemRecords": 128
+  },
+  "atom": {
+    "repository": "https://github.com/jhlagado/atom.git",
+    "revision": "802b5c2d320bec777f427755ff2d7338e3b80a05",
+    "package": "atom-z80",
+    "seed": {
+      "bytes": 64236,
+      "sha256": "fdea19fbd8aeb6211469f043491610455a71547902cf451c3e684e49a8fa0fd6"
+    }
+  },
+  "components": [
+    {
+      "id": "ccp",
+      "role": "resident",
+      "source": {
+        "kind": "git",
+        "repository": "https://github.com/jhlagado/portable-cpm.git",
+        "revision": "d28fc52774c967d1422b3b814d51c069247504c1",
+        "path": "src/ccp.asm"
+      },
+      "recipe": "verified-release",
+      "artifact": {
+        "path": "third_party/portable-cpm/2m/v0.1.4/profiles/triptych-cpu-v0.1-2m-n09/ccp.bin",
+        "bytes": 2048,
+        "sha256": "9522f78df2928f234bb57aeaf9084dd01b8f6df3ea9c0626143fb3f47d405480",
+        "manifest": "third_party/portable-cpm/2m/v0.1.4/profiles/triptych-cpu-v0.1-2m-n09/manifest.json",
+        "provenance": "third_party/portable-cpm/2m/v0.1.4/profiles/triptych-cpu-v0.1-2m-n09/ccp.provenance.json"
+      },
+      "target": {
+        "origin": 57600,
+        "capacity": 2048
+      },
+      "install": {
+        "kind": "system-records",
+        "firstRecord": 0,
+        "recordCount": 16
+      },
+      "licence": {
+        "spdx": "GPL-3.0-or-later",
+        "provenance": "third_party/portable-cpm/2m/v0.1.4/README.md"
+      }
+    },
+    {
+      "id": "bdos",
+      "role": "resident",
+      "source": {
+        "kind": "git",
+        "repository": "https://github.com/jhlagado/portable-cpm.git",
+        "revision": "d28fc52774c967d1422b3b814d51c069247504c1",
+        "path": "src/bdos.asm"
+      },
+      "recipe": "verified-release",
+      "artifact": {
+        "path": "third_party/portable-cpm/2m/v0.1.4/profiles/triptych-cpu-v0.1-2m-n09/bdos.bin",
+        "bytes": 3584,
+        "sha256": "491ea5e9981e25b65e8fd48c74a89435831256fd341120ca5413c662aa173c27",
+        "manifest": "third_party/portable-cpm/2m/v0.1.4/profiles/triptych-cpu-v0.1-2m-n09/manifest.json",
+        "provenance": "third_party/portable-cpm/2m/v0.1.4/profiles/triptych-cpu-v0.1-2m-n09/bdos.provenance.json"
+      },
+      "target": {
+        "origin": 59648,
+        "capacity": 3584
+      },
+      "install": {
+        "kind": "system-records",
+        "firstRecord": 16,
+        "recordCount": 28
+      },
+      "licence": {
+        "spdx": "GPL-3.0-or-later",
+        "provenance": "third_party/portable-cpm/2m/v0.1.4/README.md"
+      }
+    }
+  ]
+}

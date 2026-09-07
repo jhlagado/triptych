@@ -1,0 +1,36 @@
+{
+  "schema": "portable-cpm-artifacts-v1",
+  "version": "0.1.4",
+  "targetProfile": "triptych-cpu-v0.1-2m-n13",
+  "atom": {
+    "repository": "https://github.com/jhlagado/atom",
+    "revision": "802b5c2d320bec777f427755ff2d7338e3b80a05",
+    "packageIntegrity": "sha512-IkseL2Xdf8dsnwGL0ewDfnjYaHvklujdcvyQ/vOs2+3mkIFGgsp5O0q77MhTPMvvR3Gkz2A8X+vVCGrOR4030A=="
+  },
+  "components": [
+    {
+      "id": "ccp",
+      "source": "src/ccp.asm",
+      "file": "ccp.bin",
+      "capacity": 2048,
+      "origin": 57088,
+      "entry": 57088,
+      "bytes": 2048,
+      "sourceSha256": "99c06cdf58cf2ac99b4e6a2c9e209f828eda82e20df8bf63dbc6f822c51f6504",
+      "preparedSourceSha256": "27459e8909fd91e32f380fe1dd2dc1a75c41650a1c644a4698e8d706dfbf77c8",
+      "sha256": "016a3af40d870d37ce558eaac5a63d3c54cdd181dff0ab92223d7448028b2818"
+    },
+    {
+      "id": "bdos",
+      "source": "src/bdos.asm",
+      "file": "bdos.bin",
+      "capacity": 3584,
+      "origin": 59136,
+      "entry": 59142,
+      "bytes": 3584,
+      "sourceSha256": "ed58617ff3055700d38a112014f5720ae0ac338d098d4cf3d26aab6b33233946",
+      "preparedSourceSha256": "2fef88a4c376077ee9aa8d9054f8da234c501d87ca0a8e9aaba10e459585ed74",
+      "sha256": "a088d34a90deb4efb86bd2f57efecd5f4530513414e1a18be34a11f84f4b33fd"
+    }
+  ]
+}

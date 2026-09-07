@@ -1,0 +1,12 @@
+{
+  "schema": "triptych-release-provenance-v1",
+  "repository": "https://github.com/jhlagado/portable-cpm.git",
+  "revision": "d28fc52774c967d1422b3b814d51c069247504c1",
+  "bytes": 2048,
+  "sha256": "18038d280f07ca494deb75bf129141ec6dd0b81e10a1d505524f7a64cee6c366",
+  "manifestSha256": "20116184be899e4ba295b4e91c86e67330f3a937fabc989dcafba27e953fbd61",
+  "origin": {
+    "kind": "release-asset",
+    "url": "https://github.com/jhlagado/portable-cpm/releases/download/v0.1.4/portable-cpm-triptych-cpu-v0.1-2m.zip"
+  }
+}
