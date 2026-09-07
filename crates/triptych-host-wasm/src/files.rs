@@ -271,11 +271,9 @@ mod tests {
         let source = disk.export_source();
         assert_eq!(source, expected.as_bytes());
         assert_eq!(source.len(), geometry.image_bytes());
-        assert!(
-            source[..geometry.system_bytes()]
-                .iter()
-                .all(|byte| *byte == 0)
-        );
+        assert!(source[..geometry.system_bytes()]
+            .iter()
+            .all(|byte| *byte == 0));
         assert_eq!(disk.geometry_id(), geometry.id());
         assert!(disk.file_names().is_empty());
         assert_eq!(disk.import_count(), 0);
@@ -448,11 +446,10 @@ mod tests {
         bytes[SYSTEM_BYTES + 9] |= 0x80;
         let mut disk = DiskFiles::new(&bytes).unwrap();
         assert!(disk.file("LOCK.COM").unwrap().read_only);
-        assert!(
-            disk.add_import("LOCK.COM", &[8])
-                .unwrap_err()
-                .contains("read-only")
-        );
+        assert!(disk
+            .add_import("LOCK.COM", &[8])
+            .unwrap_err()
+            .contains("read-only"));
         assert_eq!(disk.candidate().unwrap(), bytes);
         bytes[SYSTEM_BYTES + 16] = 1;
         assert!(DiskFiles::new(&bytes).is_err());

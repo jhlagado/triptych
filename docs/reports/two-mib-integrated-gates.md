@@ -31,3 +31,12 @@ full-run browser failure was a stale native CLI package reference, corrected in
 `895e479` and verified by its two focused browser tests. The combined full run,
 Linux CI and hosted release remain necessary; these focused results do not prove
 tool lifetimes, persistent runtime activation or ESP32 behavior.
+
+The full run at `f2b9c60` passed 606 Vitest tests, all 155 browser tests,
+the integrated gates above, native terminal/parity checks, existing eight-MiB
+tool arenas and the Nucleus adventure. It stopped at the final Rust gate because
+two test assertions had been formatted without the workspace's edition setting.
+`cargo fmt --all` changed only those assertions' whitespace. The subsequent
+complete `npm run check:rust` passed, including workspace Clippy, tests and the
+release WASM build. The original full invocation remains recorded as a failure;
+the next integrated revision requires another complete run.
