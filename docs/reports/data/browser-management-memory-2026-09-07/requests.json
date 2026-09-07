@@ -1,0 +1,1594 @@
+[
+  {
+    "at": "2026-09-07T03:23:55.178Z",
+    "path": "system-triptych-cpm-2m-n01-v1.bin"
+  },
+  {
+    "at": "2026-09-07T03:23:55.185Z",
+    "path": "bootstrap-triptych-cpm-2m-n01-v1.bin"
+  },
+  {
+    "at": "2026-09-07T03:23:55.319Z",
+    "path": "index.html"
+  },
+  {
+    "at": "2026-09-07T03:23:55.360Z",
+    "path": "style.css"
+  },
+  {
+    "at": "2026-09-07T03:23:55.360Z",
+    "path": "app.js"
+  },
+  {
+    "at": "2026-09-07T03:23:55.429Z",
+    "path": "triptych_host_wasm.js"
+  },
+  {
+    "at": "2026-09-07T03:23:55.430Z",
+    "path": "terminal.js"
+  },
+  {
+    "at": "2026-09-07T03:23:55.430Z",
+    "path": "disk-workspace.js"
+  },
+  {
+    "at": "2026-09-07T03:23:55.430Z",
+    "path": "saved-machine-store.js"
+  },
+  {
+    "at": "2026-09-07T03:23:55.431Z",
+    "path": "saved-machine-workspace.js"
+  },
+  {
+    "at": "2026-09-07T03:23:55.432Z",
+    "path": "saved-machine.js"
+  },
+  {
+    "at": "2026-09-07T03:23:55.432Z",
+    "path": "saved-machine-runtime.js"
+  },
+  {
+    "at": "2026-09-07T03:23:55.433Z",
+    "path": "saved-machine-configuration.js"
+  },
+  {
+    "at": "2026-09-07T03:23:55.433Z",
+    "path": "two-mib-system.js"
+  },
+  {
+    "at": "2026-09-07T03:23:55.435Z",
+    "path": "source-bundle.js"
+  },
+  {
+    "at": "2026-09-07T03:23:55.435Z",
+    "path": "disk-profile.js"
+  },
+  {
+    "at": "2026-09-07T03:23:55.435Z",
+    "path": "tool-catalog.js"
+  },
+  {
+    "at": "2026-09-07T03:23:55.435Z",
+    "path": "drive-set.js"
+  },
+  {
+    "at": "2026-09-07T03:23:55.439Z",
+    "path": "working-disk-store.js"
+  },
+  {
+    "at": "2026-09-07T03:23:55.440Z",
+    "path": "drive-set-v4.js"
+  },
+  {
+    "at": "2026-09-07T03:23:55.482Z",
+    "path": "triptych_host_wasm_bg.wasm"
+  },
+  {
+    "at": "2026-09-07T03:23:55.490Z",
+    "path": "config.json"
+  },
+  {
+    "at": "2026-09-07T03:23:55.492Z",
+    "path": "cpm22.img"
+  },
+  {
+    "at": "2026-09-07T03:23:55.492Z",
+    "path": "bootstrap.bin"
+  },
+  {
+    "at": "2026-09-07T03:23:55.527Z",
+    "path": "deployment-manifest.json"
+  },
+  {
+    "at": "2026-09-07T03:23:55.560Z",
+    "path": "tool-catalog.json"
+  },
+  {
+    "at": "2026-09-07T03:23:55.896Z",
+    "path": "index.html"
+  },
+  {
+    "at": "2026-09-07T03:23:55.899Z",
+    "path": "style.css"
+  },
+  {
+    "at": "2026-09-07T03:23:55.899Z",
+    "path": "app.js"
+  },
+  {
+    "at": "2026-09-07T03:23:55.903Z",
+    "path": "triptych_host_wasm.js"
+  },
+  {
+    "at": "2026-09-07T03:23:55.903Z",
+    "path": "terminal.js"
+  },
+  {
+    "at": "2026-09-07T03:23:55.904Z",
+    "path": "disk-workspace.js"
+  },
+  {
+    "at": "2026-09-07T03:23:55.904Z",
+    "path": "saved-machine-store.js"
+  },
+  {
+    "at": "2026-09-07T03:23:55.905Z",
+    "path": "saved-machine-workspace.js"
+  },
+  {
+    "at": "2026-09-07T03:23:55.905Z",
+    "path": "saved-machine-runtime.js"
+  },
+  {
+    "at": "2026-09-07T03:23:55.905Z",
+    "path": "saved-machine.js"
+  },
+  {
+    "at": "2026-09-07T03:23:55.905Z",
+    "path": "saved-machine-configuration.js"
+  },
+  {
+    "at": "2026-09-07T03:23:55.907Z",
+    "path": "two-mib-system.js"
+  },
+  {
+    "at": "2026-09-07T03:23:55.907Z",
+    "path": "source-bundle.js"
+  },
+  {
+    "at": "2026-09-07T03:23:55.908Z",
+    "path": "disk-profile.js"
+  },
+  {
+    "at": "2026-09-07T03:23:55.908Z",
+    "path": "tool-catalog.js"
+  },
+  {
+    "at": "2026-09-07T03:23:55.908Z",
+    "path": "drive-set.js"
+  },
+  {
+    "at": "2026-09-07T03:23:55.908Z",
+    "path": "working-disk-store.js"
+  },
+  {
+    "at": "2026-09-07T03:23:55.910Z",
+    "path": "drive-set-v4.js"
+  },
+  {
+    "at": "2026-09-07T03:23:55.916Z",
+    "path": "deployment-manifest.json"
+  },
+  {
+    "at": "2026-09-07T03:23:55.921Z",
+    "path": "triptych_host_wasm_bg.wasm"
+  },
+  {
+    "at": "2026-09-07T03:23:55.927Z",
+    "path": "tool-catalog.json"
+  },
+  {
+    "at": "2026-09-07T03:23:57.428Z",
+    "path": "index.html"
+  },
+  {
+    "at": "2026-09-07T03:23:57.432Z",
+    "path": "style.css"
+  },
+  {
+    "at": "2026-09-07T03:23:57.432Z",
+    "path": "app.js"
+  },
+  {
+    "at": "2026-09-07T03:23:57.436Z",
+    "path": "triptych_host_wasm.js"
+  },
+  {
+    "at": "2026-09-07T03:23:57.436Z",
+    "path": "terminal.js"
+  },
+  {
+    "at": "2026-09-07T03:23:57.437Z",
+    "path": "disk-workspace.js"
+  },
+  {
+    "at": "2026-09-07T03:23:57.437Z",
+    "path": "saved-machine-store.js"
+  },
+  {
+    "at": "2026-09-07T03:23:57.437Z",
+    "path": "saved-machine-workspace.js"
+  },
+  {
+    "at": "2026-09-07T03:23:57.437Z",
+    "path": "saved-machine-runtime.js"
+  },
+  {
+    "at": "2026-09-07T03:23:57.440Z",
+    "path": "saved-machine.js"
+  },
+  {
+    "at": "2026-09-07T03:23:57.440Z",
+    "path": "saved-machine-configuration.js"
+  },
+  {
+    "at": "2026-09-07T03:23:57.441Z",
+    "path": "two-mib-system.js"
+  },
+  {
+    "at": "2026-09-07T03:23:57.441Z",
+    "path": "source-bundle.js"
+  },
+  {
+    "at": "2026-09-07T03:23:57.441Z",
+    "path": "disk-profile.js"
+  },
+  {
+    "at": "2026-09-07T03:23:57.441Z",
+    "path": "tool-catalog.js"
+  },
+  {
+    "at": "2026-09-07T03:23:57.443Z",
+    "path": "drive-set.js"
+  },
+  {
+    "at": "2026-09-07T03:23:57.443Z",
+    "path": "working-disk-store.js"
+  },
+  {
+    "at": "2026-09-07T03:23:57.443Z",
+    "path": "drive-set-v4.js"
+  },
+  {
+    "at": "2026-09-07T03:23:57.451Z",
+    "path": "deployment-manifest.json"
+  },
+  {
+    "at": "2026-09-07T03:23:57.457Z",
+    "path": "triptych_host_wasm_bg.wasm"
+  },
+  {
+    "at": "2026-09-07T03:23:57.464Z",
+    "path": "tool-catalog.json"
+  },
+  {
+    "at": "2026-09-07T03:23:58.811Z",
+    "path": "index.html"
+  },
+  {
+    "at": "2026-09-07T03:23:58.845Z",
+    "path": "style.css"
+  },
+  {
+    "at": "2026-09-07T03:23:58.845Z",
+    "path": "app.js"
+  },
+  {
+    "at": "2026-09-07T03:23:58.863Z",
+    "path": "triptych_host_wasm.js"
+  },
+  {
+    "at": "2026-09-07T03:23:58.863Z",
+    "path": "terminal.js"
+  },
+  {
+    "at": "2026-09-07T03:23:58.864Z",
+    "path": "disk-workspace.js"
+  },
+  {
+    "at": "2026-09-07T03:23:58.864Z",
+    "path": "saved-machine-store.js"
+  },
+  {
+    "at": "2026-09-07T03:23:58.864Z",
+    "path": "saved-machine-workspace.js"
+  },
+  {
+    "at": "2026-09-07T03:23:58.865Z",
+    "path": "saved-machine-runtime.js"
+  },
+  {
+    "at": "2026-09-07T03:23:58.865Z",
+    "path": "saved-machine.js"
+  },
+  {
+    "at": "2026-09-07T03:23:58.865Z",
+    "path": "saved-machine-configuration.js"
+  },
+  {
+    "at": "2026-09-07T03:23:58.867Z",
+    "path": "two-mib-system.js"
+  },
+  {
+    "at": "2026-09-07T03:23:58.868Z",
+    "path": "source-bundle.js"
+  },
+  {
+    "at": "2026-09-07T03:23:58.868Z",
+    "path": "disk-profile.js"
+  },
+  {
+    "at": "2026-09-07T03:23:58.868Z",
+    "path": "tool-catalog.js"
+  },
+  {
+    "at": "2026-09-07T03:23:58.868Z",
+    "path": "drive-set.js"
+  },
+  {
+    "at": "2026-09-07T03:23:58.868Z",
+    "path": "working-disk-store.js"
+  },
+  {
+    "at": "2026-09-07T03:23:58.869Z",
+    "path": "drive-set-v4.js"
+  },
+  {
+    "at": "2026-09-07T03:23:58.876Z",
+    "path": "triptych_host_wasm_bg.wasm"
+  },
+  {
+    "at": "2026-09-07T03:23:58.878Z",
+    "path": "config.json"
+  },
+  {
+    "at": "2026-09-07T03:23:58.882Z",
+    "path": "cpm22.img"
+  },
+  {
+    "at": "2026-09-07T03:23:58.883Z",
+    "path": "bootstrap.bin"
+  },
+  {
+    "at": "2026-09-07T03:23:58.901Z",
+    "path": "deployment-manifest.json"
+  },
+  {
+    "at": "2026-09-07T03:23:58.911Z",
+    "path": "tool-catalog.json"
+  },
+  {
+    "at": "2026-09-07T03:23:59.590Z",
+    "path": "index.html"
+  },
+  {
+    "at": "2026-09-07T03:23:59.596Z",
+    "path": "style.css"
+  },
+  {
+    "at": "2026-09-07T03:23:59.597Z",
+    "path": "app.js"
+  },
+  {
+    "at": "2026-09-07T03:23:59.601Z",
+    "path": "triptych_host_wasm.js"
+  },
+  {
+    "at": "2026-09-07T03:23:59.601Z",
+    "path": "terminal.js"
+  },
+  {
+    "at": "2026-09-07T03:23:59.601Z",
+    "path": "disk-workspace.js"
+  },
+  {
+    "at": "2026-09-07T03:23:59.602Z",
+    "path": "saved-machine-store.js"
+  },
+  {
+    "at": "2026-09-07T03:23:59.602Z",
+    "path": "saved-machine-workspace.js"
+  },
+  {
+    "at": "2026-09-07T03:23:59.602Z",
+    "path": "saved-machine-runtime.js"
+  },
+  {
+    "at": "2026-09-07T03:23:59.603Z",
+    "path": "saved-machine.js"
+  },
+  {
+    "at": "2026-09-07T03:23:59.604Z",
+    "path": "saved-machine-configuration.js"
+  },
+  {
+    "at": "2026-09-07T03:23:59.604Z",
+    "path": "two-mib-system.js"
+  },
+  {
+    "at": "2026-09-07T03:23:59.605Z",
+    "path": "source-bundle.js"
+  },
+  {
+    "at": "2026-09-07T03:23:59.605Z",
+    "path": "disk-profile.js"
+  },
+  {
+    "at": "2026-09-07T03:23:59.605Z",
+    "path": "tool-catalog.js"
+  },
+  {
+    "at": "2026-09-07T03:23:59.607Z",
+    "path": "drive-set.js"
+  },
+  {
+    "at": "2026-09-07T03:23:59.607Z",
+    "path": "working-disk-store.js"
+  },
+  {
+    "at": "2026-09-07T03:23:59.607Z",
+    "path": "drive-set-v4.js"
+  },
+  {
+    "at": "2026-09-07T03:23:59.659Z",
+    "path": "deployment-manifest.json"
+  },
+  {
+    "at": "2026-09-07T03:23:59.662Z",
+    "path": "triptych_host_wasm_bg.wasm"
+  },
+  {
+    "at": "2026-09-07T03:23:59.687Z",
+    "path": "tool-catalog.json"
+  },
+  {
+    "at": "2026-09-07T03:24:03.302Z",
+    "path": "index.html"
+  },
+  {
+    "at": "2026-09-07T03:24:03.311Z",
+    "path": "style.css"
+  },
+  {
+    "at": "2026-09-07T03:24:03.311Z",
+    "path": "app.js"
+  },
+  {
+    "at": "2026-09-07T03:24:03.314Z",
+    "path": "triptych_host_wasm.js"
+  },
+  {
+    "at": "2026-09-07T03:24:03.315Z",
+    "path": "terminal.js"
+  },
+  {
+    "at": "2026-09-07T03:24:03.315Z",
+    "path": "disk-workspace.js"
+  },
+  {
+    "at": "2026-09-07T03:24:03.315Z",
+    "path": "saved-machine-store.js"
+  },
+  {
+    "at": "2026-09-07T03:24:03.315Z",
+    "path": "saved-machine-workspace.js"
+  },
+  {
+    "at": "2026-09-07T03:24:03.316Z",
+    "path": "saved-machine-runtime.js"
+  },
+  {
+    "at": "2026-09-07T03:24:03.318Z",
+    "path": "saved-machine.js"
+  },
+  {
+    "at": "2026-09-07T03:24:03.318Z",
+    "path": "saved-machine-configuration.js"
+  },
+  {
+    "at": "2026-09-07T03:24:03.319Z",
+    "path": "two-mib-system.js"
+  },
+  {
+    "at": "2026-09-07T03:24:03.319Z",
+    "path": "source-bundle.js"
+  },
+  {
+    "at": "2026-09-07T03:24:03.319Z",
+    "path": "disk-profile.js"
+  },
+  {
+    "at": "2026-09-07T03:24:03.319Z",
+    "path": "tool-catalog.js"
+  },
+  {
+    "at": "2026-09-07T03:24:03.320Z",
+    "path": "drive-set.js"
+  },
+  {
+    "at": "2026-09-07T03:24:03.320Z",
+    "path": "working-disk-store.js"
+  },
+  {
+    "at": "2026-09-07T03:24:03.321Z",
+    "path": "drive-set-v4.js"
+  },
+  {
+    "at": "2026-09-07T03:24:03.372Z",
+    "path": "deployment-manifest.json"
+  },
+  {
+    "at": "2026-09-07T03:24:03.374Z",
+    "path": "triptych_host_wasm_bg.wasm"
+  },
+  {
+    "at": "2026-09-07T03:24:03.388Z",
+    "path": "tool-catalog.json"
+  },
+  {
+    "at": "2026-09-07T03:24:04.774Z",
+    "path": "index.html"
+  },
+  {
+    "at": "2026-09-07T03:24:04.808Z",
+    "path": "style.css"
+  },
+  {
+    "at": "2026-09-07T03:24:04.808Z",
+    "path": "app.js"
+  },
+  {
+    "at": "2026-09-07T03:24:04.815Z",
+    "path": "triptych_host_wasm.js"
+  },
+  {
+    "at": "2026-09-07T03:24:04.816Z",
+    "path": "terminal.js"
+  },
+  {
+    "at": "2026-09-07T03:24:04.816Z",
+    "path": "disk-workspace.js"
+  },
+  {
+    "at": "2026-09-07T03:24:04.816Z",
+    "path": "saved-machine-store.js"
+  },
+  {
+    "at": "2026-09-07T03:24:04.816Z",
+    "path": "saved-machine-workspace.js"
+  },
+  {
+    "at": "2026-09-07T03:24:04.817Z",
+    "path": "saved-machine-runtime.js"
+  },
+  {
+    "at": "2026-09-07T03:24:04.817Z",
+    "path": "saved-machine.js"
+  },
+  {
+    "at": "2026-09-07T03:24:04.818Z",
+    "path": "saved-machine-configuration.js"
+  },
+  {
+    "at": "2026-09-07T03:24:04.818Z",
+    "path": "two-mib-system.js"
+  },
+  {
+    "at": "2026-09-07T03:24:04.818Z",
+    "path": "source-bundle.js"
+  },
+  {
+    "at": "2026-09-07T03:24:04.818Z",
+    "path": "disk-profile.js"
+  },
+  {
+    "at": "2026-09-07T03:24:04.819Z",
+    "path": "tool-catalog.js"
+  },
+  {
+    "at": "2026-09-07T03:24:04.822Z",
+    "path": "drive-set.js"
+  },
+  {
+    "at": "2026-09-07T03:24:04.822Z",
+    "path": "working-disk-store.js"
+  },
+  {
+    "at": "2026-09-07T03:24:04.822Z",
+    "path": "drive-set-v4.js"
+  },
+  {
+    "at": "2026-09-07T03:24:04.829Z",
+    "path": "triptych_host_wasm_bg.wasm"
+  },
+  {
+    "at": "2026-09-07T03:24:04.831Z",
+    "path": "config.json"
+  },
+  {
+    "at": "2026-09-07T03:24:04.835Z",
+    "path": "cpm22.img"
+  },
+  {
+    "at": "2026-09-07T03:24:04.836Z",
+    "path": "bootstrap.bin"
+  },
+  {
+    "at": "2026-09-07T03:24:04.853Z",
+    "path": "deployment-manifest.json"
+  },
+  {
+    "at": "2026-09-07T03:24:04.862Z",
+    "path": "tool-catalog.json"
+  },
+  {
+    "at": "2026-09-07T03:24:05.178Z",
+    "path": "index.html"
+  },
+  {
+    "at": "2026-09-07T03:24:05.181Z",
+    "path": "style.css"
+  },
+  {
+    "at": "2026-09-07T03:24:05.181Z",
+    "path": "app.js"
+  },
+  {
+    "at": "2026-09-07T03:24:05.184Z",
+    "path": "triptych_host_wasm.js"
+  },
+  {
+    "at": "2026-09-07T03:24:05.184Z",
+    "path": "terminal.js"
+  },
+  {
+    "at": "2026-09-07T03:24:05.185Z",
+    "path": "disk-workspace.js"
+  },
+  {
+    "at": "2026-09-07T03:24:05.185Z",
+    "path": "saved-machine-store.js"
+  },
+  {
+    "at": "2026-09-07T03:24:05.185Z",
+    "path": "saved-machine-workspace.js"
+  },
+  {
+    "at": "2026-09-07T03:24:05.185Z",
+    "path": "saved-machine-runtime.js"
+  },
+  {
+    "at": "2026-09-07T03:24:05.187Z",
+    "path": "saved-machine.js"
+  },
+  {
+    "at": "2026-09-07T03:24:05.188Z",
+    "path": "saved-machine-configuration.js"
+  },
+  {
+    "at": "2026-09-07T03:24:05.188Z",
+    "path": "two-mib-system.js"
+  },
+  {
+    "at": "2026-09-07T03:24:05.188Z",
+    "path": "source-bundle.js"
+  },
+  {
+    "at": "2026-09-07T03:24:05.188Z",
+    "path": "disk-profile.js"
+  },
+  {
+    "at": "2026-09-07T03:24:05.188Z",
+    "path": "tool-catalog.js"
+  },
+  {
+    "at": "2026-09-07T03:24:05.189Z",
+    "path": "drive-set.js"
+  },
+  {
+    "at": "2026-09-07T03:24:05.190Z",
+    "path": "working-disk-store.js"
+  },
+  {
+    "at": "2026-09-07T03:24:05.190Z",
+    "path": "drive-set-v4.js"
+  },
+  {
+    "at": "2026-09-07T03:24:05.196Z",
+    "path": "deployment-manifest.json"
+  },
+  {
+    "at": "2026-09-07T03:24:05.201Z",
+    "path": "triptych_host_wasm_bg.wasm"
+  },
+  {
+    "at": "2026-09-07T03:24:05.207Z",
+    "path": "tool-catalog.json"
+  },
+  {
+    "at": "2026-09-07T03:24:06.691Z",
+    "path": "index.html"
+  },
+  {
+    "at": "2026-09-07T03:24:06.694Z",
+    "path": "style.css"
+  },
+  {
+    "at": "2026-09-07T03:24:06.694Z",
+    "path": "app.js"
+  },
+  {
+    "at": "2026-09-07T03:24:06.697Z",
+    "path": "triptych_host_wasm.js"
+  },
+  {
+    "at": "2026-09-07T03:24:06.698Z",
+    "path": "terminal.js"
+  },
+  {
+    "at": "2026-09-07T03:24:06.698Z",
+    "path": "disk-workspace.js"
+  },
+  {
+    "at": "2026-09-07T03:24:06.698Z",
+    "path": "saved-machine-store.js"
+  },
+  {
+    "at": "2026-09-07T03:24:06.699Z",
+    "path": "saved-machine-workspace.js"
+  },
+  {
+    "at": "2026-09-07T03:24:06.699Z",
+    "path": "saved-machine-runtime.js"
+  },
+  {
+    "at": "2026-09-07T03:24:06.700Z",
+    "path": "saved-machine.js"
+  },
+  {
+    "at": "2026-09-07T03:24:06.700Z",
+    "path": "saved-machine-configuration.js"
+  },
+  {
+    "at": "2026-09-07T03:24:06.701Z",
+    "path": "two-mib-system.js"
+  },
+  {
+    "at": "2026-09-07T03:24:06.701Z",
+    "path": "source-bundle.js"
+  },
+  {
+    "at": "2026-09-07T03:24:06.702Z",
+    "path": "disk-profile.js"
+  },
+  {
+    "at": "2026-09-07T03:24:06.702Z",
+    "path": "tool-catalog.js"
+  },
+  {
+    "at": "2026-09-07T03:24:06.703Z",
+    "path": "drive-set.js"
+  },
+  {
+    "at": "2026-09-07T03:24:06.703Z",
+    "path": "working-disk-store.js"
+  },
+  {
+    "at": "2026-09-07T03:24:06.703Z",
+    "path": "drive-set-v4.js"
+  },
+  {
+    "at": "2026-09-07T03:24:06.709Z",
+    "path": "deployment-manifest.json"
+  },
+  {
+    "at": "2026-09-07T03:24:06.714Z",
+    "path": "triptych_host_wasm_bg.wasm"
+  },
+  {
+    "at": "2026-09-07T03:24:06.719Z",
+    "path": "tool-catalog.json"
+  },
+  {
+    "at": "2026-09-07T03:24:07.943Z",
+    "path": "index.html"
+  },
+  {
+    "at": "2026-09-07T03:24:07.977Z",
+    "path": "style.css"
+  },
+  {
+    "at": "2026-09-07T03:24:07.978Z",
+    "path": "app.js"
+  },
+  {
+    "at": "2026-09-07T03:24:07.990Z",
+    "path": "triptych_host_wasm.js"
+  },
+  {
+    "at": "2026-09-07T03:24:07.990Z",
+    "path": "terminal.js"
+  },
+  {
+    "at": "2026-09-07T03:24:07.991Z",
+    "path": "disk-workspace.js"
+  },
+  {
+    "at": "2026-09-07T03:24:07.991Z",
+    "path": "saved-machine-store.js"
+  },
+  {
+    "at": "2026-09-07T03:24:07.991Z",
+    "path": "saved-machine-workspace.js"
+  },
+  {
+    "at": "2026-09-07T03:24:07.992Z",
+    "path": "saved-machine.js"
+  },
+  {
+    "at": "2026-09-07T03:24:07.992Z",
+    "path": "saved-machine-runtime.js"
+  },
+  {
+    "at": "2026-09-07T03:24:07.992Z",
+    "path": "saved-machine-configuration.js"
+  },
+  {
+    "at": "2026-09-07T03:24:07.993Z",
+    "path": "two-mib-system.js"
+  },
+  {
+    "at": "2026-09-07T03:24:07.993Z",
+    "path": "source-bundle.js"
+  },
+  {
+    "at": "2026-09-07T03:24:07.995Z",
+    "path": "disk-profile.js"
+  },
+  {
+    "at": "2026-09-07T03:24:07.995Z",
+    "path": "tool-catalog.js"
+  },
+  {
+    "at": "2026-09-07T03:24:07.995Z",
+    "path": "drive-set.js"
+  },
+  {
+    "at": "2026-09-07T03:24:07.995Z",
+    "path": "working-disk-store.js"
+  },
+  {
+    "at": "2026-09-07T03:24:07.996Z",
+    "path": "drive-set-v4.js"
+  },
+  {
+    "at": "2026-09-07T03:24:08.002Z",
+    "path": "triptych_host_wasm_bg.wasm"
+  },
+  {
+    "at": "2026-09-07T03:24:08.004Z",
+    "path": "config.json"
+  },
+  {
+    "at": "2026-09-07T03:24:08.009Z",
+    "path": "cpm22.img"
+  },
+  {
+    "at": "2026-09-07T03:24:08.010Z",
+    "path": "bootstrap.bin"
+  },
+  {
+    "at": "2026-09-07T03:24:08.027Z",
+    "path": "deployment-manifest.json"
+  },
+  {
+    "at": "2026-09-07T03:24:08.033Z",
+    "path": "tool-catalog.json"
+  },
+  {
+    "at": "2026-09-07T03:24:08.695Z",
+    "path": "index.html"
+  },
+  {
+    "at": "2026-09-07T03:24:08.702Z",
+    "path": "style.css"
+  },
+  {
+    "at": "2026-09-07T03:24:08.702Z",
+    "path": "app.js"
+  },
+  {
+    "at": "2026-09-07T03:24:08.706Z",
+    "path": "triptych_host_wasm.js"
+  },
+  {
+    "at": "2026-09-07T03:24:08.706Z",
+    "path": "terminal.js"
+  },
+  {
+    "at": "2026-09-07T03:24:08.706Z",
+    "path": "disk-workspace.js"
+  },
+  {
+    "at": "2026-09-07T03:24:08.706Z",
+    "path": "saved-machine-store.js"
+  },
+  {
+    "at": "2026-09-07T03:24:08.706Z",
+    "path": "saved-machine-workspace.js"
+  },
+  {
+    "at": "2026-09-07T03:24:08.706Z",
+    "path": "saved-machine-runtime.js"
+  },
+  {
+    "at": "2026-09-07T03:24:08.709Z",
+    "path": "saved-machine.js"
+  },
+  {
+    "at": "2026-09-07T03:24:08.709Z",
+    "path": "saved-machine-configuration.js"
+  },
+  {
+    "at": "2026-09-07T03:24:08.709Z",
+    "path": "two-mib-system.js"
+  },
+  {
+    "at": "2026-09-07T03:24:08.709Z",
+    "path": "source-bundle.js"
+  },
+  {
+    "at": "2026-09-07T03:24:08.709Z",
+    "path": "disk-profile.js"
+  },
+  {
+    "at": "2026-09-07T03:24:08.710Z",
+    "path": "tool-catalog.js"
+  },
+  {
+    "at": "2026-09-07T03:24:08.711Z",
+    "path": "drive-set.js"
+  },
+  {
+    "at": "2026-09-07T03:24:08.712Z",
+    "path": "drive-set-v4.js"
+  },
+  {
+    "at": "2026-09-07T03:24:08.712Z",
+    "path": "working-disk-store.js"
+  },
+  {
+    "at": "2026-09-07T03:24:08.762Z",
+    "path": "deployment-manifest.json"
+  },
+  {
+    "at": "2026-09-07T03:24:08.766Z",
+    "path": "triptych_host_wasm_bg.wasm"
+  },
+  {
+    "at": "2026-09-07T03:24:08.786Z",
+    "path": "tool-catalog.json"
+  },
+  {
+    "at": "2026-09-07T03:24:12.623Z",
+    "path": "index.html"
+  },
+  {
+    "at": "2026-09-07T03:24:12.626Z",
+    "path": "style.css"
+  },
+  {
+    "at": "2026-09-07T03:24:12.627Z",
+    "path": "app.js"
+  },
+  {
+    "at": "2026-09-07T03:24:12.630Z",
+    "path": "triptych_host_wasm.js"
+  },
+  {
+    "at": "2026-09-07T03:24:12.630Z",
+    "path": "terminal.js"
+  },
+  {
+    "at": "2026-09-07T03:24:12.631Z",
+    "path": "disk-workspace.js"
+  },
+  {
+    "at": "2026-09-07T03:24:12.631Z",
+    "path": "saved-machine-store.js"
+  },
+  {
+    "at": "2026-09-07T03:24:12.631Z",
+    "path": "saved-machine-workspace.js"
+  },
+  {
+    "at": "2026-09-07T03:24:12.631Z",
+    "path": "saved-machine-runtime.js"
+  },
+  {
+    "at": "2026-09-07T03:24:12.633Z",
+    "path": "saved-machine.js"
+  },
+  {
+    "at": "2026-09-07T03:24:12.633Z",
+    "path": "saved-machine-configuration.js"
+  },
+  {
+    "at": "2026-09-07T03:24:12.633Z",
+    "path": "two-mib-system.js"
+  },
+  {
+    "at": "2026-09-07T03:24:12.634Z",
+    "path": "source-bundle.js"
+  },
+  {
+    "at": "2026-09-07T03:24:12.634Z",
+    "path": "disk-profile.js"
+  },
+  {
+    "at": "2026-09-07T03:24:12.634Z",
+    "path": "tool-catalog.js"
+  },
+  {
+    "at": "2026-09-07T03:24:12.636Z",
+    "path": "drive-set.js"
+  },
+  {
+    "at": "2026-09-07T03:24:12.636Z",
+    "path": "working-disk-store.js"
+  },
+  {
+    "at": "2026-09-07T03:24:12.636Z",
+    "path": "drive-set-v4.js"
+  },
+  {
+    "at": "2026-09-07T03:24:12.685Z",
+    "path": "deployment-manifest.json"
+  },
+  {
+    "at": "2026-09-07T03:24:12.687Z",
+    "path": "triptych_host_wasm_bg.wasm"
+  },
+  {
+    "at": "2026-09-07T03:24:12.704Z",
+    "path": "tool-catalog.json"
+  },
+  {
+    "at": "2026-09-07T03:24:14.182Z",
+    "path": "index.html"
+  },
+  {
+    "at": "2026-09-07T03:24:14.216Z",
+    "path": "style.css"
+  },
+  {
+    "at": "2026-09-07T03:24:14.216Z",
+    "path": "app.js"
+  },
+  {
+    "at": "2026-09-07T03:24:14.229Z",
+    "path": "triptych_host_wasm.js"
+  },
+  {
+    "at": "2026-09-07T03:24:14.229Z",
+    "path": "terminal.js"
+  },
+  {
+    "at": "2026-09-07T03:24:14.230Z",
+    "path": "disk-workspace.js"
+  },
+  {
+    "at": "2026-09-07T03:24:14.230Z",
+    "path": "saved-machine-store.js"
+  },
+  {
+    "at": "2026-09-07T03:24:14.230Z",
+    "path": "saved-machine-workspace.js"
+  },
+  {
+    "at": "2026-09-07T03:24:14.231Z",
+    "path": "saved-machine-runtime.js"
+  },
+  {
+    "at": "2026-09-07T03:24:14.231Z",
+    "path": "saved-machine.js"
+  },
+  {
+    "at": "2026-09-07T03:24:14.232Z",
+    "path": "saved-machine-configuration.js"
+  },
+  {
+    "at": "2026-09-07T03:24:14.232Z",
+    "path": "two-mib-system.js"
+  },
+  {
+    "at": "2026-09-07T03:24:14.232Z",
+    "path": "source-bundle.js"
+  },
+  {
+    "at": "2026-09-07T03:24:14.234Z",
+    "path": "disk-profile.js"
+  },
+  {
+    "at": "2026-09-07T03:24:14.234Z",
+    "path": "tool-catalog.js"
+  },
+  {
+    "at": "2026-09-07T03:24:14.235Z",
+    "path": "drive-set.js"
+  },
+  {
+    "at": "2026-09-07T03:24:14.235Z",
+    "path": "working-disk-store.js"
+  },
+  {
+    "at": "2026-09-07T03:24:14.235Z",
+    "path": "drive-set-v4.js"
+  },
+  {
+    "at": "2026-09-07T03:24:14.242Z",
+    "path": "triptych_host_wasm_bg.wasm"
+  },
+  {
+    "at": "2026-09-07T03:24:14.244Z",
+    "path": "config.json"
+  },
+  {
+    "at": "2026-09-07T03:24:14.248Z",
+    "path": "cpm22.img"
+  },
+  {
+    "at": "2026-09-07T03:24:14.249Z",
+    "path": "bootstrap.bin"
+  },
+  {
+    "at": "2026-09-07T03:24:14.266Z",
+    "path": "deployment-manifest.json"
+  },
+  {
+    "at": "2026-09-07T03:24:14.278Z",
+    "path": "tool-catalog.json"
+  },
+  {
+    "at": "2026-09-07T03:24:14.561Z",
+    "path": "index.html"
+  },
+  {
+    "at": "2026-09-07T03:24:14.564Z",
+    "path": "style.css"
+  },
+  {
+    "at": "2026-09-07T03:24:14.564Z",
+    "path": "app.js"
+  },
+  {
+    "at": "2026-09-07T03:24:14.567Z",
+    "path": "triptych_host_wasm.js"
+  },
+  {
+    "at": "2026-09-07T03:24:14.567Z",
+    "path": "terminal.js"
+  },
+  {
+    "at": "2026-09-07T03:24:14.567Z",
+    "path": "disk-workspace.js"
+  },
+  {
+    "at": "2026-09-07T03:24:14.567Z",
+    "path": "saved-machine-store.js"
+  },
+  {
+    "at": "2026-09-07T03:24:14.567Z",
+    "path": "saved-machine-workspace.js"
+  },
+  {
+    "at": "2026-09-07T03:24:14.567Z",
+    "path": "saved-machine-runtime.js"
+  },
+  {
+    "at": "2026-09-07T03:24:14.569Z",
+    "path": "saved-machine.js"
+  },
+  {
+    "at": "2026-09-07T03:24:14.569Z",
+    "path": "saved-machine-configuration.js"
+  },
+  {
+    "at": "2026-09-07T03:24:14.570Z",
+    "path": "two-mib-system.js"
+  },
+  {
+    "at": "2026-09-07T03:24:14.570Z",
+    "path": "source-bundle.js"
+  },
+  {
+    "at": "2026-09-07T03:24:14.570Z",
+    "path": "disk-profile.js"
+  },
+  {
+    "at": "2026-09-07T03:24:14.570Z",
+    "path": "tool-catalog.js"
+  },
+  {
+    "at": "2026-09-07T03:24:14.572Z",
+    "path": "drive-set.js"
+  },
+  {
+    "at": "2026-09-07T03:24:14.572Z",
+    "path": "working-disk-store.js"
+  },
+  {
+    "at": "2026-09-07T03:24:14.573Z",
+    "path": "drive-set-v4.js"
+  },
+  {
+    "at": "2026-09-07T03:24:14.578Z",
+    "path": "deployment-manifest.json"
+  },
+  {
+    "at": "2026-09-07T03:24:14.583Z",
+    "path": "triptych_host_wasm_bg.wasm"
+  },
+  {
+    "at": "2026-09-07T03:24:14.589Z",
+    "path": "tool-catalog.json"
+  },
+  {
+    "at": "2026-09-07T03:24:16.061Z",
+    "path": "index.html"
+  },
+  {
+    "at": "2026-09-07T03:24:16.065Z",
+    "path": "style.css"
+  },
+  {
+    "at": "2026-09-07T03:24:16.066Z",
+    "path": "app.js"
+  },
+  {
+    "at": "2026-09-07T03:24:16.070Z",
+    "path": "triptych_host_wasm.js"
+  },
+  {
+    "at": "2026-09-07T03:24:16.070Z",
+    "path": "terminal.js"
+  },
+  {
+    "at": "2026-09-07T03:24:16.070Z",
+    "path": "disk-workspace.js"
+  },
+  {
+    "at": "2026-09-07T03:24:16.071Z",
+    "path": "saved-machine-store.js"
+  },
+  {
+    "at": "2026-09-07T03:24:16.071Z",
+    "path": "saved-machine-workspace.js"
+  },
+  {
+    "at": "2026-09-07T03:24:16.071Z",
+    "path": "saved-machine-runtime.js"
+  },
+  {
+    "at": "2026-09-07T03:24:16.077Z",
+    "path": "saved-machine.js"
+  },
+  {
+    "at": "2026-09-07T03:24:16.077Z",
+    "path": "saved-machine-configuration.js"
+  },
+  {
+    "at": "2026-09-07T03:24:16.077Z",
+    "path": "two-mib-system.js"
+  },
+  {
+    "at": "2026-09-07T03:24:16.077Z",
+    "path": "source-bundle.js"
+  },
+  {
+    "at": "2026-09-07T03:24:16.077Z",
+    "path": "disk-profile.js"
+  },
+  {
+    "at": "2026-09-07T03:24:16.077Z",
+    "path": "tool-catalog.js"
+  },
+  {
+    "at": "2026-09-07T03:24:16.079Z",
+    "path": "drive-set.js"
+  },
+  {
+    "at": "2026-09-07T03:24:16.079Z",
+    "path": "drive-set-v4.js"
+  },
+  {
+    "at": "2026-09-07T03:24:16.080Z",
+    "path": "working-disk-store.js"
+  },
+  {
+    "at": "2026-09-07T03:24:16.086Z",
+    "path": "deployment-manifest.json"
+  },
+  {
+    "at": "2026-09-07T03:24:16.090Z",
+    "path": "triptych_host_wasm_bg.wasm"
+  },
+  {
+    "at": "2026-09-07T03:24:16.095Z",
+    "path": "tool-catalog.json"
+  },
+  {
+    "at": "2026-09-07T03:24:17.344Z",
+    "path": "index.html"
+  },
+  {
+    "at": "2026-09-07T03:24:17.379Z",
+    "path": "style.css"
+  },
+  {
+    "at": "2026-09-07T03:24:17.379Z",
+    "path": "app.js"
+  },
+  {
+    "at": "2026-09-07T03:24:17.385Z",
+    "path": "triptych_host_wasm.js"
+  },
+  {
+    "at": "2026-09-07T03:24:17.385Z",
+    "path": "terminal.js"
+  },
+  {
+    "at": "2026-09-07T03:24:17.386Z",
+    "path": "disk-workspace.js"
+  },
+  {
+    "at": "2026-09-07T03:24:17.386Z",
+    "path": "saved-machine-store.js"
+  },
+  {
+    "at": "2026-09-07T03:24:17.386Z",
+    "path": "saved-machine-workspace.js"
+  },
+  {
+    "at": "2026-09-07T03:24:17.386Z",
+    "path": "saved-machine-runtime.js"
+  },
+  {
+    "at": "2026-09-07T03:24:17.386Z",
+    "path": "saved-machine.js"
+  },
+  {
+    "at": "2026-09-07T03:24:17.387Z",
+    "path": "saved-machine-configuration.js"
+  },
+  {
+    "at": "2026-09-07T03:24:17.387Z",
+    "path": "two-mib-system.js"
+  },
+  {
+    "at": "2026-09-07T03:24:17.388Z",
+    "path": "source-bundle.js"
+  },
+  {
+    "at": "2026-09-07T03:24:17.388Z",
+    "path": "disk-profile.js"
+  },
+  {
+    "at": "2026-09-07T03:24:17.388Z",
+    "path": "tool-catalog.js"
+  },
+  {
+    "at": "2026-09-07T03:24:17.391Z",
+    "path": "drive-set.js"
+  },
+  {
+    "at": "2026-09-07T03:24:17.391Z",
+    "path": "working-disk-store.js"
+  },
+  {
+    "at": "2026-09-07T03:24:17.391Z",
+    "path": "drive-set-v4.js"
+  },
+  {
+    "at": "2026-09-07T03:24:17.398Z",
+    "path": "triptych_host_wasm_bg.wasm"
+  },
+  {
+    "at": "2026-09-07T03:24:17.400Z",
+    "path": "config.json"
+  },
+  {
+    "at": "2026-09-07T03:24:17.405Z",
+    "path": "cpm22.img"
+  },
+  {
+    "at": "2026-09-07T03:24:17.408Z",
+    "path": "bootstrap.bin"
+  },
+  {
+    "at": "2026-09-07T03:24:17.423Z",
+    "path": "deployment-manifest.json"
+  },
+  {
+    "at": "2026-09-07T03:24:17.429Z",
+    "path": "tool-catalog.json"
+  },
+  {
+    "at": "2026-09-07T03:24:18.099Z",
+    "path": "index.html"
+  },
+  {
+    "at": "2026-09-07T03:24:18.106Z",
+    "path": "style.css"
+  },
+  {
+    "at": "2026-09-07T03:24:18.106Z",
+    "path": "app.js"
+  },
+  {
+    "at": "2026-09-07T03:24:18.110Z",
+    "path": "triptych_host_wasm.js"
+  },
+  {
+    "at": "2026-09-07T03:24:18.110Z",
+    "path": "terminal.js"
+  },
+  {
+    "at": "2026-09-07T03:24:18.111Z",
+    "path": "disk-workspace.js"
+  },
+  {
+    "at": "2026-09-07T03:24:18.111Z",
+    "path": "saved-machine-store.js"
+  },
+  {
+    "at": "2026-09-07T03:24:18.112Z",
+    "path": "saved-machine-workspace.js"
+  },
+  {
+    "at": "2026-09-07T03:24:18.113Z",
+    "path": "saved-machine-runtime.js"
+  },
+  {
+    "at": "2026-09-07T03:24:18.113Z",
+    "path": "saved-machine.js"
+  },
+  {
+    "at": "2026-09-07T03:24:18.113Z",
+    "path": "saved-machine-configuration.js"
+  },
+  {
+    "at": "2026-09-07T03:24:18.113Z",
+    "path": "two-mib-system.js"
+  },
+  {
+    "at": "2026-09-07T03:24:18.113Z",
+    "path": "source-bundle.js"
+  },
+  {
+    "at": "2026-09-07T03:24:18.115Z",
+    "path": "disk-profile.js"
+  },
+  {
+    "at": "2026-09-07T03:24:18.115Z",
+    "path": "tool-catalog.js"
+  },
+  {
+    "at": "2026-09-07T03:24:18.115Z",
+    "path": "drive-set-v4.js"
+  },
+  {
+    "at": "2026-09-07T03:24:18.116Z",
+    "path": "drive-set.js"
+  },
+  {
+    "at": "2026-09-07T03:24:18.116Z",
+    "path": "working-disk-store.js"
+  },
+  {
+    "at": "2026-09-07T03:24:18.171Z",
+    "path": "deployment-manifest.json"
+  },
+  {
+    "at": "2026-09-07T03:24:18.174Z",
+    "path": "triptych_host_wasm_bg.wasm"
+  },
+  {
+    "at": "2026-09-07T03:24:18.198Z",
+    "path": "tool-catalog.json"
+  },
+  {
+    "at": "2026-09-07T03:24:22.068Z",
+    "path": "index.html"
+  },
+  {
+    "at": "2026-09-07T03:24:22.077Z",
+    "path": "style.css"
+  },
+  {
+    "at": "2026-09-07T03:24:22.077Z",
+    "path": "app.js"
+  },
+  {
+    "at": "2026-09-07T03:24:22.081Z",
+    "path": "triptych_host_wasm.js"
+  },
+  {
+    "at": "2026-09-07T03:24:22.081Z",
+    "path": "terminal.js"
+  },
+  {
+    "at": "2026-09-07T03:24:22.081Z",
+    "path": "disk-workspace.js"
+  },
+  {
+    "at": "2026-09-07T03:24:22.081Z",
+    "path": "saved-machine-store.js"
+  },
+  {
+    "at": "2026-09-07T03:24:22.081Z",
+    "path": "saved-machine-workspace.js"
+  },
+  {
+    "at": "2026-09-07T03:24:22.081Z",
+    "path": "saved-machine-runtime.js"
+  },
+  {
+    "at": "2026-09-07T03:24:22.084Z",
+    "path": "saved-machine.js"
+  },
+  {
+    "at": "2026-09-07T03:24:22.084Z",
+    "path": "saved-machine-configuration.js"
+  },
+  {
+    "at": "2026-09-07T03:24:22.085Z",
+    "path": "two-mib-system.js"
+  },
+  {
+    "at": "2026-09-07T03:24:22.085Z",
+    "path": "source-bundle.js"
+  },
+  {
+    "at": "2026-09-07T03:24:22.085Z",
+    "path": "disk-profile.js"
+  },
+  {
+    "at": "2026-09-07T03:24:22.085Z",
+    "path": "tool-catalog.js"
+  },
+  {
+    "at": "2026-09-07T03:24:22.087Z",
+    "path": "drive-set.js"
+  },
+  {
+    "at": "2026-09-07T03:24:22.087Z",
+    "path": "drive-set-v4.js"
+  },
+  {
+    "at": "2026-09-07T03:24:22.087Z",
+    "path": "working-disk-store.js"
+  },
+  {
+    "at": "2026-09-07T03:24:22.141Z",
+    "path": "deployment-manifest.json"
+  },
+  {
+    "at": "2026-09-07T03:24:22.143Z",
+    "path": "triptych_host_wasm_bg.wasm"
+  },
+  {
+    "at": "2026-09-07T03:24:22.165Z",
+    "path": "tool-catalog.json"
+  }
+]

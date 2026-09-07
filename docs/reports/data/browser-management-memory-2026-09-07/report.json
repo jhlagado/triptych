@@ -1,0 +1,990 @@
+{
+  "complete": true,
+  "output": "/var/folders/z3/5d423z657d7fm572qd818jd00000gn/T/triptych-management-memory-FXMJeJ",
+  "input": "/tmp/triptych-browser-activation.G92zG1/results/two-mib-activation-all-six-1a1e3-hive-and-rejected-reduction/all-sixteen.tds",
+  "inputSha256": "4bbcdb86d22df3d4d799d5aba4c0de0a2d821241e934f44ee3c76e3602066fbf",
+  "manifestSha256": "661a232923aba5683b3533d64f052f1b83af0a25d98bafd50450244fec48f5c4",
+  "assetCount": 72,
+  "utilitySha256": "895d9b64288a4eee22182827bde56e84073dc0f97d73705933f526345fa1f23f",
+  "environment": {
+    "platform": "darwin",
+    "release": "25.5.0",
+    "node": "v24.18.0",
+    "cpu": "Apple M2",
+    "logicalCpus": 8,
+    "totalMemoryBytes": 8589934592,
+    "freeMemoryBytesAtStart": 123142144,
+    "started": "2026-09-07T03:23:50.579Z",
+    "chromium": "151.0.7922.34",
+    "chromiumExecutable": "/Users/johnhardy/Library/Caches/ms-playwright/chromium-1234/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing"
+  },
+  "method": {
+    "repeats": 3,
+    "summary": "median and median absolute deviation",
+    "rssRequestedIntervalMs": 100,
+    "heapRequestedIntervalMs": 250,
+    "boundaries": "Additional RSS samples immediately before and after each action capture short retained states. Phase duration includes sampling overhead; actionDurationMs excludes the boundary samples.",
+    "baselineDurationMs": 1000,
+    "baseline": "median samples after setup/reload; no forced GC",
+    "metric": "Sum of OS resident set sizes of renderer PIDs reported by this fresh browser process; per-PID values retained. RSS is not unique physical memory and may include shared pages.",
+    "peak": "Maximum observed sample per named phase, not guaranteed true high-water mark. CDP heap measurements are separate and may be delayed while the renderer is busy.",
+    "comparison": "Absolute costs of realistic n01/one-inserted and n16/sixteen-inserted machines, not an isolated causal count experiment.",
+    "scope": "Local headless Chromium, not ESP32, browser process total, GPU process, or native process memory."
+  },
+  "workloads": [
+    {
+      "repeat": 1,
+      "configuredCount": 1,
+      "insertedMedia": 1,
+      "selectedDrive": "A",
+      "phases": {
+        "setup-restore": {
+          "rssSampleCount": 8,
+          "medianRssBytes": 154279936,
+          "sampledPeakRssBytes": 224067584,
+          "durationMs": 643.5030829999996,
+          "actionDurationMs": 636.8436659999998,
+          "maxObservedIntervalMs": 102.21633399999973
+        },
+        "baseline": {
+          "rssSampleCount": 12,
+          "medianRssBytes": 223363072,
+          "sampledPeakRssBytes": 224395264,
+          "durationMs": 1008.5847920000006,
+          "actionDurationMs": 1002.1629579999999,
+          "maxObservedIntervalMs": 103.08866699999999
+        },
+        "enter-management": {
+          "rssSampleCount": 4,
+          "medianRssBytes": 229482496,
+          "sampledPeakRssBytes": 238829568,
+          "durationMs": 186.37895800000024,
+          "actionDurationMs": 179.52462500000001,
+          "maxObservedIntervalMs": 101.26749999999993
+        },
+        "stage-import": {
+          "rssSampleCount": 2,
+          "medianRssBytes": 251781120,
+          "sampledPeakRssBytes": 264732672,
+          "durationMs": 24.025249999999687,
+          "actionDurationMs": 16.93512499999997,
+          "maxObservedIntervalMs": 20.767624999999498
+        },
+        "apply-reboot": {
+          "rssSampleCount": 3,
+          "medianRssBytes": 264847360,
+          "sampledPeakRssBytes": 265043968,
+          "durationMs": 128.99987500000043,
+          "actionDurationMs": 122.1299170000002,
+          "maxObservedIntervalMs": 70.48645900000065
+        },
+        "archive-download": {
+          "rssSampleCount": 3,
+          "medianRssBytes": 263749632,
+          "sampledPeakRssBytes": 265043968,
+          "durationMs": 121.20474999999988,
+          "actionDurationMs": 114.43495900000016,
+          "maxObservedIntervalMs": 89.51541700000053
+        },
+        "reload-read": {
+          "rssSampleCount": 4,
+          "medianRssBytes": 243187712,
+          "sampledPeakRssBytes": 247758848,
+          "durationMs": 123.54941599999984,
+          "actionDurationMs": 117.37537500000053,
+          "maxObservedIntervalMs": 96.59308300000066
+        },
+        "settled-after-reload": {
+          "rssSampleCount": 12,
+          "medianRssBytes": 234070016,
+          "sampledPeakRssBytes": 243236864,
+          "durationMs": 1004.2660839999999,
+          "actionDurationMs": 999.1838749999997,
+          "maxObservedIntervalMs": 102.27350000000024
+        }
+      },
+      "sourceArchive": "/var/folders/z3/5d423z657d7fm572qd818jd00000gn/T/triptych-management-memory-FXMJeJ/n01-one-medium.tds",
+      "downloaded": "/var/folders/z3/5d423z657d7fm572qd818jd00000gn/T/triptych-management-memory-FXMJeJ/run-1-n1/after-import.tds",
+      "archiveBytes": 2097827,
+      "correctness": "Reloaded guest reads imported sentinel; IDs, names, count, bootstrap/reserved bytes and all unrelated media preserved.",
+      "samples": "/var/folders/z3/5d423z657d7fm572qd818jd00000gn/T/triptych-management-memory-FXMJeJ/run-1-n1/samples.jsonl"
+    },
+    {
+      "repeat": 1,
+      "configuredCount": 16,
+      "insertedMedia": 16,
+      "selectedDrive": "P",
+      "phases": {
+        "setup-restore": {
+          "rssSampleCount": 10,
+          "medianRssBytes": 355549184,
+          "sampledPeakRssBytes": 560021504,
+          "durationMs": 900.8219160000008,
+          "actionDurationMs": 887.4183329999996,
+          "maxObservedIntervalMs": 102.37133299999914
+        },
+        "baseline": {
+          "rssSampleCount": 12,
+          "medianRssBytes": 282492928,
+          "sampledPeakRssBytes": 560889856,
+          "durationMs": 1008.8585000000003,
+          "actionDurationMs": 1002.380459,
+          "maxObservedIntervalMs": 103.47354199999972
+        },
+        "enter-management": {
+          "rssSampleCount": 11,
+          "medianRssBytes": 471646208,
+          "sampledPeakRssBytes": 506216448,
+          "durationMs": 815.6576249999998,
+          "actionDurationMs": 810.8524170000001,
+          "maxObservedIntervalMs": 102.15849999999955
+        },
+        "stage-import": {
+          "rssSampleCount": 2,
+          "medianRssBytes": 420282368,
+          "sampledPeakRssBytes": 490536960,
+          "durationMs": 48.5211249999993,
+          "actionDurationMs": 42.13037499999882,
+          "maxObservedIntervalMs": 46.233000000000175
+        },
+        "apply-reboot": {
+          "rssSampleCount": 14,
+          "medianRssBytes": 652230656,
+          "sampledPeakRssBytes": 688324608,
+          "durationMs": 1158.3904170000005,
+          "actionDurationMs": 1152.695917000001,
+          "maxObservedIntervalMs": 102.1747919999998
+        },
+        "archive-download": {
+          "rssSampleCount": 7,
+          "medianRssBytes": 390037504,
+          "sampledPeakRssBytes": 545177600,
+          "durationMs": 559.3984999999993,
+          "actionDurationMs": 554.0851249999996,
+          "maxObservedIntervalMs": 101.34829199999876
+        },
+        "reload-read": {
+          "rssSampleCount": 4,
+          "medianRssBytes": 450371584,
+          "sampledPeakRssBytes": 497729536,
+          "durationMs": 147.63441600000078,
+          "actionDurationMs": 142.83387499999844,
+          "maxObservedIntervalMs": 101.56525000000147
+        },
+        "settled-after-reload": {
+          "rssSampleCount": 11,
+          "medianRssBytes": 497729536,
+          "sampledPeakRssBytes": 497844224,
+          "durationMs": 1007.5000409999993,
+          "actionDurationMs": 1001.9865829999999,
+          "maxObservedIntervalMs": 102.18591699999888
+        }
+      },
+      "sourceArchive": "/tmp/triptych-browser-activation.G92zG1/results/two-mib-activation-all-six-1a1e3-hive-and-rejected-reduction/all-sixteen.tds",
+      "downloaded": "/var/folders/z3/5d423z657d7fm572qd818jd00000gn/T/triptych-management-memory-FXMJeJ/run-1-n16/after-import.tds",
+      "archiveBytes": 33557883,
+      "correctness": "Reloaded guest reads imported sentinel; IDs, names, count, bootstrap/reserved bytes and all unrelated media preserved.",
+      "samples": "/var/folders/z3/5d423z657d7fm572qd818jd00000gn/T/triptych-management-memory-FXMJeJ/run-1-n16/samples.jsonl"
+    },
+    {
+      "repeat": 2,
+      "configuredCount": 1,
+      "insertedMedia": 1,
+      "selectedDrive": "A",
+      "phases": {
+        "setup-restore": {
+          "rssSampleCount": 6,
+          "medianRssBytes": 173678592,
+          "sampledPeakRssBytes": 224280576,
+          "durationMs": 463.7855409999993,
+          "actionDurationMs": 456.8263330000009,
+          "maxObservedIntervalMs": 100.86808299999939
+        },
+        "baseline": {
+          "rssSampleCount": 12,
+          "medianRssBytes": 223862784,
+          "sampledPeakRssBytes": 224935936,
+          "durationMs": 1007.6110420000005,
+          "actionDurationMs": 1002.201833000001,
+          "maxObservedIntervalMs": 102.76808299999902
+        },
+        "enter-management": {
+          "rssSampleCount": 4,
+          "medianRssBytes": 223838208,
+          "sampledPeakRssBytes": 245383168,
+          "durationMs": 188.72433300000012,
+          "actionDurationMs": 183.24470800000017,
+          "maxObservedIntervalMs": 101.57774999999856
+        },
+        "stage-import": {
+          "rssSampleCount": 2,
+          "medianRssBytes": 258441216,
+          "sampledPeakRssBytes": 271499264,
+          "durationMs": 14.485375000000204,
+          "actionDurationMs": 9.41558299999997,
+          "maxObservedIntervalMs": 12.24895800000013
+        },
+        "apply-reboot": {
+          "rssSampleCount": 3,
+          "medianRssBytes": 277020672,
+          "sampledPeakRssBytes": 285769728,
+          "durationMs": 122.2556250000016,
+          "actionDurationMs": 116.87654099999781,
+          "maxObservedIntervalMs": 78.15612499999952
+        },
+        "archive-download": {
+          "rssSampleCount": 3,
+          "medianRssBytes": 277053440,
+          "sampledPeakRssBytes": 281755648,
+          "durationMs": 120.40091699999903,
+          "actionDurationMs": 114.42937499999971,
+          "maxObservedIntervalMs": 97.72716699999728
+        },
+        "reload-read": {
+          "rssSampleCount": 2,
+          "medianRssBytes": 278372352,
+          "sampledPeakRssBytes": 281755648,
+          "durationMs": 58.94145800000115,
+          "actionDurationMs": 53.14983399999983,
+          "maxObservedIntervalMs": 56.43145899999945
+        },
+        "settled-after-reload": {
+          "rssSampleCount": 12,
+          "medianRssBytes": 275054592,
+          "sampledPeakRssBytes": 275152896,
+          "durationMs": 1006.7750000000015,
+          "actionDurationMs": 1001.5287499999977,
+          "maxObservedIntervalMs": 102.92795799999658
+        }
+      },
+      "sourceArchive": "/var/folders/z3/5d423z657d7fm572qd818jd00000gn/T/triptych-management-memory-FXMJeJ/n01-one-medium.tds",
+      "downloaded": "/var/folders/z3/5d423z657d7fm572qd818jd00000gn/T/triptych-management-memory-FXMJeJ/run-2-n1/after-import.tds",
+      "archiveBytes": 2097827,
+      "correctness": "Reloaded guest reads imported sentinel; IDs, names, count, bootstrap/reserved bytes and all unrelated media preserved.",
+      "samples": "/var/folders/z3/5d423z657d7fm572qd818jd00000gn/T/triptych-management-memory-FXMJeJ/run-2-n1/samples.jsonl"
+    },
+    {
+      "repeat": 2,
+      "configuredCount": 16,
+      "insertedMedia": 16,
+      "selectedDrive": "P",
+      "phases": {
+        "setup-restore": {
+          "rssSampleCount": 10,
+          "medianRssBytes": 488996864,
+          "sampledPeakRssBytes": 614875136,
+          "durationMs": 863.9258340000015,
+          "actionDurationMs": 855.1333750000013,
+          "maxObservedIntervalMs": 101.41333299999678
+        },
+        "baseline": {
+          "rssSampleCount": 12,
+          "medianRssBytes": 302465024,
+          "sampledPeakRssBytes": 607961088,
+          "durationMs": 1008.6869590000024,
+          "actionDurationMs": 1002.171875,
+          "maxObservedIntervalMs": 102.33241700000144
+        },
+        "enter-management": {
+          "rssSampleCount": 10,
+          "medianRssBytes": 453926912,
+          "sampledPeakRssBytes": 529973248,
+          "durationMs": 799.0108330000003,
+          "actionDurationMs": 793.7792919999993,
+          "maxObservedIntervalMs": 104.74970799999937
+        },
+        "stage-import": {
+          "rssSampleCount": 2,
+          "medianRssBytes": 438231040,
+          "sampledPeakRssBytes": 491503616,
+          "durationMs": 47.80975000000035,
+          "actionDurationMs": 41.24975000000268,
+          "maxObservedIntervalMs": 45.4764159999977
+        },
+        "apply-reboot": {
+          "rssSampleCount": 16,
+          "medianRssBytes": 523280384,
+          "sampledPeakRssBytes": 585547776,
+          "durationMs": 1389.392667,
+          "actionDurationMs": 1383.9484999999986,
+          "maxObservedIntervalMs": 102.66812500000015
+        },
+        "archive-download": {
+          "rssSampleCount": 8,
+          "medianRssBytes": 318046208,
+          "sampledPeakRssBytes": 318062592,
+          "durationMs": 572.5351669999982,
+          "actionDurationMs": 567.2897919999996,
+          "maxObservedIntervalMs": 102.46245799999815
+        },
+        "reload-read": {
+          "rssSampleCount": 3,
+          "medianRssBytes": 380387328,
+          "sampledPeakRssBytes": 428982272,
+          "durationMs": 143.09358300000167,
+          "actionDurationMs": 137.6455840000017,
+          "maxObservedIntervalMs": 78.3839999999982
+        },
+        "settled-after-reload": {
+          "rssSampleCount": 12,
+          "medianRssBytes": 428982272,
+          "sampledPeakRssBytes": 429047808,
+          "durationMs": 1007.445208000001,
+          "actionDurationMs": 1002.0270000000019,
+          "maxObservedIntervalMs": 102.14479199999914
+        }
+      },
+      "sourceArchive": "/tmp/triptych-browser-activation.G92zG1/results/two-mib-activation-all-six-1a1e3-hive-and-rejected-reduction/all-sixteen.tds",
+      "downloaded": "/var/folders/z3/5d423z657d7fm572qd818jd00000gn/T/triptych-management-memory-FXMJeJ/run-2-n16/after-import.tds",
+      "archiveBytes": 33557883,
+      "correctness": "Reloaded guest reads imported sentinel; IDs, names, count, bootstrap/reserved bytes and all unrelated media preserved.",
+      "samples": "/var/folders/z3/5d423z657d7fm572qd818jd00000gn/T/triptych-management-memory-FXMJeJ/run-2-n16/samples.jsonl"
+    },
+    {
+      "repeat": 3,
+      "configuredCount": 1,
+      "insertedMedia": 1,
+      "selectedDrive": "A",
+      "phases": {
+        "setup-restore": {
+          "rssSampleCount": 6,
+          "medianRssBytes": 172564480,
+          "sampledPeakRssBytes": 224100352,
+          "durationMs": 439.1541249999973,
+          "actionDurationMs": 432.0001669999983,
+          "maxObservedIntervalMs": 101.55525000000125
+        },
+        "baseline": {
+          "rssSampleCount": 12,
+          "medianRssBytes": 224583680,
+          "sampledPeakRssBytes": 225116160,
+          "durationMs": 1007.6007920000011,
+          "actionDurationMs": 1002.3598330000023,
+          "maxObservedIntervalMs": 102.1408330000013
+        },
+        "enter-management": {
+          "rssSampleCount": 4,
+          "medianRssBytes": 233005056,
+          "sampledPeakRssBytes": 245268480,
+          "durationMs": 188.4429170000003,
+          "actionDurationMs": 183.37516600000163,
+          "maxObservedIntervalMs": 101.78408399999898
+        },
+        "stage-import": {
+          "rssSampleCount": 2,
+          "medianRssBytes": 258293760,
+          "sampledPeakRssBytes": 271319040,
+          "durationMs": 14.321875000001455,
+          "actionDurationMs": 9.330291999998735,
+          "maxObservedIntervalMs": 12.180082999999286
+        },
+        "apply-reboot": {
+          "rssSampleCount": 3,
+          "medianRssBytes": 271319040,
+          "sampledPeakRssBytes": 272678912,
+          "durationMs": 123.2932499999988,
+          "actionDurationMs": 117.96849999999904,
+          "maxObservedIntervalMs": 64.95229099999779
+        },
+        "archive-download": {
+          "rssSampleCount": 3,
+          "medianRssBytes": 272859136,
+          "sampledPeakRssBytes": 277413888,
+          "durationMs": 107.93233400000099,
+          "actionDurationMs": 102.50600000000122,
+          "maxObservedIntervalMs": 62.34883300000001
+        },
+        "reload-read": {
+          "rssSampleCount": 3,
+          "medianRssBytes": 277413888,
+          "sampledPeakRssBytes": 278888448,
+          "durationMs": 104.91249999999854,
+          "actionDurationMs": 99.21600000000035,
+          "maxObservedIntervalMs": 65.62858400000187
+        },
+        "settled-after-reload": {
+          "rssSampleCount": 12,
+          "medianRssBytes": 275038208,
+          "sampledPeakRssBytes": 275087360,
+          "durationMs": 1006.9476250000007,
+          "actionDurationMs": 1001.5496669999993,
+          "maxObservedIntervalMs": 102.16712499999994
+        }
+      },
+      "sourceArchive": "/var/folders/z3/5d423z657d7fm572qd818jd00000gn/T/triptych-management-memory-FXMJeJ/n01-one-medium.tds",
+      "downloaded": "/var/folders/z3/5d423z657d7fm572qd818jd00000gn/T/triptych-management-memory-FXMJeJ/run-3-n1/after-import.tds",
+      "archiveBytes": 2097827,
+      "correctness": "Reloaded guest reads imported sentinel; IDs, names, count, bootstrap/reserved bytes and all unrelated media preserved.",
+      "samples": "/var/folders/z3/5d423z657d7fm572qd818jd00000gn/T/triptych-management-memory-FXMJeJ/run-3-n1/samples.jsonl"
+    },
+    {
+      "repeat": 3,
+      "configuredCount": 16,
+      "insertedMedia": 16,
+      "selectedDrive": "P",
+      "phases": {
+        "setup-restore": {
+          "rssSampleCount": 10,
+          "medianRssBytes": 376561664,
+          "sampledPeakRssBytes": 494174208,
+          "durationMs": 877.9687080000003,
+          "actionDurationMs": 865.7282090000008,
+          "maxObservedIntervalMs": 102.39341699999932
+        },
+        "baseline": {
+          "rssSampleCount": 12,
+          "medianRssBytes": 284016640,
+          "sampledPeakRssBytes": 492617728,
+          "durationMs": 1009.4957079999986,
+          "actionDurationMs": 1002.9489580000009,
+          "maxObservedIntervalMs": 102.78837500000009
+        },
+        "enter-management": {
+          "rssSampleCount": 10,
+          "medianRssBytes": 446398464,
+          "sampledPeakRssBytes": 480968704,
+          "durationMs": 836.3687079999982,
+          "actionDurationMs": 830.7799580000028,
+          "maxObservedIntervalMs": 102.25300000000061
+        },
+        "stage-import": {
+          "rssSampleCount": 3,
+          "medianRssBytes": 467501056,
+          "sampledPeakRssBytes": 480968704,
+          "durationMs": 61.17450000000099,
+          "actionDurationMs": 53.96954200000255,
+          "maxObservedIntervalMs": 50.34733300000153
+        },
+        "apply-reboot": {
+          "rssSampleCount": 16,
+          "medianRssBytes": 552222720,
+          "sampledPeakRssBytes": 613220352,
+          "durationMs": 1406.4757500000014,
+          "actionDurationMs": 1401.2643330000028,
+          "maxObservedIntervalMs": 101.72720900000058
+        },
+        "archive-download": {
+          "rssSampleCount": 7,
+          "medianRssBytes": 319586304,
+          "sampledPeakRssBytes": 319619072,
+          "durationMs": 534.8222500000011,
+          "actionDurationMs": 529.8193329999995,
+          "maxObservedIntervalMs": 102.40579100000105
+        },
+        "reload-read": {
+          "rssSampleCount": 4,
+          "medianRssBytes": 375160832,
+          "sampledPeakRssBytes": 431243264,
+          "durationMs": 163.78583399999843,
+          "actionDurationMs": 158.68908400000146,
+          "maxObservedIntervalMs": 99.69154200000048
+        },
+        "settled-after-reload": {
+          "rssSampleCount": 12,
+          "medianRssBytes": 431243264,
+          "sampledPeakRssBytes": 431308800,
+          "durationMs": 1007.6632499999978,
+          "actionDurationMs": 1002.2083330000023,
+          "maxObservedIntervalMs": 103.95937500000218
+        }
+      },
+      "sourceArchive": "/tmp/triptych-browser-activation.G92zG1/results/two-mib-activation-all-six-1a1e3-hive-and-rejected-reduction/all-sixteen.tds",
+      "downloaded": "/var/folders/z3/5d423z657d7fm572qd818jd00000gn/T/triptych-management-memory-FXMJeJ/run-3-n16/after-import.tds",
+      "archiveBytes": 33557883,
+      "correctness": "Reloaded guest reads imported sentinel; IDs, names, count, bootstrap/reserved bytes and all unrelated media preserved.",
+      "samples": "/var/folders/z3/5d423z657d7fm572qd818jd00000gn/T/triptych-management-memory-FXMJeJ/run-3-n16/samples.jsonl"
+    }
+  ],
+  "calibration": {
+    "touchedBytes": 201326592,
+    "medianRssRiseBytes": 208175104,
+    "phases": {
+      "calibration-baseline": {
+        "rssSampleCount": 12,
+        "medianRssBytes": 74891264,
+        "sampledPeakRssBytes": 75137024,
+        "durationMs": 1007.2470410000001,
+        "actionDurationMs": 1001.354292,
+        "maxObservedIntervalMs": 106.24183300000004
+      },
+      "calibration-touched": {
+        "rssSampleCount": 17,
+        "medianRssBytes": 283066368,
+        "sampledPeakRssBytes": 283082752,
+        "durationMs": 1574.6686670000004,
+        "actionDurationMs": 1569.6419999999994,
+        "maxObservedIntervalMs": 102.66474999999991
+      }
+    }
+  },
+  "summary": {
+    "1": {
+      "setup-restore": {
+        "sampledPeakRssBytes": {
+          "median": 224100352,
+          "mad": 32768,
+          "samples": [
+            224067584,
+            224280576,
+            224100352
+          ]
+        },
+        "medianRssBytes": {
+          "median": 172564480,
+          "mad": 1114112,
+          "samples": [
+            154279936,
+            173678592,
+            172564480
+          ]
+        },
+        "durationMs": {
+          "median": 463.7855409999993,
+          "mad": 24.63141600000199,
+          "samples": [
+            643.5030829999996,
+            463.7855409999993,
+            439.1541249999973
+          ]
+        }
+      },
+      "baseline": {
+        "sampledPeakRssBytes": {
+          "median": 224935936,
+          "mad": 180224,
+          "samples": [
+            224395264,
+            224935936,
+            225116160
+          ]
+        },
+        "medianRssBytes": {
+          "median": 223862784,
+          "mad": 499712,
+          "samples": [
+            223363072,
+            223862784,
+            224583680
+          ]
+        },
+        "durationMs": {
+          "median": 1007.6110420000005,
+          "mad": 0.010249999999359716,
+          "samples": [
+            1008.5847920000006,
+            1007.6110420000005,
+            1007.6007920000011
+          ]
+        }
+      },
+      "enter-management": {
+        "sampledPeakRssBytes": {
+          "median": 245268480,
+          "mad": 114688,
+          "samples": [
+            238829568,
+            245383168,
+            245268480
+          ]
+        },
+        "medianRssBytes": {
+          "median": 229482496,
+          "mad": 3522560,
+          "samples": [
+            229482496,
+            223838208,
+            233005056
+          ]
+        },
+        "durationMs": {
+          "median": 188.4429170000003,
+          "mad": 0.28141599999980826,
+          "samples": [
+            186.37895800000024,
+            188.72433300000012,
+            188.4429170000003
+          ]
+        }
+      },
+      "stage-import": {
+        "sampledPeakRssBytes": {
+          "median": 271319040,
+          "mad": 180224,
+          "samples": [
+            264732672,
+            271499264,
+            271319040
+          ]
+        },
+        "medianRssBytes": {
+          "median": 258293760,
+          "mad": 147456,
+          "samples": [
+            251781120,
+            258441216,
+            258293760
+          ]
+        },
+        "durationMs": {
+          "median": 14.485375000000204,
+          "mad": 0.16349999999874854,
+          "samples": [
+            24.025249999999687,
+            14.485375000000204,
+            14.321875000001455
+          ]
+        }
+      },
+      "apply-reboot": {
+        "sampledPeakRssBytes": {
+          "median": 272678912,
+          "mad": 7634944,
+          "samples": [
+            265043968,
+            285769728,
+            272678912
+          ]
+        },
+        "medianRssBytes": {
+          "median": 271319040,
+          "mad": 5701632,
+          "samples": [
+            264847360,
+            277020672,
+            271319040
+          ]
+        },
+        "durationMs": {
+          "median": 123.2932499999988,
+          "mad": 1.037624999997206,
+          "samples": [
+            128.99987500000043,
+            122.2556250000016,
+            123.2932499999988
+          ]
+        }
+      },
+      "archive-download": {
+        "sampledPeakRssBytes": {
+          "median": 277413888,
+          "mad": 4341760,
+          "samples": [
+            265043968,
+            281755648,
+            277413888
+          ]
+        },
+        "medianRssBytes": {
+          "median": 272859136,
+          "mad": 4194304,
+          "samples": [
+            263749632,
+            277053440,
+            272859136
+          ]
+        },
+        "durationMs": {
+          "median": 120.40091699999903,
+          "mad": 0.80383300000085,
+          "samples": [
+            121.20474999999988,
+            120.40091699999903,
+            107.93233400000099
+          ]
+        }
+      },
+      "reload-read": {
+        "sampledPeakRssBytes": {
+          "median": 278888448,
+          "mad": 2867200,
+          "samples": [
+            247758848,
+            281755648,
+            278888448
+          ]
+        },
+        "medianRssBytes": {
+          "median": 277413888,
+          "mad": 958464,
+          "samples": [
+            243187712,
+            278372352,
+            277413888
+          ]
+        },
+        "durationMs": {
+          "median": 104.91249999999854,
+          "mad": 18.636916000001293,
+          "samples": [
+            123.54941599999984,
+            58.94145800000115,
+            104.91249999999854
+          ]
+        }
+      },
+      "settled-after-reload": {
+        "sampledPeakRssBytes": {
+          "median": 275087360,
+          "mad": 65536,
+          "samples": [
+            243236864,
+            275152896,
+            275087360
+          ]
+        },
+        "medianRssBytes": {
+          "median": 275038208,
+          "mad": 16384,
+          "samples": [
+            234070016,
+            275054592,
+            275038208
+          ]
+        },
+        "durationMs": {
+          "median": 1006.7750000000015,
+          "mad": 0.1726249999992433,
+          "samples": [
+            1004.2660839999999,
+            1006.7750000000015,
+            1006.9476250000007
+          ]
+        }
+      }
+    },
+    "16": {
+      "setup-restore": {
+        "sampledPeakRssBytes": {
+          "median": 560021504,
+          "mad": 54853632,
+          "samples": [
+            560021504,
+            614875136,
+            494174208
+          ]
+        },
+        "medianRssBytes": {
+          "median": 376561664,
+          "mad": 21012480,
+          "samples": [
+            355549184,
+            488996864,
+            376561664
+          ]
+        },
+        "durationMs": {
+          "median": 877.9687080000003,
+          "mad": 14.042873999998847,
+          "samples": [
+            900.8219160000008,
+            863.9258340000015,
+            877.9687080000003
+          ]
+        }
+      },
+      "baseline": {
+        "sampledPeakRssBytes": {
+          "median": 560889856,
+          "mad": 47071232,
+          "samples": [
+            560889856,
+            607961088,
+            492617728
+          ]
+        },
+        "medianRssBytes": {
+          "median": 284016640,
+          "mad": 1523712,
+          "samples": [
+            282492928,
+            302465024,
+            284016640
+          ]
+        },
+        "durationMs": {
+          "median": 1008.8585000000003,
+          "mad": 0.1715409999978874,
+          "samples": [
+            1008.8585000000003,
+            1008.6869590000024,
+            1009.4957079999986
+          ]
+        }
+      },
+      "enter-management": {
+        "sampledPeakRssBytes": {
+          "median": 506216448,
+          "mad": 23756800,
+          "samples": [
+            506216448,
+            529973248,
+            480968704
+          ]
+        },
+        "medianRssBytes": {
+          "median": 453926912,
+          "mad": 7528448,
+          "samples": [
+            471646208,
+            453926912,
+            446398464
+          ]
+        },
+        "durationMs": {
+          "median": 815.6576249999998,
+          "mad": 16.64679199999955,
+          "samples": [
+            815.6576249999998,
+            799.0108330000003,
+            836.3687079999982
+          ]
+        }
+      },
+      "stage-import": {
+        "sampledPeakRssBytes": {
+          "median": 490536960,
+          "mad": 966656,
+          "samples": [
+            490536960,
+            491503616,
+            480968704
+          ]
+        },
+        "medianRssBytes": {
+          "median": 438231040,
+          "mad": 17948672,
+          "samples": [
+            420282368,
+            438231040,
+            467501056
+          ]
+        },
+        "durationMs": {
+          "median": 48.5211249999993,
+          "mad": 0.7113749999989523,
+          "samples": [
+            48.5211249999993,
+            47.80975000000035,
+            61.17450000000099
+          ]
+        }
+      },
+      "apply-reboot": {
+        "sampledPeakRssBytes": {
+          "median": 613220352,
+          "mad": 27672576,
+          "samples": [
+            688324608,
+            585547776,
+            613220352
+          ]
+        },
+        "medianRssBytes": {
+          "median": 552222720,
+          "mad": 28942336,
+          "samples": [
+            652230656,
+            523280384,
+            552222720
+          ]
+        },
+        "durationMs": {
+          "median": 1389.392667,
+          "mad": 17.083083000001352,
+          "samples": [
+            1158.3904170000005,
+            1389.392667,
+            1406.4757500000014
+          ]
+        }
+      },
+      "archive-download": {
+        "sampledPeakRssBytes": {
+          "median": 319619072,
+          "mad": 1556480,
+          "samples": [
+            545177600,
+            318062592,
+            319619072
+          ]
+        },
+        "medianRssBytes": {
+          "median": 319586304,
+          "mad": 1540096,
+          "samples": [
+            390037504,
+            318046208,
+            319586304
+          ]
+        },
+        "durationMs": {
+          "median": 559.3984999999993,
+          "mad": 13.136666999998852,
+          "samples": [
+            559.3984999999993,
+            572.5351669999982,
+            534.8222500000011
+          ]
+        }
+      },
+      "reload-read": {
+        "sampledPeakRssBytes": {
+          "median": 431243264,
+          "mad": 2260992,
+          "samples": [
+            497729536,
+            428982272,
+            431243264
+          ]
+        },
+        "medianRssBytes": {
+          "median": 380387328,
+          "mad": 5226496,
+          "samples": [
+            450371584,
+            380387328,
+            375160832
+          ]
+        },
+        "durationMs": {
+          "median": 147.63441600000078,
+          "mad": 4.540832999999111,
+          "samples": [
+            147.63441600000078,
+            143.09358300000167,
+            163.78583399999843
+          ]
+        }
+      },
+      "settled-after-reload": {
+        "sampledPeakRssBytes": {
+          "median": 431308800,
+          "mad": 2260992,
+          "samples": [
+            497844224,
+            429047808,
+            431308800
+          ]
+        },
+        "medianRssBytes": {
+          "median": 431243264,
+          "mad": 2260992,
+          "samples": [
+            497729536,
+            428982272,
+            431243264
+          ]
+        },
+        "durationMs": {
+          "median": 1007.5000409999993,
+          "mad": 0.05483299999832525,
+          "samples": [
+            1007.5000409999993,
+            1007.445208000001,
+            1007.6632499999978
+          ]
+        }
+      }
+    }
+  }
+}
