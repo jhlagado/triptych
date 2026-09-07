@@ -97,7 +97,7 @@
         line endings for CP/M. A CP/M flush followed by “Working disk saved”
         makes guest writes reload-safe. Download saved disk copies the drive
         selected in Files and recovery. Download saved drive set includes the
-        exact bootstrap, A and any attached B in one .tds archive. The latest
+        exact bootstrap and every media slot in one .tds archive. The latest
         checkpoint downloads can recover newer guest-flushed data after a save
         failure; that data may not be durably saved. Later unflushed writes and
         unsaved editor text are excluded. Browser storage may be cleared or
@@ -117,6 +117,7 @@
           <option value="B">B:</option>
         </select>
       </label>
+      <p id="machine-summary"></p>
       <p id="disk-summary"></p>
       <label
         ><input id="saved-and-exited" type="checkbox" /> I have saved and exited
@@ -197,6 +198,36 @@
         source and build bytes; it does not describe unsaved editor text.
       </p>
       <h3>Disk capacity</h3>
+      <label
+        >Target two-MiB drive slots
+        <input
+          id="configured-count"
+          type="number"
+          min="1"
+          max="16"
+          step="1"
+          value="4"
+          disabled
+        />
+      </label>
+      <div class="controls">
+        <button id="configure-drives" type="button" disabled>
+          Stage drive configuration
+        </button>
+        <button id="blank-drive" type="button" disabled>
+          Stage blank selected drive
+        </button>
+        <button id="eject-drive" type="button" disabled>
+          Stage ejection of selected drive
+        </button>
+      </div>
+      <p>
+        Choose 1–16 slots, usually 2 or 4. Empty slots remain configured and
+        reserve the same guest memory. A must be inserted to boot. Applying a
+        configuration replaces A's resident system, preserves existing two-MiB
+        filesystem bytes, backs up all preceding media and reboots. Historical
+        files are migrated only if the complete retained contents fit.
+      </p>
       <button id="migrate-large-disk" type="button" disabled>
         Stage upgrade of drive A to 8 MiB
       </button>
@@ -260,8 +291,8 @@
         />
       </label>
       <p>
-        Drive-set archives include the exact bootstrap and both images,
-        including an absent B. No adaptation is applied when restoring an
+        Drive-set archives include the exact bootstrap and all media slots,
+        including empty slots. No adaptation is applied when restoring an
         archive.
       </p>
       <h3>Recovery backups</h3>

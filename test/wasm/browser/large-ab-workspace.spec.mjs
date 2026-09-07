@@ -7,14 +7,14 @@ const digest = (bytes) => createHash("sha256").update(bytes).digest("hex");
 
 async function state(page) {
   return page.evaluate(async () => {
-    const { openDriveSetStore } = await import("/drive-set-store.js");
+    const { openSavedMachineStore } = await import("/saved-machine-store.js");
     const { CpmDisk } = await import("/triptych_host_wasm.js");
     const hash = async (bytes) =>
       Array.from(
         new Uint8Array(await crypto.subtle.digest("SHA-256", bytes)),
         (n) => n.toString(16).padStart(2, "0"),
       ).join("");
-    const store = await openDriveSetStore();
+    const store = await openSavedMachineStore();
     try {
       const head = await store.load();
       if (head.kind !== "ready") throw new Error(head.error ?? head.kind);
@@ -121,9 +121,9 @@ test("A/B migration, B tool workflows, complete export and removal/restore prese
   // Import released example source onto B, then install each verified tool
   // through the selected-drive UI. These are file copies, not OS adaptation.
   const sources = await page.evaluate(async () => {
-    const { openDriveSetStore } = await import("/drive-set-store.js");
+    const { openSavedMachineStore } = await import("/saved-machine-store.js");
     const { CpmDisk } = await import("/triptych_host_wasm.js");
-    const store = await openDriveSetStore();
+    const store = await openSavedMachineStore();
     const head = await store.load();
     const disk = new CpmDisk(head.snapshot.drives.A.bytes);
     try {
@@ -270,7 +270,7 @@ test("A/B migration, B tool workflows, complete export and removal/restore prese
   for (const name of ["A", "B"]) {
     const pendingRaw = page.waitForEvent("download");
     await page
-      .getByRole("button", { name: `Download raw ${name}`, exact: true })
+      .getByRole("button", { name: `Download raw v4 ${name}`, exact: true })
       .click();
     const rawPath = info.outputPath(`raw-${name}.img`);
     await (await pendingRaw).saveAs(rawPath);

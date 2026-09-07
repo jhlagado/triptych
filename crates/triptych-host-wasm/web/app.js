@@ -7,9 +7,18 @@ import {
   TerminalBuffer,
   textInputToBytes,
 } from "./terminal.js";
-import { acquireDiskWriter, createDiskWorkspace } from "./disk-workspace.js";
-import { openDriveSetStore } from "./drive-set-store.js";
-import { copyDriveSet, encodeDriveSet, decodeDriveSet } from "./drive-set.js";
+import { acquireDiskWriter } from "./disk-workspace.js";
+import { openSavedMachineStore } from "./saved-machine-store.js";
+import { createSavedMachineWorkspace } from "./saved-machine-workspace.js";
+import { prepareSavedMachineRuntime } from "./saved-machine-runtime.js";
+import {
+  copySavedMachine,
+  sameSavedMachine,
+  encodeSavedMachine,
+  decodeSavedMachineArchive,
+} from "./saved-machine.js";
+import { prepareTwoMibConfiguration } from "./saved-machine-configuration.js";
+import { fetchTwoMibSystem } from "./two-mib-system.js";
 import { prepareSourceBundle, mapSourceBundleOffset } from "./source-bundle.js";
 import {
   fetchLargeDiskSystem,
@@ -40,6 +49,8 @@ const mobileKeyButtons = document.querySelectorAll("[data-terminal-key]");
 const terminal = new TerminalBuffer();
 
 let machine;
+let runtime;
+let startupRuntime;
 let bootRom;
 let ccp;
 let bdos;
@@ -93,6 +104,41 @@ const downloadSetButton = document.querySelector("#download-set");
 const downloadCheckpointSetButton = document.querySelector(
   "#download-checkpoint-set",
 );
+const slotCount = document.querySelector("#configured-count");
+const configureButton = document.querySelector("#configure-drives");
+const blankDriveButton = document.querySelector("#blank-drive");
+const ejectDriveButton = document.querySelector("#eject-drive");
+for (let index = 2; index < 16; index++) {
+  const option = document.createElement("option");
+  option.value = option.textContent = String.fromCharCode(65 + index);
+  driveSelect.append(option);
+}
+
+function driveIndex(letter = selectedDrive) {
+  if (!/^[A-P]$/.test(letter)) throw new Error("Select a drive from A to P.");
+  return letter.charCodeAt(0) - 65;
+}
+function slots(snapshot) {
+  if (!snapshot) return [];
+  return snapshot.schema === "triptych-drive-set-v4"
+    ? snapshot.slots
+    : [snapshot.drives.A, snapshot.drives.B];
+}
+function imageAt(snapshot, letter = selectedDrive) {
+  return slots(snapshot)[driveIndex(letter)];
+}
+function replaceImage(snapshot, letter, image) {
+  if (snapshot.schema === "triptych-drive-set-v4") {
+    const index = driveIndex(letter);
+    if (index >= snapshot.configuredCount)
+      throw new Error("Drive is outside the configured slots.");
+    snapshot.slots[index] = image;
+  } else {
+    if (!["A", "B"].includes(letter))
+      throw new Error("This historical profile supports A/B only.");
+    snapshot.drives[letter] = image;
+  }
+}
 
 function displayedSet() {
   return managementToken
@@ -100,36 +146,17 @@ function displayedSet() {
     : committed?.snapshot;
 }
 function selectedImage(snapshot) {
-  const image = snapshot?.drives[selectedDrive];
+  const image = imageAt(snapshot);
   if (!image) throw new Error(`Drive ${selectedDrive} is not attached.`);
   return image;
 }
 function captureCheckpoint() {
-  if (!machine || !activeMedia)
-    throw new Error("No running drive set is available.");
-  return {
-    bootstrap: {
-      profile: activeMedia.bootstrap.profile,
-      bytes: activeMedia.bootstrap.bytes.slice(),
-    },
-    drives: {
-      A: {
-        name: activeMedia.names.A,
-        bytes: machine.export_drive_checkpoint(0),
-      },
-      B:
-        activeMedia.names.B === null
-          ? null
-          : {
-              name: activeMedia.names.B,
-              bytes: machine.export_drive_checkpoint(1),
-            },
-    },
-  };
+  if (!runtime) throw new Error("No running drive set is available.");
+  return runtime.captureCheckpoint();
 }
 function stageSet(token, snapshot) {
   workspace.stage(token, snapshot);
-  stagedSet = copyDriveSet(snapshot);
+  stagedSet = copySavedMachine(snapshot);
 }
 
 function message(error) {
@@ -138,11 +165,10 @@ function message(error) {
 function controls() {
   const running = machineRunning && workspace?.canRun;
   resetButton.disabled = !running || filesDialog.open;
-  downloadButton.disabled = !committed?.snapshot.drives[selectedDrive];
+  downloadButton.disabled = !imageAt(committed?.snapshot);
   downloadButton.textContent = `Download saved disk ${selectedDrive}`;
   downloadSetButton.disabled = !committed;
-  recoveryDownload.disabled =
-    !machine || activeMedia?.names[selectedDrive] === null;
+  recoveryDownload.disabled = !machine || !activeMedia?.slots[driveIndex()];
   downloadCheckpointSetButton.disabled = !machine;
   const managing = workspace?.state === "managing";
   beginButton.disabled =
@@ -152,7 +178,18 @@ function controls() {
     !writer?.owned ||
     !discardAcknowledgment.checked;
   const snapshot = stagedSet ?? displayedSet();
-  const attached = !!snapshot?.drives[selectedDrive];
+  const attached = !!imageAt(snapshot);
+  const isTwoMib = snapshot?.schema === "triptych-drive-set-v4";
+  const count = isTwoMib ? snapshot.configuredCount : 2;
+  for (const option of driveSelect.options)
+    option.disabled = driveIndex(option.value) >= count;
+  configureButton.disabled =
+    !managing || !!stagedSet || migrationPending || !deployment?.twoMibProfiles;
+  slotCount.disabled = !managing || !!stagedSet || migrationPending;
+  blankDriveButton.disabled =
+    !managing || !isTwoMib || attached || driveIndex() >= count;
+  ejectDriveButton.disabled =
+    !managing || !isTwoMib || !attached || selectedDrive === "A";
   importInput.disabled = !managing || !attached;
   diskInput.disabled = !managing;
   setInput.disabled = !managing;
@@ -168,6 +205,7 @@ function controls() {
     !deployment?.diskProfiles;
   enableAbButton.disabled =
     !managing ||
+    isTwoMib ||
     !!stagedSet ||
     migrationPending ||
     !deployment?.diskProfiles ||
@@ -175,8 +213,8 @@ function controls() {
   blankBButton.disabled =
     !managing ||
     snapshot?.bootstrap.profile !== "triptych-cpu-v0.1-8m-ab" ||
-    !!snapshot?.drives.B;
-  removeBButton.disabled = !managing || !snapshot?.drives.B;
+    !!imageAt(snapshot, "B");
+  removeBButton.disabled = !managing || isTwoMib || !imageAt(snapshot, "B");
   commitButton.disabled =
     !managementToken ||
     !stagedSet ||
@@ -337,10 +375,7 @@ function runMachine(generation) {
       renderTerminal(terminalElement, terminal.snapshot());
       revealActiveCursor();
     }
-    const counts = [
-      machine.drive_flush_count(0),
-      activeMedia.names.B === null ? 0 : machine.drive_flush_count(1),
-    ];
+    const counts = runtime.flushCounts();
     if (counts.some((count, drive) => count !== lastFlushCounts[drive])) {
       lastFlushCounts = counts;
       void saveCheckpoint();
@@ -367,6 +402,16 @@ async function defaultBootstrap() {
   return bootRom;
 }
 
+async function loadDeployment() {
+  const response = await fetch("deployment-manifest.json", {
+    cache: "no-store",
+    redirect: "error",
+    signal: AbortSignal.timeout(10000),
+  });
+  if (!response.ok) throw new Error("Could not load deployment-manifest.json.");
+  deployment = await response.json();
+}
+
 async function defaultResidents() {
   await defaultBootstrap();
   if (ccp && bdos && bios) return;
@@ -390,6 +435,21 @@ async function defaultResidents() {
 }
 
 async function adaptedDisk(source, profile) {
+  if (source.length === 2097152) {
+    const match = /^triptych-cpu-v0\.1-2m-n(0[1-9]|1[0-6])$/.exec(profile);
+    if (!match)
+      throw new Error(
+        "Configure two-MiB slots before adapting a two-MiB boot disk.",
+      );
+    const { system } = await fetchTwoMibSystem({
+      deployment,
+      configuredCount: Number(match[1]),
+      baseUrl: document.baseURI,
+    });
+    const disk = source.slice();
+    disk.set(system.subarray(0, 6656));
+    return disk;
+  }
   if (source.length === 8388608) {
     const system =
       profile === "triptych-cpu-v0.1-8m-ab"
@@ -432,6 +492,10 @@ function largeAbSystem() {
 
 async function selectedBootstrap(snapshot, choice) {
   if (choice === "current") return snapshot.bootstrap;
+  if (snapshot.schema === "triptych-drive-set-v4")
+    throw new Error(
+      "Use drive configuration to change a two-MiB resident profile, or restore a complete historical archive.",
+    );
   if (snapshot.drives.B && choice !== "triptych-cpu-v0.1-8m-ab")
     throw new Error(
       "Remove B explicitly before selecting a one-drive resident profile.",
@@ -445,41 +509,56 @@ async function selectedBootstrap(snapshot, choice) {
   return { profile: choice, bytes: await defaultBootstrap() };
 }
 
-function prepareMachine(value) {
-  const snapshot = copyDriveSet(value);
-  const cpu = new TriptychCpu(snapshot.bootstrap.bytes);
-  try {
-    cpu.install_drive(0, snapshot.drives.A.bytes, !!writer?.owned);
-    if (snapshot.drives.B)
-      cpu.install_drive(1, snapshot.drives.B.bytes, !!writer?.owned);
-    cpu.reset();
-    return {
-      cpu,
-      media: {
-        bootstrap: snapshot.bootstrap,
-        names: {
-          A: snapshot.drives.A.name,
-          B: snapshot.drives.B?.name ?? null,
-        },
-      },
-    };
-  } catch (error) {
-    cpu.free();
-    throw error;
+function prepareMachine(snapshot) {
+  return prepareSavedMachineRuntime({
+    snapshot,
+    TriptychCpu,
+    writable: !!writer?.owned,
+    deployment,
+  });
+}
+
+function twoMibComLoadLimit(count) {
+  return 65536 - 256 * Math.ceil(count / 2) - 6656 - 256;
+}
+
+function renderActiveConfiguration() {
+  const summary = document.querySelector("#machine-summary");
+  if (!activeMedia) {
+    summary.textContent =
+      "No active machine. Saved media remain available for recovery.";
+    return;
   }
+  const inserted = activeMedia.slots.flatMap((slot, index) =>
+    slot ? [String.fromCharCode(65 + index)] : [],
+  );
+  const twoMib = /^triptych-cpu-v0\.1-2m-n/.test(activeMedia.profile);
+  summary.textContent = `Active machine: ${activeMedia.configuredCount} configured slots; inserted media: ${inserted.join(", ")}. ${twoMib ? `COM load capacity: ${twoMibComLoadLimit(activeMedia.configuredCount)} bytes. ` : ""}Profile: ${activeMedia.profile}.`;
+}
+
+function resetConfigurationTarget() {
+  // Synchronize at lifecycle boundaries, not in controls(): a control refresh
+  // must not erase the user's unsubmitted target count.
+  slotCount.value = /^triptych-cpu-v0\.1-2m-n/.test(activeMedia?.profile ?? "")
+    ? String(activeMedia.configuredCount)
+    : "4";
 }
 
 function activateMachine(prepared) {
-  const previous = machine;
+  const previous = runtime;
+  runtime = prepared;
   machine = prepared.cpu;
   activeMedia = prepared.media;
-  lastFlushCounts = [
-    machine.drive_flush_count(0),
-    activeMedia.names.B === null ? 0 : machine.drive_flush_count(1),
-  ];
+  resetConfigurationTarget();
+  renderActiveConfiguration();
+  lastFlushCounts = runtime.flushCounts();
+  if (driveIndex() >= activeMedia.configuredCount) {
+    selectedDrive = "A";
+    driveSelect.value = "A";
+  }
   terminal.clear();
   renderTerminal(terminalElement, terminal.snapshot());
-  previous?.free();
+  previous?.dispose();
 }
 
 function pauseMachine() {
@@ -495,7 +574,7 @@ function pauseMachine() {
 function resumeMachine() {
   machineRunning = true;
   setStatus(
-    `Running A: ${activeMedia.names.A}${activeMedia.names.B === null ? "" : ` · B: ${activeMedia.names.B}`}${writer?.owned ? "" : " (read-only tab)"}; click or tap the terminal and type at A>.`,
+    `Running ${activeMedia.slots.map((slot, index) => `${String.fromCharCode(65 + index)}: ${slot?.name ?? "empty"}`).join(" · ")}${writer?.owned ? "" : " (read-only tab)"}; click or tap the terminal and type at A>.`,
     "running",
   );
   const generation = ++runGeneration;
@@ -607,13 +686,16 @@ resetButton.addEventListener("click", () => {
 });
 
 downloadButton.addEventListener("click", () => {
-  const disk = committed?.snapshot.drives[selectedDrive];
+  const disk = imageAt(committed?.snapshot);
   if (disk) download(disk.bytes, disk.name);
 });
 downloadSetButton.addEventListener("click", async () => {
   try {
     if (committed)
-      download(await encodeDriveSet(committed.snapshot), "triptych-drives.tds");
+      download(
+        await encodeSavedMachine(committed.snapshot),
+        "triptych-drives.tds",
+      );
   } catch (error) {
     panelError(error);
   }
@@ -621,7 +703,7 @@ downloadSetButton.addEventListener("click", async () => {
 downloadCheckpointSetButton.addEventListener("click", async () => {
   try {
     download(
-      await encodeDriveSet(captureCheckpoint()),
+      await encodeSavedMachine(captureCheckpoint()),
       "checkpoint-triptych-drives.tds",
     );
   } catch (error) {
@@ -642,10 +724,10 @@ function download(bytes, name) {
 }
 
 recoveryDownload.addEventListener("click", () => {
-  if (machine && activeMedia.names[selectedDrive] !== null)
+  if (machine && activeMedia.slots[driveIndex()])
     download(
-      machine.export_drive_checkpoint(selectedDrive === "A" ? 0 : 1),
-      `checkpoint-${activeMedia.names[selectedDrive]}`,
+      machine.export_drive_checkpoint(driveIndex()),
+      `checkpoint-${activeMedia.slots[driveIndex()].name}`,
     );
 });
 retrySave.addEventListener("click", () => void saveCheckpoint());
@@ -692,7 +774,8 @@ function stagingRequest() {
 }
 
 driveSelect.addEventListener("change", () => {
-  selectedDrive = driveSelect.value === "B" ? "B" : "A";
+  driveIndex(driveSelect.value);
+  selectedDrive = driveSelect.value;
   stageGeneration += 1;
   diagnosticAttempt += 1;
   void renderFiles().catch(panelError);
@@ -708,7 +791,7 @@ for (const selector of ["#image-profile", "#adapt-image"]) {
 async function readBackup(id) {
   if (!id.startsWith("v2:")) return store.readBackup(id);
   const bootstrap = await defaultBootstrap();
-  const reader = await openDriveSetStore({ legacyBootstrap: bootstrap });
+  const reader = await openSavedMachineStore({ legacyBootstrap: bootstrap });
   try {
     return await reader.readBackup(id);
   } finally {
@@ -718,12 +801,13 @@ async function readBackup(id) {
 
 async function renderFiles() {
   const generation = ++panelGeneration;
+  renderActiveConfiguration();
   displayedGeometry = undefined;
   fileList.replaceChildren();
   backupList.replaceChildren();
   toolsList.replaceChildren();
   const set = displayedSet();
-  const snapshot = set?.drives[selectedDrive];
+  const snapshot = imageAt(set);
   if (snapshot) {
     document.querySelector("#disk-summary").textContent =
       `Drive ${selectedDrive}: ${snapshot.name} · committed revision ${workspace?.token?.revision ?? committed?.token?.revision ?? "legacy"}. Downloads include CP/M record padding.`;
@@ -740,7 +824,7 @@ async function renderFiles() {
         fileList.append(row);
       }
       document.querySelector("#disk-summary").textContent +=
-        ` Geometry: ${displayedGeometry === "ibm3740" ? "legacy IBM 3740" : "8 MiB"}. Free: ${disk.free_bytes()} bytes, ${disk.free_directory_entries()} directory entries.`;
+        ` Geometry: ${displayedGeometry === "ibm3740" ? "legacy IBM 3740" : displayedGeometry === "triptych-cpm-2m-v1" ? "2 MiB" : "8 MiB"}. Free: ${disk.free_bytes()} bytes, ${disk.free_directory_entries()} directory entries.`;
       if (catalog) {
         const identities = await identifyInstalledTools(
           catalog,
@@ -768,7 +852,7 @@ async function renderFiles() {
     }
   } else
     document.querySelector("#disk-summary").textContent = set
-      ? `Drive ${selectedDrive} is not attached. Enable A/B and stage a blank B or an eight MiB image.`
+      ? `Drive ${selectedDrive} is empty or outside this configuration. Configure slots before inserting media.`
       : "No committed working disk is available.";
   if (!store) return;
   try {
@@ -792,7 +876,7 @@ async function renderFiles() {
           const drive = selectedDrive;
           const value = await readBackup(backup.id);
           if (!value) throw new Error("Backup is unavailable.");
-          const disk = value.drives[drive];
+          const disk = imageAt(value, drive);
           if (!disk)
             throw new Error(
               `Backup has no drive ${drive}; download the complete set instead.`,
@@ -803,7 +887,7 @@ async function renderFiles() {
           const value = await readBackup(backup.id);
           if (!value) throw new Error("Backup is unavailable.");
           download(
-            await encodeDriveSet(value),
+            await encodeSavedMachine(value),
             `backup-r${backup.revision}-drives.tds`,
           );
         }),
@@ -870,6 +954,7 @@ async function enterManagement(recoverSaved = false) {
     }
     managementToken = token;
     discardStaging();
+    resetConfigurationTarget();
     filesStatus.textContent = recoverSaved
       ? "Recovery uses the saved disk only; guest RAM and unsaved writes are excluded. Stage a backup or disk image, then Apply to back up and restart."
       : "CPU paused. Import files or stage an update; Apply creates a backup and restarts CP/M.";
@@ -938,11 +1023,11 @@ async function stageImports(imports, token) {
         return;
       disk.add_import(name, bytes);
     }
-    const value = copyDriveSet(candidate);
-    value.drives[selectedDrive] = {
-      name: image.name,
+    const value = copySavedMachine(candidate);
+    replaceImage(value, selectedDrive, {
+      ...image,
       bytes: disk.export_candidate(),
-    };
+    });
     currentToken(token);
     stageSet(token, value);
     filesStatus.textContent = `Staged ${names.join(", ")}. Apply and restart to publish; nothing has changed on disk yet.`;
@@ -978,7 +1063,9 @@ diskInput.addEventListener("change", async () => {
   if (!file) return;
   try {
     const request = stagingRequest();
-    const candidate = copyDriveSet(stagedSet ?? currentToken(request.token));
+    const candidate = copySavedMachine(
+      stagedSet ?? currentToken(request.token),
+    );
     let bytes = new Uint8Array(await file.arrayBuffer());
     request.check();
     if (request.drive === "A") {
@@ -1001,7 +1088,13 @@ diskInput.addEventListener("change", async () => {
     }
     // Geometry and directory checks apply to Files, but exact whole-disk
     // recovery may legitimately contain an unsupported guest filesystem.
-    candidate.drives[request.drive] = { name: file.name, bytes };
+    replaceImage(candidate, request.drive, {
+      ...(candidate.schema === "triptych-drive-set-v4"
+        ? { instanceId: crypto.randomUUID() }
+        : {}),
+      name: file.name,
+      bytes,
+    });
     stageSet(request.token, candidate);
     filesStatus.textContent = `Staged exact disk ${file.name}${adapt ? " with explicit system adaptation" : ""}. Apply will back up and restart.`;
     controls();
@@ -1038,7 +1131,7 @@ migrateButton.addEventListener("click", async () => {
     request.check();
     if (stagedSet)
       throw new Error("Pending changes must be applied or cancelled first.");
-    const value = copyDriveSet(baseline);
+    const value = copySavedMachine(baseline);
     value.drives.A.bytes = disk.migrate_to_eight_mib(system);
     value.bootstrap = {
       profile: "triptych-cpu-v0.1-8m-a",
@@ -1076,7 +1169,7 @@ enableAbButton.addEventListener("click", async () => {
     controls();
     const verified = await largeAbSystem();
     request.check();
-    const value = copyDriveSet(baseline);
+    const value = copySavedMachine(baseline);
     disk = new CpmDisk(value.drives.A.bytes);
     if (disk.geometry_id() === "ibm3740")
       value.drives.A.bytes = disk.migrate_to_eight_mib(verified.system);
@@ -1101,7 +1194,7 @@ blankBButton.addEventListener("click", () => {
   let disk;
   try {
     const token = managementToken;
-    const value = copyDriveSet(stagedSet ?? currentToken(token));
+    const value = copySavedMachine(stagedSet ?? currentToken(token));
     if (value.bootstrap.profile !== "triptych-cpu-v0.1-8m-ab" || value.drives.B)
       throw new Error("Blank B requires A/B and an absent B drive.");
     stageGeneration += 1;
@@ -1121,7 +1214,7 @@ blankBButton.addEventListener("click", () => {
 removeBButton.addEventListener("click", () => {
   try {
     const token = managementToken;
-    const value = copyDriveSet(stagedSet ?? currentToken(token));
+    const value = copySavedMachine(stagedSet ?? currentToken(token));
     if (!value.drives.B) throw new Error("B is not attached.");
     if (
       !confirm(
@@ -1145,13 +1238,13 @@ setInput.addEventListener("change", async () => {
   if (!file) return;
   try {
     const request = stagingRequest();
-    const value = await decodeDriveSet(
+    const value = await decodeSavedMachineArchive(
       new Uint8Array(await file.arrayBuffer()),
     );
     request.check();
     if (
       !confirm(
-        "Stage this complete saved set, including its exact bootstrap and A/B images? Apply backs up the current set and restarts.",
+        "Stage this complete saved set, including its exact bootstrap and all media slots? Apply backs up the current set and restarts.",
       )
     )
       return;
@@ -1163,6 +1256,108 @@ setInput.addEventListener("change", async () => {
     panelError(error);
   } finally {
     setInput.value = "";
+  }
+});
+
+configureButton.addEventListener("click", async () => {
+  try {
+    const request = stagingRequest();
+    if (stagedSet)
+      throw new Error(
+        "Apply or cancel pending changes before configuring drives.",
+      );
+    const count = Number(slotCount.value);
+    if (!Number.isInteger(count) || count < 1 || count > 16)
+      throw new Error("Configure between 1 and 16 slots.");
+    const baseline = currentToken(request.token);
+    const removed = slots(baseline)
+      .slice(count)
+      .flatMap((slot, index) =>
+        slot ? [String.fromCharCode(65 + count + index)] : [],
+      );
+    if (
+      !confirm(
+        `Configure ${count} two-MiB slots? The COM load limit becomes ${twoMibComLoadLimit(count)} bytes. This replaces A's resident system and migrates historical files if needed. ${removed.length ? `Removed media ${removed.join(", ")} remain in the complete preceding backup. ` : ""}Apply backs up the complete machine and cold reboots; tools are not upgraded.`,
+      )
+    )
+      return;
+    migrationPending = true;
+    controls();
+    const result = await prepareTwoMibConfiguration({
+      snapshot: baseline,
+      configuredCount: count,
+      CpmDisk,
+      deployment,
+      baseUrl: document.baseURI,
+    });
+    request.check();
+    if (stagedSet) throw new Error("A newer change has been staged.");
+    stageSet(request.token, result.snapshot);
+    filesStatus.textContent = `${count} two-MiB slots staged; COM load limit ${result.descriptor.layout.ccp - 256} bytes. Apply creates the complete preceding backup and restarts. Filesystem bytes of existing two-MiB media are unchanged.`;
+  } catch (error) {
+    panelError(error);
+  } finally {
+    migrationPending = false;
+    controls();
+  }
+});
+slotCount.addEventListener("change", () => {
+  stageGeneration += 1;
+});
+blankDriveButton.addEventListener("click", () => {
+  let disk;
+  try {
+    const token = managementToken;
+    const value = copySavedMachine(stagedSet ?? currentToken(token));
+    if (
+      value.schema !== "triptych-drive-set-v4" ||
+      imageAt(value) ||
+      driveIndex() >= value.configuredCount
+    )
+      throw new Error(
+        "A blank disk requires an empty configured two-MiB slot.",
+      );
+    stageGeneration += 1;
+    disk = CpmDisk.create_two_mib();
+    replaceImage(value, selectedDrive, {
+      instanceId: crypto.randomUUID(),
+      name: `triptych-${selectedDrive.toLowerCase()}.img`,
+      bytes: disk.export_candidate(),
+    });
+    stageSet(token, value);
+    filesStatus.textContent = `Blank ${selectedDrive} staged. Apply backs up and restarts the complete machine.`;
+  } catch (error) {
+    panelError(error);
+  } finally {
+    disk?.free();
+    controls();
+  }
+});
+ejectDriveButton.addEventListener("click", () => {
+  try {
+    const token = managementToken;
+    const value = copySavedMachine(stagedSet ?? currentToken(token));
+    if (
+      value.schema !== "triptych-drive-set-v4" ||
+      !imageAt(value) ||
+      selectedDrive === "A"
+    )
+      throw new Error(
+        "Ejection requires inserted media other than boot drive A.",
+      );
+    if (
+      !confirm(
+        `Eject ${selectedDrive}? The configured slot count and application RAM stay unchanged. Apply retains the complete preceding machine as a backup and reboots.`,
+      )
+    )
+      return;
+    stageGeneration += 1;
+    replaceImage(value, selectedDrive, null);
+    stageSet(token, value);
+    filesStatus.textContent = `${selectedDrive} ejection staged; configured slots remain unchanged.`;
+    controls();
+  } catch (error) {
+    panelError(error);
   }
 });
 
@@ -1262,12 +1457,12 @@ prepareBuildButton.addEventListener("click", async () => {
 
 function projectSnapshot() {
   return managementToken
-    ? (stagedSet ?? currentToken(managementToken)).drives[selectedDrive]?.bytes
+    ? imageAt(stagedSet ?? currentToken(managementToken))?.bytes
     : machine
-      ? activeMedia.names[selectedDrive] === null
+      ? !activeMedia.slots[driveIndex()]
         ? undefined
-        : machine.export_drive_checkpoint(selectedDrive === "A" ? 0 : 1)
-      : committed?.snapshot.drives[selectedDrive]?.bytes;
+        : machine.export_drive_checkpoint(driveIndex())
+      : imageAt(committed?.snapshot)?.bytes;
 }
 
 document
@@ -1419,36 +1614,50 @@ async function rawRecovery() {
     document.querySelector("#legacy-recovery").onclick = () =>
       download(legacy.bytes, "legacy-recovery.img");
   }
-  const head = await store
-    .readRawRecovery("drive-set-state", "head")
-    .catch(() => undefined);
   const target = document.querySelector("#raw-recovery");
   target.replaceChildren();
-  if (!head) return;
-  target.append(
-    button("Download raw saved manifest", () =>
-      download(
-        new TextEncoder().encode(JSON.stringify(head)),
-        "drive-set-head.json",
-      ),
-    ),
-  );
-  const refs = [
-    ["bootstrap", head.manifest?.bootstrap?.image],
-    ["A", head.manifest?.drives?.A?.image],
-    ["B", head.manifest?.drives?.B?.image],
-  ];
-  for (const [name, reference] of refs) {
-    if (typeof reference?.sha256 !== "string") continue;
-    const raw = await store
-      .readRawRecovery("drive-set-blobs", reference.sha256)
+  for (const [stateStore, blobStore, version] of [
+    ["drive-set-state-v4", "drive-set-blobs-v4", "v4"],
+    ["drive-set-state", "drive-set-blobs", "v3"],
+  ]) {
+    const head = await store
+      .readRawRecovery(stateStore, "head")
       .catch(() => undefined);
-    if (raw?.bytes)
-      target.append(
-        button(`Download raw ${name}`, () =>
-          download(raw.bytes, `recovery-${name}.bin`),
+    if (!head) continue;
+    target.append(
+      button(`Download raw ${version} saved manifest`, () =>
+        download(
+          new TextEncoder().encode(JSON.stringify(head)),
+          `${version}-drive-set-head.json`,
         ),
-      );
+      ),
+    );
+    const refs = [
+      ["bootstrap", head.manifest?.bootstrap?.image],
+      ...(Array.isArray(head.manifest?.slots)
+        ? head.manifest.slots
+            .slice(0, 16)
+            .map((slot, index) => [
+              String.fromCharCode(65 + index),
+              slot?.image,
+            ])
+        : [
+            ["A", head.manifest?.drives?.A?.image],
+            ["B", head.manifest?.drives?.B?.image],
+          ]),
+    ];
+    for (const [name, reference] of refs) {
+      if (typeof reference?.sha256 !== "string") continue;
+      const raw = await store
+        .readRawRecovery(blobStore, reference.sha256)
+        .catch(() => undefined);
+      if (raw?.bytes)
+        target.append(
+          button(`Download raw ${version} ${name}`, () =>
+            download(raw.bytes, `recovery-${version}-${name}.bin`),
+          ),
+        );
+    }
   }
 }
 
@@ -1458,16 +1667,15 @@ try {
   const options = {
     onBlocked: (text) => setSaveStatus(text, "error"),
   };
-  store = await openDriveSetStore(options);
+  store = await openSavedMachineStore(options);
   let stored = await refreshCommitted();
   if (stored.kind === "recovery") {
-    const v3 = await store.readRawRecovery("drive-set-state", "head");
-    if (v3 === undefined) {
+    if (stored.code === "HISTORICAL_BOOTSTRAP_REQUIRED") {
       // v1/v2 did not store a bootstrap. Supply their historical E400 bootstrap
       // explicitly; leave their source records untouched during this upgrade.
       const historical = await defaultBootstrap();
       store.close();
-      store = await openDriveSetStore({
+      store = await openSavedMachineStore({
         ...options,
         legacyBootstrap: historical,
       });
@@ -1475,6 +1683,11 @@ try {
     }
     if (stored.kind === "recovery") throw new Error(stored.error);
   }
+  // Saved v4 needs descriptor metadata before runtime admission, but no fresh
+  // bootstrap or resident bytes. Historical sessions remain bootable when the
+  // optional release metadata or tool catalog is unavailable.
+  if (committed?.snapshot.schema === "triptych-drive-set-v4")
+    await loadDeployment();
   await init();
   // Corrupt saved data has already failed closed; never seed over it.
   let initial = committed?.snapshot;
@@ -1492,7 +1705,7 @@ try {
       redirect: "error",
     });
     if (!disk.ok) throw new Error("Could not load the distribution disk.");
-    initial = copyDriveSet({
+    initial = copySavedMachine({
       bootstrap: { profile: "legacy-e400", bytes: await defaultBootstrap() },
       drives: {
         A: {
@@ -1502,9 +1715,21 @@ try {
         B: null,
       },
     });
+    startupRuntime = await prepareMachine(initial);
     if (writer.owned) {
-      await store.saveCheckpoint({ kind: "empty" }, initial);
-      await refreshCommitted();
+      const publication = await store.saveCheckpoint(
+        { kind: "empty" },
+        initial,
+      );
+      const published = await refreshCommitted();
+      if (
+        published.kind !== "ready" ||
+        JSON.stringify(published.token) !== JSON.stringify(publication.token) ||
+        !sameSavedMachine(published.snapshot, initial)
+      )
+        throw new Error(
+          "The initial saved machine changed before activation. Reload to recover its current authority.",
+        );
     } else
       committed = {
         kind: "ready",
@@ -1512,24 +1737,26 @@ try {
         snapshot: initial,
       };
   }
-  activateMachine(prepareMachine(initial));
+  startupRuntime ??= await prepareMachine(initial);
+  activateMachine(startupRuntime);
+  startupRuntime = undefined;
   const coordinatedStore = {
     load: () => store.load(),
     commitChange: (...args) => store.commitChange(...args),
     async saveCheckpoint(token, value) {
-      const snapshot = copyDriveSet(value);
-      const receipt = await store.saveCheckpoint(token, snapshot);
+      const snapshot = copySavedMachine(value);
+      const publication = await store.saveCheckpoint(token, snapshot);
       committedGeneration += 1;
       committed = {
         kind: "ready",
-        token: { kind: "v3", revision: receipt.revision },
+        token: publication.token,
         snapshot,
-        receipt,
+        receipt: publication.receipt,
       };
-      return receipt;
+      return publication;
     },
   };
-  workspace = createDiskWorkspace({
+  workspace = createSavedMachineWorkspace({
     store: coordinatedStore,
     writer,
     token: committed?.token ?? { kind: "empty" },
@@ -1540,7 +1767,7 @@ try {
       checkpoint: captureCheckpoint,
       prepare: prepareMachine,
       activate: activateMachine,
-      discard: (prepared) => prepared.cpu.free(),
+      discard: (prepared) => prepared.dispose(),
     },
   });
   resumeMachine();
@@ -1553,13 +1780,13 @@ try {
   controls();
   terminalElement.focus({ preventScroll: true });
   try {
-    [deployment, catalog] = await Promise.all(
-      ["deployment-manifest.json", "tool-catalog.json"].map(async (path) => {
-        const response = await fetch(path, { cache: "no-store" });
-        if (!response.ok) throw new Error(`Could not load ${path}.`);
-        return response.json();
-      }),
-    );
+    if (!deployment) await loadDeployment();
+    const response = await fetch("tool-catalog.json", {
+      cache: "no-store",
+      redirect: "error",
+    });
+    if (!response.ok) throw new Error("Could not load tool-catalog.json.");
+    catalog = await response.json();
     validateToolCatalog(catalog, deployment.distribution);
   } catch (error) {
     catalog = undefined;
@@ -1568,6 +1795,12 @@ try {
     controls();
   }
 } catch (error) {
+  try {
+    startupRuntime?.dispose();
+  } catch (cleanupError) {
+    console.warn("Prepared startup cleanup failed", cleanupError);
+  }
+  startupRuntime = undefined;
   setStatus(
     `Recovery required: ${message(error)}. Saved data has not been replaced.`,
     "error",

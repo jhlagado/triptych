@@ -38,6 +38,7 @@ check(
     "test/wasm/two-mib-system-artifacts.node.mjs",
     "test/wasm/saved-machine-runtime.node.mjs",
     "test/wasm/saved-machine-runtime-wasm.node.mjs",
+    "test/wasm/saved-machine-configuration.node.mjs",
   ],
   2,
 );

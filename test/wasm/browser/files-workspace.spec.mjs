@@ -23,20 +23,19 @@ async function manage(page) {
 }
 async function head(page) {
   return page.evaluate(async () => {
-    const { openDriveSetStore } = await import("/drive-set-store.js");
-    let store = await openDriveSetStore();
+    const { openSavedMachineStore } = await import("/saved-machine-store.js");
+    let store = await openSavedMachineStore();
     try {
       let value = await store.load();
       if (
         value.kind === "recovery" &&
-        value.error ===
-          "Historical bootstrap is required to reopen the saved legacy disk."
+        value.code === "HISTORICAL_BOOTSTRAP_REQUIRED"
       ) {
         store.close();
         const legacyBootstrap = new Uint8Array(
           await (await fetch("/bootstrap.bin")).arrayBuffer(),
         );
-        store = await openDriveSetStore({ legacyBootstrap });
+        store = await openSavedMachineStore({ legacyBootstrap });
         value = await store.load();
       }
       if (value.kind !== "ready")
@@ -276,7 +275,7 @@ test("aborted manual publication keeps the head and backups unchanged and retrie
     IDBObjectStore.prototype.add = function (value, ...rest) {
       if (
         globalThis.abortManual &&
-        this.name === "drive-set-state" &&
+        this.name === "drive-set-state-v4" &&
         value?.key?.startsWith("backup:")
       ) {
         globalThis.abortManual = false;
@@ -333,8 +332,8 @@ test("backup restoration preserves exact bytes and backs up the displaced disk",
   expect(restored.bytes).toEqual(original.bytes);
   expect(restored.backups).toHaveLength(2);
   const displaced = await page.evaluate(async (id) => {
-    const { openDriveSetStore } = await import("/drive-set-store.js");
-    const store = await openDriveSetStore();
+    const { openSavedMachineStore } = await import("/saved-machine-store.js");
+    const store = await openSavedMachineStore();
     try {
       return Array.from((await store.readBackup(id)).drives.A.bytes);
     } finally {
@@ -415,8 +414,8 @@ test("corrupt legacy data enters recovery without seeding over the original reco
   await expect(page.locator("#status")).toContainText("Recovery required");
   await expect(page.locator("#legacy-recovery")).toBeVisible();
   const original = await page.evaluate(async () => {
-    const { openDriveSetStore } = await import("/drive-set-store.js");
-    const store = await openDriveSetStore();
+    const { openSavedMachineStore } = await import("/saved-machine-store.js");
+    const store = await openSavedMachineStore();
     try {
       const value = await store.readRawRecovery("working-disks", "drive-a");
       return { schema: value.schema, bytes: Array.from(value.bytes) };
@@ -490,7 +489,7 @@ for (const newerAction of ["disk", "file"]) {
 test("closing while management entry saves cancels the eventual session and resumes input", async ({
   page,
 }) => {
-  await page.route("**/drive-set-store.js", async (route) => {
+  await page.route("**/saved-machine-store.js", async (route) => {
     const response = await route.fetch();
     const source = await response.text();
     const marker = "publish(expected, undefined, snapshot, false),";
@@ -523,7 +522,7 @@ test("closing while management entry saves cancels the eventual session and resu
   await expect(page.locator("#terminal")).toContainText("ATOM");
 });
 
-test("saved v3 work boots without downloading a replacement bootstrap", async ({
+test("saved historical work in v4 authority boots without downloading a replacement bootstrap", async ({
   page,
 }, info) => {
   await boot(page);
