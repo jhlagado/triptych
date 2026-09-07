@@ -3,7 +3,7 @@ name = "triptych-host-native"
 version = "0.1.0"
 edition.workspace = true
 license.workspace = true
-rust-version.workspace = true
+rust-version = "1.89"
 description = "Native macOS/Linux terminal and disk-image host for Triptych"
 
 [dependencies]
