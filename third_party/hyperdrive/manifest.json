@@ -1,0 +1,46 @@
+{
+  "format": "hyperdrive-build-v1",
+  "artifact": "HYPERDRV.COM",
+  "version": "0.1.0",
+  "loadAddress": 256,
+  "entryAddress": 256,
+  "bytes": 15152,
+  "sha256": "a3db132195631da3cd80885d9072b7b7cf1bb96118fc24363be71b93c7be3870",
+  "assembler": {
+    "name": "atom-z80",
+    "revision": "802b5c2d320bec777f427755ff2d7338e3b80a05"
+  },
+  "sourceFormat": "native-atom",
+  "memory": {
+    "start": 256,
+    "endExclusive": 15408,
+    "allocatedBytes": 15152,
+    "stackStart": 14896,
+    "stackEndExclusive": 15408,
+    "stackBytes": 512,
+    "dynamicAllocationBytes": 0
+  },
+  "sourceSha256": "e0e33544307238af50aa2729efe45a73cf1dcc59689126ab23f71fd1bb4dac55",
+  "sourceFiles": {
+    "cpm/actions.asm": "8d982cc2644d42ff3a8f848e846059e1d9d4a0dae7f3d5f4ad0a1fe79c72895c",
+    "cpm/acttext.asm": "a656d4367e7ba86fe953dec734080b93b9c61c3732642fe043572549f1f193d1",
+    "cpm/combat.asm": "f256c7440747bd3c2afe40cebd360a465965a3a1632c0a62d309d400ef35104c",
+    "cpm/display.asm": "3518c080a07c93b482e502a8fe3ecf8c7afef533a27018b9647a66f1fe305b2f",
+    "cpm/ending.asm": "99fe8eade2026ad12be19e377e895b45d899b0524ac3b9f575e8899c54540777",
+    "cpm/entry.asm": "19ef197aacb69120ed98ebf6424a7f19f38482ef9ee605c9d6cc622b0c8defdd",
+    "cpm/game.asm": "1f7c584f165535a789c8c8f6319a4727c9b3b548caa5ba0258e6516862214ff7",
+    "cpm/hazards.asm": "437d8061ef4e9aec29f40545d23d9c3c20de0e3af1e91798181d30644d3a8091",
+    "cpm/input.asm": "74626ce6d57b1fb02962ae7d528fba54a6e4fc6ddfcebb75a1fdadfcd9bffd6f",
+    "cpm/main.asm": "f6680c34acc34366e13e663aea86fabd0fea94a5365e64570a3e89d9af8dd4fe",
+    "cpm/numbers.asm": "28260847f9fc3e2610672d8c20555a9263109ca349ad42ba1da14979178e635b",
+    "cpm/pager.asm": "dbd4edf402696b837aea6d17bdeda75283e55274762c4edbcbdb82b06ee20c3a",
+    "cpm/roomtext.asm": "75b9b4d44cdde82d4d408a0f2ea4449b9276670f8623425d4d2ccbf9c325c7d0",
+    "cpm/savecode.asm": "2fea323f27c3436a70481bb149b4ae8b910553cbb6a7c3140bd1324871f0229a",
+    "cpm/savedisk.asm": "dd2658cd64cf5fc368c435edcd4902c5e5ed7388cbbd9e9b8b2c7ceba07b18cd",
+    "cpm/stack.asm": "25818bc15816d622af7ee3f418f18a9c03073956d229041b193430fed0444fda",
+    "cpm/system.asm": "1c6e41af7a6bc66bc5801ce970336db995aad8bb8bf0340266566d18daedede9",
+    "cpm/text.asm": "e337c06fc96092c05632b0c8687852d97c541959434d57d5540551deb7b84956",
+    "cpm/vars.asm": "7e134a6bb43a415d696fa07a2778a0331c7d389d10b1a086904d3a13acca6a7e",
+    "cpm/world.asm": "f021e05ef2cd14e4a627e2cc51ada26443b7682e87c8fade48a35dd57d852c6f"
+  }
+}

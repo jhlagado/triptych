@@ -22,6 +22,10 @@ test("retained A/B release reproduces separate system and bootstrap assets witho
     ab.components.find((c) => c.name === "CAVERNS.COM").bytes,
     distribution.manifest.components.find((c) => c.id === "caverns80").bytes,
   );
+  assert.equal(
+    ab.components.find((c) => c.name === "HYPERDRV.COM").bytes,
+    distribution.manifest.components.find((c) => c.id === "hyperdrive").bytes,
+  );
   assert.equal(ab.bytes.length, 16384);
   assert.equal(ab.bootstrap.length, 256);
   assert.notEqual(ab.profile.systemAsset, single.profile.systemAsset);

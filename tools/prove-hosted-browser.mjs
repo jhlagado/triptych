@@ -851,7 +851,13 @@ try {
   await expect(ab.locator("#files-status")).toContainText(
     "Staged HELLO.ASM, INPUT.NU, NOTE.TXT",
   );
-  for (const name of ["ATOM.COM", "NUC.COM", "EDIT.COM", "CAVERNS.COM"]) {
+  for (const name of [
+    "ATOM.COM",
+    "NUC.COM",
+    "EDIT.COM",
+    "CAVERNS.COM",
+    "HYPERDRV.COM",
+  ]) {
     await ab
       .locator("#tool-list li")
       .filter({ hasText: name })

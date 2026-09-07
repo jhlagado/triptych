@@ -42,7 +42,16 @@ export async function buildCpmDistribution(
   });
   assert.deepEqual(
     lock.components.map((c) => c.id),
-    ["ccp", "bdos", "bios", "atom", "nucleus", "edit", "caverns80"],
+    [
+      "ccp",
+      "bdos",
+      "bios",
+      "atom",
+      "nucleus",
+      "edit",
+      "caverns80",
+      "hyperdrive",
+    ],
   );
   const packageBytes = await readFile(join(repositoryRoot, "package.json"));
   const npmLockBytes = await readFile(

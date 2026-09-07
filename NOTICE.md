@@ -33,3 +33,9 @@ Caverns is Copyright 1982–83 John Hardy. The native ATOM CP/M application unde
 `third_party/caverns80/` is an identified upstream CI artifact, with its original
 manifest, GPLv3 licence and acquisition provenance. Triptych installs the
 verified COM; the game source remains independently maintained in Caverns80.
+
+Hyperdrive is Ken Stone's original VIC-20 adventure. Its recovered program
+credits Ken Stone and John Hardy and states Copyright Micro Parts, 1982.
+The independently maintained native ATOM CP/M release under
+`third_party/hyperdrive/` retains its upstream manifest, GPLv3 licence and
+acquisition provenance. It is distinct from John Hardy's Hyperdrive II.

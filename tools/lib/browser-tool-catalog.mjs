@@ -4,7 +4,7 @@ import { readCpm22File } from "./cpm22-disk.mjs";
 import { validateToolCatalog } from "../../crates/triptych-host-wasm/web/tool-catalog.js";
 
 const hash = (bytes) => createHash("sha256").update(bytes).digest("hex");
-const IDS = ["atom", "nucleus", "edit", "caverns80"];
+const IDS = ["atom", "nucleus", "edit", "caverns80", "hyperdrive"];
 
 /**
  * Extract only the pinned tools from a freshly built private distribution.

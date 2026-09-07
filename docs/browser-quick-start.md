@@ -13,6 +13,23 @@ profile starts with the supplied single-drive disk. Previously saved media
 reopen automatically, so their files and drive layout may differ. Opening a
 new website release does not silently replace their operating system or tools.
 
+## Play Hyperdrive
+
+Open the [Triptych terminal](https://jhlagado.github.io/triptych/) and type
+`HYPERDRV` at `A>`. This is Ken Stone's original 1982 VIC-20 adventure,
+not John Hardy's later Hyperdrive II. Fresh disks include `HYPERDRV.COM`.
+
+Type `HELP` for the story and commands. Space or Enter advances long text;
+Q skips its remaining pages. `INVENTORY` shows your equipment. Use `SAVE CAMP`
+and `LOAD CAMP` to keep and restore a position. `QUIT`, then `Y`, returns
+to CP/M. Wait for the browser's saved-disk status before closing the page.
+
+Previously saved disks stay unchanged. Use Files to select `HYPERDRV.COM`
+from the application catalogue and apply the installation; keep the offered
+backup. This preserves your other files and saved games. The
+[Hyperdrive repository](https://github.com/jhlagado/hyperdrive) contains the
+source and player documentation; development walkthroughs contain spoilers.
+
 ## Play Caverns
 
 Fresh disks include `CAVERNS.COM`, John Hardy's revised 1982–83 adventure.

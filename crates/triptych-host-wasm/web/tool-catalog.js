@@ -3,6 +3,7 @@ const TOOLS = {
   nucleus: "NUC.COM",
   edit: "EDIT.COM",
   caverns80: "CAVERNS.COM",
+  hyperdrive: "HYPERDRV.COM",
 };
 const SHA256 = /^[0-9a-f]{64}$/;
 const REVISION = /^(?:[0-9a-f]{40}|[0-9a-f]{64})$/;
