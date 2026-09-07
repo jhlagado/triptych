@@ -122,7 +122,9 @@ function chainCases() {
 /** Fresh closures and independent images keep every suite below 512 entries.
  * The caller owns execution, lifetime/guard observation and source preservation.
  */
-export function createSuite(kind) {
+export function createSuite(kind, { workLetter = "B" } = {}) {
+  assert.match(workLetter, /^[A-P]$/);
+  const prompt = `\r\n${workLetter}>`;
   const factories = {
     "atom-symbols": symbolCases,
     "atom-parts": partCases,
@@ -134,11 +136,11 @@ export function createSuite(kind) {
   let previous;
   const steps = [
     { id: "boot", input: "", suffix: "\r\nA>" },
-    { id: "select-b", input: "B:\r", suffix: "\r\nB>" },
+    { id: "select-work-drive", input: `${workLetter}:\r`, suffix: prompt },
     ...cases.map(({ name, expected, error }) => ({
       id: `${kind}-${name.slice(0, -4).toLowerCase()}`,
       input: `ATOM ${name} KEEP.COM\r`,
-      suffix: "\r\nB>",
+      suffix: prompt,
       tool: "ATOM.COM",
       required: error ?? "KEEP.COM written",
       // The maximum dependency chain measured about 645 million instructions
@@ -174,7 +176,7 @@ export function createSuite(kind) {
     {
       id: "following-command",
       input: "TYPE END.TXT\r",
-      suffix: "\r\nB>",
+      suffix: prompt,
       required: "AB-LIMITS-END",
     },
   ];

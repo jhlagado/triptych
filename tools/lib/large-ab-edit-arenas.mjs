@@ -9,7 +9,6 @@ const QUERY_LENGTH = 0x1ed4;
 const DMA = 0x1e48;
 const SAVE_STATE = 0x1f15;
 const HORIZONTAL_HIGH = 0x1f24;
-const prompt = "\r\nB>";
 const cursor = "\x1b[1;1H";
 const pad = (bytes) => {
   const records = Buffer.alloc(Math.ceil(bytes.length / 128) * 128, 0x1a);
@@ -19,7 +18,9 @@ const pad = (bytes) => {
 const ram = (cpu, address, length) =>
   Buffer.from(cpu.read_ram(address, length));
 
-export function createSuite() {
+export function createSuite(_kind, { workLetter = "B" } = {}) {
+  assert.match(workLetter, /^[A-P]$/);
+  const prompt = `\r\n${workLetter}>`;
   const originalQuery = Buffer.from("Q".repeat(64) + "TAIL");
   const replacedQuery = Buffer.from("R".repeat(64) + "TAIL");
   const originalGrow = Buffer.from("Q" + "A".repeat(47102));
@@ -129,7 +130,10 @@ export function createSuite() {
   const quit = (id) => add(id, "\x11", prompt, { suffix: prompt, open: false });
 
   add("boot", "", "\r\nA>", { suffix: "\r\nA>", open: false });
-  add("select-b", "B:\r", prompt, { suffix: prompt, open: false });
+  add("select-work-drive", `${workLetter}:\r`, prompt, {
+    suffix: prompt,
+    open: false,
+  });
   launch("query-open", "QUERY.TXT", originalQuery);
   committedQuery = "Q".repeat(64);
   add("query-64", "\x06" + committedQuery, "Find: " + committedQuery, {
