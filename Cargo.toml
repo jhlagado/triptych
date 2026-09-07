@@ -1,5 +1,6 @@
 [workspace]
 members = [
+  "crates/triptych-cpm-cli",
   "crates/triptych-cpm-image",
   "crates/triptych-cpu-core",
   "crates/triptych-cpu-selftest",

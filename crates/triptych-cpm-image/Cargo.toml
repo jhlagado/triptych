@@ -8,7 +8,3 @@ rust-version.workspace = true
 [lib]
 name = "triptych_cpm_image"
 path = "src/lib.rs"
-
-[[bin]]
-name = "triptych-cpm"
-path = "src/main.rs"

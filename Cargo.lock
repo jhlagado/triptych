@@ -193,6 +193,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "triptych-cpm-cli"
+version = "0.1.0"
+dependencies = [
+ "triptych-cpm-image",
+]
+
+[[package]]
 name = "triptych-cpm-image"
 version = "0.1.0"
 

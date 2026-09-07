@@ -1,4 +1,9 @@
-# Triptych CP/M image utility
+# Triptych CP/M image library
+
+This reusable library owns image parsing and filesystem transformations. The
+host-only [`triptych-cpm-cli`](../triptych-cpm-cli/) package provides the
+`triptych-cpm` executable described below. The library retains Rust 1.85 support;
+the CLI requires Rust 1.89. Neither package emulates a CPU.
 
 `triptych-cpm` manages development copies of the legacy IBM 3740 disk and the
 new 8 MiB disk profile. File listing, import and export use user 0. Migration

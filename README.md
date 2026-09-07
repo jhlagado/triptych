@@ -34,7 +34,8 @@ ESP32 physical qualification follows separately when hardware is available.
 
 | Path                          | Contents                                                                    |
 | ----------------------------- | --------------------------------------------------------------------------- |
-| `crates/triptych-cpm-image`   | native CP/M working-image library and command-line utility                  |
+| `crates/triptych-cpm-image`   | portable CP/M working-image library                                         |
+| `crates/triptych-cpm-cli`     | native `triptych-cpm` command-line utility                                  |
 | `src/cpu`                     | boot overlay, serial, storage, port routing, and host reference composition |
 | `src/video`                   | transport-neutral video processor contract and executable model             |
 | `src/sound`                   | transport-neutral synthesizer, PCM, mixer, and port model                   |
@@ -113,18 +114,18 @@ machine distribution, then address its contents by CP/M filename:
 
 ```sh
 node tools/create-cpm-working-image.mjs /path/to/triptych-working.img
-cargo run -p triptych-cpm-image -- list \
+cargo run -p triptych-cpm-cli -- list \
   /path/to/triptych-working.img
-cargo run -p triptych-cpm-image -- import \
+cargo run -p triptych-cpm-cli -- import \
   /path/to/triptych-working.img /path/to/hello.asm HELLO.ASM
-cargo run -p triptych-cpm-image -- export --text \
+cargo run -p triptych-cpm-cli -- export --text \
   /path/to/triptych-working.img HELLO.ASM /path/to/exported-hello.asm
 ```
 
 The creation command publishes a new destination only; an existing file or
 symlink is never replaced. It prints the distribution manifest and requires a
 clean checkout unless `--allow-dirty` is explicitly selected for development.
-The separate `triptych-cpm-image create` command copies and sector-pads an
+The separate `triptych-cpm create` command copies and sector-pads an
 existing image; it does not install machine-compatible system records. `import`
 validates the complete directory and allocation map before atomically replacing
 the image. Binary exports contain complete 128-byte CP/M records; `--text`
