@@ -197,6 +197,7 @@ name = "triptych-cpm-cli"
 version = "0.1.0"
 dependencies = [
  "triptych-cpm-image",
+ "triptych-host-native",
 ]
 
 [[package]]

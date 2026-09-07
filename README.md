@@ -132,6 +132,13 @@ the image. Binary exports contain complete 128-byte CP/M records; `--text`
 removes trailing CP/M `$1A` text EOF bytes. Add `--force` to `export` only when
 an existing Mac file should be replaced.
 
+The CLI and native host acquire exclusive locks on their opened files. Close
+the native session before listing, importing or exporting its mounted images;
+`--force` does not bypass ownership. Other editors must remain offline unless
+they use the same locking policy. The
+[CLI ownership notes](crates/triptych-cpm-cli/README.md) describe atomic
+replacement, alias handling and filesystem limits.
+
 Select the persistent disk when starting the native terminal:
 
 ```sh
@@ -163,9 +170,11 @@ npm run run:cpm22-native
 ```
 
 The launcher rejects incorrect capacities and paths that identify the same file,
-including hard links and symbolic links. These checks run before launch; they
-do not lock images against another process changing them. Use `B:` at the CP/M
-prompt to select B, or an explicit filename such as `TYPE B:README.TXT`.
+including hard links and symbolic links. These checks run before launch; the
+native host then acquires exclusive locks on the opened image files. Those
+locks exclude cooperating owners, including the CLI, but not arbitrary file
+editors. Use `B:` at the CP/M prompt to select B, or an explicit filename such
+as `TYPE B:README.TXT`.
 
 The Stage 5 WebAssembly proof additionally needs the exactly matching
 `wasm-bindgen` 0.2.127 command-line tool:
