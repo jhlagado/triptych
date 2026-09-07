@@ -68,3 +68,21 @@ site's behavior; the release still requires the hosted proof after publication.
 The saved-runtime adapter is integrated and tested but is not yet connected to
 the public application's storage and configuration controls. Browser activation,
 complete tool qualification and release verification remain open.
+
+## Complete foundation run
+
+The full `npm run check` at `13db997` completed successfully, including all
+158 browser cases and the final Rust formatting, Clippy, workspace tests and
+release WASM build. This run supersedes the failed `f2b9c60` invocation for the
+integrated saved-runtime and deployment-check foundation. Its retained log is
+`/tmp/triptych-two-mib-host-smoke.Te931B/saved-runtime-served-assets-full-check.log`.
+The matching older Linux run `34073569820` failed on the same two formatting
+assertions fixed before this local run; it is not a green CI result.
+
+Subsequent integration adds the reviewed
+[two-MiB lifetime matrix](two-mib-tool-lifetimes.md) as a required check after
+the historical large-disk gates. It retains the earlier gates and requires the
+native/WASM hosts they build. The browser CI timeout is now 45 minutes: the
+previous Linux check took about seventeen minutes, and the new 31-case matrix
+adds two-worker instruction-level proofs whose combined CI cost remains to be
+measured. The new wrapper and complete expanded check still require execution.
