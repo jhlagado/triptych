@@ -1,0 +1,33 @@
+# Integrated two-MiB verification gates
+
+Date: 2026-09-07. The system builder and browser admission changes are integrated
+at `ecad98e`, following the captured-source and WASM filesystem changes.
+Application activation and release qualification remain incomplete.
+
+`npm run check:two-mib-system` assembles each of the sixteen profiles once into
+a fresh temporary capture directory. After the builder suite succeeds, the gate
+passes those exact artifacts to the browser API tests, including Chromium.
+Missing captures fail; no earlier fixture directory is reused. Captures remain
+available at the path printed by the command. Both fixture environment variables
+are overridden by this gate.
+
+The integrated run passed nine builder tests and 94 browser tests: 77 synthetic
+cases plus seventeen actual-artifact cases, including Chromium n01/n16. Its
+capture directory was
+`/var/folders/z3/5d423z657d7fm572qd818jd00000gn/T/triptych-two-mib-check-JkTqKg`.
+This was a development build, not a clean release.
+
+`npm run check:wasm-two-mib-files` rebuilds the Node WASM binding and runs four
+filesystem tests against that exact output. Independent review found that the
+initial command inherited an optional isolated-binding override. A deliberately
+invalid override reproduced the failure after a successful build. The corrected
+wrapper pins the absolute freshly built binding path; all four tests passed with
+the same invalid inherited override. Direct test invocation still permits an
+explicit isolated binding for review.
+
+Both commands are required by `npm run check`, with all earlier gates retained.
+Independent review also checked fresh capture and failure sequencing. The previous
+full-run browser failure was a stale native CLI package reference, corrected in
+`895e479` and verified by its two focused browser tests. The combined full run,
+Linux CI and hosted release remain necessary; these focused results do not prove
+tool lifetimes, persistent runtime activation or ESP32 behavior.

@@ -41,4 +41,6 @@ node --test test/wasm/two-mib-files.node.mjs
 ```
 
 An isolated generated binding may be selected with `TRIPTYCH_WASM_MODULE`.
-Normal verification uses the repository's freshly built Node binding.
+The required `npm run check:wasm-two-mib-files` gate pins the repository's
+freshly built Node binding even when an isolated-binding override is inherited;
+see the [integrated gate report](two-mib-integrated-gates.md).

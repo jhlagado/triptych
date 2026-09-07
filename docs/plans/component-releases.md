@@ -120,3 +120,42 @@ headless target configuration. Move component proofs with their source and
 retain Triptych-specific boot/disk/console scenarios locally. The BIOS remains
 the machine adapter throughout. Extraction is complete only after both sides
 build independently and the consumer uses an immutable dependency.
+
+## ATOM and Nucleus consumer updates
+
+Added 2026-09-07. The dated release identities above record the extraction
+milestones; the checked-in component and package locks select build inputs.
+Every ATOM or Nucleus release requires an explicit Triptych consumer review,
+even when the decision is to retain the currently qualified version.
+
+1. Qualify the component in its authoritative repository. Record the committed
+   and pushed revision, release assets and digests, interface changes and
+   passing upstream checks. An active worktree or a passing subset of tests is
+   not a release input.
+2. Inspect Triptych's assembly API, component locks, retained artifacts,
+   browser tool catalog, source loader and diagnostic mapping for affected
+   boundaries. An ATOM update also requires checking the assembler identity
+   recorded for retained OS releases; changing only package.json is insufficient.
+3. Update compatible pins and verified artifacts together. Record a deliberate
+   deferral when the component remains under qualification or requires an
+   unresolved interface change. Never substitute a sibling worktree's build
+   or an unpinned download for the selected release.
+4. Exercise the tools in each supported resident memory layout: load, compile,
+   execute, edit, save and return to the CCP, including memory-boundary and
+   failure cases. Artifact size alone does not prove buffer and stack safety.
+5. Run the complete Triptych checks and Linux CI, construct the release, then
+   verify the published asset bytes and hosted browser workflow. Record the
+   exact upstream and consumer revisions in a human-facing release report.
+6. Keep fresh installation separate from saved disks. Reopening existing media
+   preserves their tool and system bytes. A user-requested tool update requires
+   the existing backup and recovery flow before publishing replacements.
+
+The pending Nucleus single-stream integration has an ordered 1–255-source-file
+loader contract and a 65,535-byte logical stream limit. That byte count includes
+one inserted LF after every source that lacks a final LF. Qualification must
+cover acceptance of 255 files, rejection of 256 before compilation, byte-limit
+boundaries, invalid or duplicate source identities, invalid bank placements,
+and global-to-file-local diagnostic and debug mapping. Triptych's current
+16-file browser limit remains until the compatible Nucleus release and consumer
+tests are qualified together. Project export/import follows that integration;
+it must preserve maintained source order and source-map semantics.
