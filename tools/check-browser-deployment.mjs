@@ -4,6 +4,7 @@ import { readFile, readdir } from "node:fs/promises";
 import { resolve, join } from "node:path";
 import { webcrypto } from "node:crypto";
 import { fetchLargeAbDiskSystem } from "../crates/triptych-host-wasm/web/disk-profile.js";
+import { fetchTwoMibSystem } from "../crates/triptych-host-wasm/web/two-mib-system.js";
 
 const directory = resolve(process.argv[2] ?? "dist/wasm-browser");
 const expectedRevision = process.argv[3];
@@ -211,6 +212,88 @@ await fetchLargeAbDiskSystem({
     return { ok: true, arrayBuffer: async () => Uint8Array.from(bytes).buffer };
   },
 });
+// Historical deployments may omit this collection. Current configurable-drive
+// release gates select --require-two-mib; runtime subset registries remain valid.
+const requireTwoMib = process.argv.includes("--require-two-mib");
+if (requireTwoMib || Object.hasOwn(manifest, "twoMibProfiles")) {
+  assert.ok(
+    Array.isArray(manifest.twoMibProfiles) &&
+      manifest.twoMibProfiles.length <= 16,
+    "two-MiB profiles must be an array of at most sixteen descriptors",
+  );
+  const counts = manifest.twoMibProfiles.map(
+    (profile) => profile?.configuredCount,
+  );
+  assert.ok(
+    counts.every(
+      (count) => Number.isInteger(count) && count >= 1 && count <= 16,
+    ) && new Set(counts).size === counts.length,
+    "two-MiB configured counts must be distinct integers from one to sixteen",
+  );
+  if (requireTwoMib) {
+    assert.deepEqual(
+      [...counts].sort((a, b) => a - b),
+      Array.from({ length: 16 }, (_, index) => index + 1),
+      "all sixteen two-MiB profiles are required",
+    );
+  }
+  for (const name of ["two-mib-system.js", "drive-set-v4.js"])
+    assert.ok(names.has(name), `missing required two-MiB module ${name}`);
+  const first = manifest.twoMibProfiles[0];
+  for (const configuredCount of counts) {
+    const { descriptor } = await fetchTwoMibSystem({
+      deployment: manifest,
+      configuredCount,
+      baseUrl: "https://deployment.invalid/",
+      crypto: webcrypto,
+      fetch: async (url) =>
+        new Response(
+          await readFile(join(directory, new URL(url).pathname.slice(1))),
+        ),
+    });
+    // Runtime admission checks any supplied source identity. A release checker
+    // additionally requires complete outer metadata and one common toolchain.
+    assert.deepEqual(
+      {
+        revision: descriptor.machine.revision,
+        dirty: descriptor.machine.dirty,
+      },
+      manifest.distribution.triptych,
+      "two-MiB and default distribution source identity",
+    );
+    const { packageIntegrity, ...atom } = descriptor.atom;
+    assert.deepEqual(
+      atom,
+      manifest.distribution.atom,
+      "two-MiB and default distribution ATOM identity",
+    );
+    for (const [actual, expected, label] of [
+      [packageIntegrity, first.atom.packageIntegrity, "ATOM package integrity"],
+      [
+        descriptor.machine.generatorSha256,
+        first.machine.generatorSha256,
+        "generator",
+      ],
+      [descriptor.bios.sourceSha256, first.bios.sourceSha256, "BIOS source"],
+      [
+        descriptor.bootstrap.sourceSha256,
+        first.bootstrap.sourceSha256,
+        "bootstrap source",
+      ],
+      [
+        descriptor.residents.ccp.sourceSha256,
+        first.residents.ccp.sourceSha256,
+        "CCP source",
+      ],
+      [
+        descriptor.residents.bdos.sourceSha256,
+        first.residents.bdos.sourceSha256,
+        "BDOS source",
+      ],
+    ])
+      assert.equal(actual, expected, `one two-MiB family ${label}`);
+  }
+}
 console.log(
   JSON.stringify({
     status: "passed",

@@ -12,6 +12,7 @@ import {
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { addTwoMibDeploymentFixture } from "../support/two-mib-deployment-fixture.mjs";
 import {
   archiveBrowserRecovery,
   verifyBrowserRecoveryArchive,
@@ -150,6 +151,73 @@ afterEach(async () => {
 // site. Historical archives use their corresponding release verifier; runtime
 // compatibility is separately proved, never inferred from this byte archive.
 describe("exact current-build browser recovery archive", () => {
+  it("retains all sixteen optional profile tuples without claiming v4 runtime activation", async () => {
+    const oldProfiles = structuredClone(manifest.diskProfiles);
+    await addTwoMibDeploymentFixture(source, manifest);
+    await saveManifest();
+    const receipt = await archiveBrowserRecovery(options());
+    expect(receipt.assetCount).toBe(64);
+    expect(receipt.intendedStorageSchema).toBe("triptych-drive-set-v3");
+    expect(receipt.runtimeQualification).toBe("not-performed");
+    expect(manifest.diskProfiles).toEqual(oldProfiles);
+    const retained = JSON.parse(
+      await readFile(join(archive, "site/deployment-manifest.json")),
+    );
+    expect(retained.twoMibProfiles).toEqual(manifest.twoMibProfiles);
+    expect(retained.diskProfiles).toEqual(oldProfiles);
+    for (const asset of manifest.assets)
+      expect(await readFile(join(archive, "site", asset.path))).toEqual(
+        await readFile(join(source, asset.path)),
+      );
+    expect(await verifyBrowserRecoveryArchive(options())).toEqual(receipt);
+  });
+
+  it.each([
+    "system-triptych-cpm-2m-n16-v1.bin",
+    "bootstrap-triptych-cpm-2m-n01-v1.bin",
+  ])(
+    "rejects missing new asset %s before archive reservation",
+    async (name) => {
+      await addTwoMibDeploymentFixture(source, manifest);
+      await saveManifest();
+      await rm(join(source, name));
+      await expect(archiveBrowserRecovery(options())).rejects.toThrow(/ENOENT/);
+      expect(await readdir(root)).toEqual(["source"]);
+    },
+  );
+
+  it("rejects rehashed neighboring BIOS substitution before archive reservation", async () => {
+    const tuples = await addTwoMibDeploymentFixture(source, manifest, [3, 4]);
+    const profile = manifest.twoMibProfiles[0];
+    const bytes = Buffer.from(tuples[0].system);
+    bytes.set(tuples[1].system.subarray(5632, 6656), 5632);
+    profile.system.sha256 = sha256(bytes);
+    profile.bios.sha256 = sha256(bytes.subarray(5632, 6656));
+    manifest.assets.find(
+      (asset) => asset.path === profile.system.asset,
+    ).sha256 = profile.system.sha256;
+    await writeFile(join(source, profile.system.asset), bytes);
+    await saveManifest();
+    await expect(archiveBrowserRecovery(options())).rejects.toThrow(
+      /nonzero unused DPH padding/,
+    );
+    expect(await readdir(root)).toEqual(["source"]);
+  });
+
+  it.each(["two-mib-system.js", "drive-set-v4.js"])(
+    "rejects an omitted module %s even if the archive file inventory agrees",
+    async (name) => {
+      await addTwoMibDeploymentFixture(source, manifest);
+      await rm(join(source, name));
+      manifest.assets = manifest.assets.filter((asset) => asset.path !== name);
+      await saveManifest();
+      await expect(archiveBrowserRecovery(options())).rejects.toThrow(
+        new RegExp(`missing required two-MiB module ${name}`),
+      );
+      expect(await readdir(root)).toEqual(["source"]);
+    },
+  );
+
   it("retains every exact served byte and external identity without claiming runtime proof", async () => {
     const receipt = await archiveBrowserRecovery(options());
     expect(receipt).toEqual({
