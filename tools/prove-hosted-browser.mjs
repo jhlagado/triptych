@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
-import { resolve, join } from "node:path";
+import { resolve, join, extname } from "node:path";
 import { execFileSync } from "node:child_process";
 import { chromium, expect } from "@playwright/test";
 import { installCpm22File, readCpm22File } from "./lib/cpm22-disk.mjs";
@@ -103,7 +103,7 @@ try {
   }
   async function newPage() {
     // Every profile is disposable; no user's browser or saved disk is opened.
-    const context = await browser.newContext();
+    const context = await browser.newContext({ serviceWorkers: "block" });
     // Playwright routing disables the HTTP cache. Each navigation must supply
     // complete response bytes for identity checks, not a conditional 304.
     // Forward requests unchanged; status, length and hash checks still apply.
@@ -728,6 +728,181 @@ try {
     "Written after v2 migration",
   );
 
+  // A canonical v3 snapshot inside v4 storage does not exercise promotion from
+  // actual v3 authority. Seed its old store while the current app is blocked.
+  const migratedV3 = await newPage();
+  await migratedV3.route(appUrl, (route) => route.abort());
+  await migratedV3.goto(base.href);
+  const v3Bootstrap = await readFile(join(directory, "bootstrap.bin"));
+  const v3HeadBytes = installCpm22File(legacyBytes, {
+    name: "V3.TXT",
+    bytes: Buffer.from("Historical version three survives\r\n"),
+    padByte: 26,
+  });
+  const v3StoreUrl = new URL("drive-set-store.js", base).href;
+  const v3SeedResponsePending = migratedV3.waitForResponse(
+    (response) => response.url() === v3StoreUrl,
+  );
+  await migratedV3.evaluate(
+    async ({ url, bootstrap, before, after }) => {
+      const { openDriveSetStore } = await import(url);
+      const snapshot = (bytes) => ({
+        bootstrap: {
+          profile: "legacy-e400",
+          bytes: Uint8Array.from(bootstrap),
+        },
+        drives: {
+          A: { name: "historical-v3.img", bytes: Uint8Array.from(bytes) },
+          B: null,
+        },
+      });
+      const store = await openDriveSetStore();
+      try {
+        const first = await store.saveCheckpoint(
+          { kind: "empty" },
+          snapshot(before),
+        );
+        await store.commitChange(
+          { kind: "v3", revision: first.revision },
+          "hosted-v3-change",
+          snapshot(after),
+        );
+      } finally {
+        store.close();
+      }
+    },
+    {
+      url: v3StoreUrl,
+      bootstrap: Array.from(v3Bootstrap),
+      before: Array.from(legacyBytes),
+      after: Array.from(v3HeadBytes),
+    },
+  );
+  const v3SeedResponse = await v3SeedResponsePending;
+  const v3SeedAsset = manifest.assets.find(
+    (asset) => asset.path === "drive-set-store.js",
+  );
+  const v3SeedBody = await v3SeedResponse.body();
+  assert.ok(v3SeedResponse.ok() && v3SeedAsset);
+  assert.equal(v3SeedBody.length, v3SeedAsset.bytes);
+  assert.equal(digest(v3SeedBody), v3SeedAsset.sha256);
+  async function rawLegacyV3(target) {
+    return target.evaluate(async () => {
+      const db = await new Promise((resolve, reject) => {
+        const opening = indexedDB.open("triptych-cpu");
+        opening.onsuccess = () => resolve(opening.result);
+        opening.onerror = () => reject(opening.error);
+      });
+      try {
+        const rows = await new Promise((resolve, reject) => {
+          const tx = db.transaction(
+            ["drive-set-state", "drive-set-blobs"],
+            "readonly",
+          );
+          const state = tx.objectStore("drive-set-state").getAll();
+          const blobs = tx.objectStore("drive-set-blobs").getAll();
+          tx.oncomplete = () =>
+            resolve({ state: state.result, blobs: blobs.result });
+          tx.onabort = () => reject(tx.error);
+        });
+        const bytes = new TextEncoder().encode(
+          JSON.stringify(rows, (_key, value) =>
+            value instanceof Uint8Array ? Array.from(value) : value,
+          ),
+        );
+        return {
+          sha256: Array.from(
+            new Uint8Array(await crypto.subtle.digest("SHA-256", bytes)),
+            (byte) => byte.toString(16).padStart(2, "0"),
+          ).join(""),
+          stateKeys: rows.state.map((row) => row.key),
+          blobCount: rows.blobs.length,
+        };
+      } finally {
+        db.close();
+      }
+    });
+  }
+  const v3RawBefore = await rawLegacyV3(migratedV3);
+  assert.ok(v3RawBefore.stateKeys.includes("head"));
+  assert.ok(v3RawBefore.stateKeys.includes("backup:hosted-v3-change"));
+  await migratedV3.unrouteAll();
+  const migratedV3Seen = observe(migratedV3, "migrated-v3");
+  await boot(migratedV3, true);
+  const v3Reopened = await stored(migratedV3);
+  assert.equal(v3Reopened.token.kind, "historical");
+  assert.equal(v3Reopened.token.store, "drive-set-state");
+  assert.deepEqual(v3Reopened.bytes, Array.from(v3HeadBytes));
+  assert.equal(v3Reopened.name, "historical-v3.img");
+  assert.equal(v3Reopened.b, null);
+  assert.deepEqual(v3Reopened.bootstrap.bytes, Array.from(v3Bootstrap));
+  assert.equal(v3Reopened.bootstrap.profile, "legacy-e400");
+  assert.equal(v3Reopened.backups.length, 1);
+  assert.equal(v3Reopened.backups[0].id, "v3:hosted-v3-change");
+  assert.deepEqual(v3Reopened.backups[0].bytes, Array.from(legacyBytes));
+  assert.equal(v3Reopened.backups[0].name, v3Reopened.name);
+  assert.equal(v3Reopened.backups[0].b, null);
+  assert.deepEqual(v3Reopened.backups[0].bootstrap, v3Reopened.bootstrap);
+  assert.deepEqual(await rawLegacyV3(migratedV3), v3RawBefore);
+  await manage(migratedV3);
+  const v3Checkpoint = await stored(migratedV3);
+  assert.equal(v3Checkpoint.token.kind, "v4");
+  assert.deepEqual(v3Checkpoint.bytes, v3Reopened.bytes);
+  assert.deepEqual(v3Checkpoint.bootstrap, v3Reopened.bootstrap);
+  assert.equal(v3Checkpoint.name, v3Reopened.name);
+  assert.equal(v3Checkpoint.b, null);
+  assert.equal(v3Checkpoint.backups.length, 2);
+  const promotedV3 = v3Checkpoint.backups.find((backup) =>
+    backup.id.startsWith("v4:"),
+  );
+  assert.match(promotedV3.operationId, /^checkpoint:/);
+  assert.deepEqual(promotedV3.bytes, Array.from(v3HeadBytes));
+  assert.equal(promotedV3.name, v3Reopened.name);
+  assert.equal(promotedV3.b, null);
+  assert.deepEqual(promotedV3.bootstrap, v3Reopened.bootstrap);
+  assert.deepEqual(
+    v3Checkpoint.backups.find((backup) => backup.id === "v3:hosted-v3-change"),
+    v3Reopened.backups[0],
+  );
+  assert.deepEqual(await rawLegacyV3(migratedV3), v3RawBefore);
+  await migratedV3.locator("#file-import").setInputFiles({
+    name: "AFTER.TXT",
+    mimeType: "text/plain",
+    buffer: Buffer.from("Written after v3 promotion\r\n"),
+  });
+  await expect(migratedV3.locator("#files-status")).toContainText(
+    "Staged AFTER.TXT",
+  );
+  await apply(migratedV3);
+  const v3Saved = await stored(migratedV3);
+  assert.equal(v3Saved.backups.length, 3);
+  for (const backup of v3Checkpoint.backups)
+    assert.deepEqual(
+      v3Saved.backups.find((entry) => entry.id === backup.id),
+      backup,
+    );
+  const manualV3 = v3Saved.backups.find(
+    (entry) => !v3Checkpoint.backups.some((backup) => backup.id === entry.id),
+  );
+  assert.deepEqual(manualV3.bytes, v3Checkpoint.bytes);
+  assert.equal(manualV3.name, v3Checkpoint.name);
+  assert.equal(manualV3.b, v3Checkpoint.b);
+  assert.deepEqual(manualV3.bootstrap, v3Checkpoint.bootstrap);
+  assert.equal(manualV3.revision, v3Checkpoint.revision);
+  assert.doesNotMatch(manualV3.operationId, /^checkpoint:/);
+  await migratedV3.locator("#close-files").click();
+  await savedBoot(migratedV3);
+  assert.deepEqual(await stored(migratedV3), v3Saved);
+  assert.deepEqual(await rawLegacyV3(migratedV3), v3RawBefore);
+  await command(migratedV3, "TYPE V3.TXT");
+  await expect(migratedV3.locator("#terminal")).toContainText(
+    "Historical version three survives",
+  );
+  await command(migratedV3, "TYPE AFTER.TXT");
+  await expect(migratedV3.locator("#terminal")).toContainText(
+    "Written after v3 promotion",
+  );
+
   // A separate disposable context exercises the actual hosted A/B assets and
   // selected-drive UI. Hash complete images without serializing every backup's
   // 16 MiB payload through the browser automation protocol.
@@ -1124,70 +1299,160 @@ try {
         const head = await store.load();
         if (head.kind !== "ready" || head.token.kind !== "v4")
           throw new Error(`Expected v4 authority: ${JSON.stringify(head)}`);
-        const snapshot = head.snapshot;
-        if (snapshot.schema !== "triptych-drive-set-v4")
-          throw new Error("Expected a two-MiB saved snapshot");
-        const slots = [];
-        for (const slot of snapshot.slots)
-          slots.push(
-            slot
-              ? {
-                  instanceId: slot.instanceId,
-                  name: slot.name,
-                  bytes: slot.bytes.length,
-                  sha256: await hash(slot.bytes),
-                }
-              : null,
-          );
-        return {
-          schema: snapshot.schema,
-          configuredCount: snapshot.configuredCount,
-          bootstrap: {
+        const describe = async (snapshot) => {
+          const image = async (slot) =>
+            slot && {
+              ...(slot.instanceId ? { instanceId: slot.instanceId } : {}),
+              name: slot.name,
+              bytes: slot.bytes.length,
+              sha256: await hash(slot.bytes),
+            };
+          const bootstrap = {
             profile: snapshot.bootstrap.profile,
             bytes: snapshot.bootstrap.bytes.length,
             sha256: await hash(snapshot.bootstrap.bytes),
-          },
-          slots,
+          };
+          return snapshot.schema === "triptych-drive-set-v4"
+            ? {
+                schema: snapshot.schema,
+                configuredCount: snapshot.configuredCount,
+                bootstrap,
+                slots: await Promise.all(snapshot.slots.map(image)),
+              }
+            : {
+                bootstrap,
+                drives: {
+                  A: await image(snapshot.drives.A),
+                  B: await image(snapshot.drives.B),
+                },
+              };
+        };
+        const backups = [];
+        for (const entry of (await store.listBackups()).sort((a, b) =>
+          a.id.localeCompare(b.id),
+        )) {
+          assertAvailable(entry);
+          const snapshot = await store.readBackup(entry.id);
+          if (!snapshot) throw new Error(`Missing backup ${entry.id}`);
+          backups.push({ ...entry, snapshot: await describe(snapshot) });
+        }
+        function assertAvailable(entry) {
+          if (entry.kind !== "available")
+            throw new Error(JSON.stringify(entry));
+        }
+        return {
+          token: head.token,
+          snapshot: await describe(head.snapshot),
+          backups,
         };
       } finally {
         store.close();
       }
     }, new URL("saved-machine-store.js", base).href);
   }
+  function exactMachineBackup(before, after, label) {
+    assert.equal(
+      after.backups.length,
+      before.backups.length + 1,
+      `${label}: one new backup`,
+    );
+    for (const backup of before.backups)
+      assert.deepEqual(
+        after.backups.find((entry) => entry.id === backup.id),
+        backup,
+        `${label}: existing backup unchanged`,
+      );
+    const added = after.backups.filter(
+      (entry) => !before.backups.some((backup) => backup.id === entry.id),
+    );
+    assert.equal(added.length, 1);
+    assert.equal(added[0].revision, before.token.revision);
+    assert.deepEqual(
+      added[0].snapshot,
+      before.snapshot,
+      `${label}: every preceding image, identity, count and bootstrap retained`,
+    );
+  }
+  function archiveState(snapshot) {
+    const image = (slot) =>
+      slot && {
+        ...(slot.instanceId ? { instanceId: slot.instanceId } : {}),
+        name: slot.name,
+        bytes: slot.bytes.length,
+        sha256: digest(slot.bytes),
+      };
+    const bootstrap = {
+      profile: snapshot.bootstrap.profile,
+      bytes: snapshot.bootstrap.bytes.length,
+      sha256: digest(snapshot.bootstrap.bytes),
+    };
+    return snapshot.schema === "triptych-drive-set-v4"
+      ? {
+          schema: snapshot.schema,
+          configuredCount: snapshot.configuredCount,
+          bootstrap,
+          slots: snapshot.slots.map(image),
+        }
+      : {
+          bootstrap,
+          drives: { A: image(snapshot.drives.A), B: image(snapshot.drives.B) },
+        };
+  }
   const twoMib = await newPage();
   const twoMibSeen = observe(twoMib, "two-mib-sixteen");
   await boot(twoMib);
   await manage(twoMib);
+  const beforeSixteen = await twoMibState(twoMib);
   await twoMib.locator("#configured-count").fill("16");
   await twoMib.locator("#configure-drives").click();
   await expect(twoMib.locator("#files-status")).toContainText(
     "16 two-MiB slots staged",
   );
-  await twoMib.locator("#file-drive").selectOption("P");
-  await twoMib.locator("#blank-drive").click();
-  await expect(twoMib.locator("#files-status")).toContainText("Blank P staged");
-  await twoMib.locator("#file-import").setInputFiles({
-    name: "PKEEP.TXT",
-    mimeType: "text/plain",
-    buffer: Buffer.from("Hosted P sentinel\r\n"),
-  });
-  await expect(twoMib.locator("#files-status")).toContainText(
-    "Staged PKEEP.TXT",
+  const letters = Array.from({ length: 16 }, (_, index) =>
+    String.fromCharCode(65 + index),
+  );
+  for (const letter of letters) {
+    await twoMib.locator("#file-drive").selectOption(letter);
+    if (letter !== "A") {
+      await twoMib.locator("#blank-drive").click();
+      await expect(twoMib.locator("#files-status")).toContainText(
+        `Blank ${letter} staged`,
+      );
+    }
+    await twoMib.locator("#file-import").setInputFiles({
+      name: "WHO.TXT",
+      mimeType: "text/plain",
+      buffer: Buffer.from(`Hosted drive ${letter} sentinel\r\n`),
+    });
+    await expect(twoMib.locator("#files-status")).toContainText(
+      "Staged WHO.TXT",
+    );
+  }
+  assert.deepEqual(
+    await twoMibState(twoMib),
+    beforeSixteen,
+    "All sixteen media remain staged before Apply",
   );
   await apply(twoMib);
   await prompt(twoMib);
-  const sixteenState = await twoMibState(twoMib);
+  const sixteenSaved = await twoMibState(twoMib);
+  exactMachineBackup(
+    beforeSixteen,
+    sixteenSaved,
+    "configure and populate sixteen",
+  );
+  const sixteenState = sixteenSaved.snapshot;
   assert.equal(sixteenState.configuredCount, 16);
   assert.equal(sixteenState.slots.length, 16);
-  assert.deepEqual(sixteenState.slots.slice(1, 15), Array(14).fill(null));
-  for (const index of [0, 15]) {
+  for (const index of letters.keys()) {
     assert.ok(sixteenState.slots[index]?.instanceId);
     assert.equal(sixteenState.slots[index].bytes, 2097152);
   }
-  assert.notEqual(
-    sixteenState.slots[0].instanceId,
-    sixteenState.slots[15].instanceId,
+  assert.equal(
+    new Set(sixteenState.slots.map((slot) => slot.instanceId)).size,
+    16,
   );
+  assert.equal(new Set(sixteenState.slots.map((slot) => slot.sha256)).size, 16);
   const sixteenDescriptor = manifest.twoMibProfiles.find(
     (profile) => profile.configuredCount === 16,
   );
@@ -1201,40 +1466,197 @@ try {
     sixteenDescriptor.bootstrap.sha256,
   );
   await twoMib.locator("#close-files").click();
-  await command(twoMib, "TYPE P:PKEEP.TXT");
-  await expect(twoMib.locator("#terminal")).toContainText("Hosted P sentinel");
+  for (const letter of letters) {
+    await command(twoMib, `TYPE ${letter}:WHO.TXT`);
+    await expect(twoMib.locator("#terminal")).toContainText(
+      `Hosted drive ${letter} sentinel`,
+    );
+  }
   await savedBoot(twoMib);
   assert.deepEqual(
     await twoMibState(twoMib),
-    sixteenState,
+    sixteenSaved,
     "two-MiB reload preserves count, slot identities and every saved byte",
   );
-  await command(twoMib, "TYPE P:PKEEP.TXT");
-  await expect(twoMib.locator("#terminal")).toContainText("Hosted P sentinel");
   const twoMibArchiveBytes = await archiveDownload(twoMib, "#download-set");
   const twoMibArchive = await decodeSavedMachineArchive(twoMibArchiveBytes);
   assert.deepEqual(
-    {
-      schema: twoMibArchive.schema,
-      configuredCount: twoMibArchive.configuredCount,
-      bootstrap: {
-        profile: twoMibArchive.bootstrap.profile,
-        bytes: twoMibArchive.bootstrap.bytes.length,
-        sha256: digest(twoMibArchive.bootstrap.bytes),
-      },
-      slots: twoMibArchive.slots.map(
-        (slot) =>
-          slot && {
-            instanceId: slot.instanceId,
-            name: slot.name,
-            bytes: slot.bytes.length,
-            sha256: digest(slot.bytes),
-          },
-      ),
-    },
+    archiveState(twoMibArchive),
     sixteenState,
-    "download preserves the complete v4 sparse machine",
+    "download preserves all sixteen complete, distinct media",
   );
+
+  // Change real media before importing the earlier archive, so a no-op restore
+  // or metadata-only implementation cannot pass this proof.
+  await manage(twoMib);
+  const beforeLaterChange = await twoMibState(twoMib);
+  await twoMib.locator("#file-drive").selectOption("P");
+  await twoMib.locator("#file-import").setInputFiles({
+    name: "AFTER.TXT",
+    mimeType: "text/plain",
+    buffer: Buffer.from(
+      "This later P change must be backed up then restored away\r\n",
+    ),
+  });
+  await expect(twoMib.locator("#files-status")).toContainText(
+    "Staged AFTER.TXT",
+  );
+  await apply(twoMib);
+  await prompt(twoMib);
+  const laterSaved = await twoMibState(twoMib);
+  exactMachineBackup(beforeLaterChange, laterSaved, "later P change");
+  assert.notEqual(
+    laterSaved.snapshot.slots[15].sha256,
+    sixteenState.slots[15].sha256,
+  );
+  assert.deepEqual(
+    laterSaved.snapshot.slots.slice(0, 15),
+    sixteenState.slots.slice(0, 15),
+  );
+  await manage(twoMib);
+  const beforeArchiveRestore = await twoMibState(twoMib);
+  await twoMib.locator("#drive-set-input").setInputFiles({
+    name: "all-sixteen.tds",
+    mimeType: "application/octet-stream",
+    buffer: twoMibArchiveBytes,
+  });
+  await expect(twoMib.locator("#files-status")).toContainText(
+    "Complete drive set staged",
+  );
+  assert.deepEqual(
+    await twoMibState(twoMib),
+    beforeArchiveRestore,
+    "Complete archive restoration remains staged",
+  );
+  await apply(twoMib);
+  await prompt(twoMib);
+  const restoredSixteen = await twoMibState(twoMib);
+  assert.deepEqual(
+    restoredSixteen.snapshot,
+    sixteenState,
+    "Archive import restores all images, UUIDs, names, count and bootstrap exactly",
+  );
+  exactMachineBackup(
+    beforeArchiveRestore,
+    restoredSixteen,
+    "restore all-sixteen archive",
+  );
+  await twoMib.locator("#close-files").click();
+  await savedBoot(twoMib);
+  assert.deepEqual(await twoMibState(twoMib), restoredSixteen);
+
+  async function downloadRecovery(target, expected) {
+    const headBytes = await archiveDownload(target, "#download-set");
+    assert.deepEqual(
+      archiveState(await decodeSavedMachineArchive(headBytes)),
+      expected.snapshot,
+    );
+    await target.locator("#files").click();
+    const backups = [];
+    for (const backup of expected.backups) {
+      const pending = target.waitForEvent("download");
+      await target
+        .locator("#backup-list li")
+        .filter({ hasText: backup.id })
+        .getByRole("button", { name: "Download set", exact: true })
+        .click();
+      const path = await (await pending).path();
+      assert.ok(path, `${backup.id}: complete backup download finished`);
+      const bytes = await readFile(path);
+      assert.deepEqual(
+        archiveState(await decodeSavedMachineArchive(bytes)),
+        backup.snapshot,
+        `${backup.id}: downloaded complete backup`,
+      );
+      backups.push({ id: backup.id, sha256: digest(bytes) });
+    }
+    await target.locator("#close-files").click();
+    return { headSha256: digest(headBytes), backups };
+  }
+  const onlineRecovery = await downloadRecovery(twoMib, restoredSixteen);
+  assert.equal(onlineRecovery.headSha256, digest(twoMibArchiveBytes));
+
+  // Keep the original origin and IndexedDB, but satisfy EVERY request from
+  // the exact retained CI site. There is deliberately no route.fetch or live
+  // fallback. Saved recovery must not request fresh media or resident bytes.
+  const retainedServed = new Set();
+  const retainedRejected = [];
+  const contentTypes = {
+    ".html": "text/html",
+    ".js": "text/javascript",
+    ".css": "text/css",
+    ".json": "application/json",
+    ".wasm": "application/wasm",
+    ".svg": "image/svg+xml",
+    ".png": "image/png",
+    ".ico": "image/x-icon",
+  };
+  await twoMib.route("**/*", async (route) => {
+    const url = new URL(route.request().url());
+    const name =
+      url.origin === base.origin && url.pathname.startsWith(base.pathname)
+        ? url.pathname.slice(base.pathname.length) || "index.html"
+        : null;
+    const asset = manifest.assets.find((entry) => entry.path === name);
+    const fresh =
+      name &&
+      (["config.json", "cpm22.img", "ccp.bin", "bdos.bin", "bios.bin"].includes(
+        name,
+      ) ||
+        /^bootstrap.*\.bin$/.test(name) ||
+        /^system-.*\.bin$/.test(name));
+    if ((!asset && name !== "deployment-manifest.json") || fresh) {
+      retainedRejected.push(route.request().url());
+      await route.abort("blockedbyclient");
+      return;
+    }
+    const body = await readFile(join(directory, name));
+    if (asset) {
+      assert.equal(body.length, asset.bytes);
+      assert.equal(digest(body), asset.sha256);
+    } else assert.deepEqual(body, expectedManifest);
+    retainedServed.add(name);
+    await route.fulfill({
+      status: 200,
+      contentType: contentTypes[extname(name)] ?? "application/octet-stream",
+      body,
+    });
+  });
+  await savedBoot(twoMib);
+  assert.deepEqual(
+    await twoMibState(twoMib),
+    restoredSixteen,
+    "Retained-site-only reload preserves complete authority and backups",
+  );
+  for (const letter of ["A", "P"]) {
+    await command(twoMib, `TYPE ${letter}:WHO.TXT`);
+    await expect(twoMib.locator("#terminal")).toContainText(
+      `Hosted drive ${letter} sentinel`,
+    );
+  }
+  const retainedRecovery = await downloadRecovery(twoMib, restoredSixteen);
+  assert.deepEqual(
+    retainedRecovery,
+    onlineRecovery,
+    "Retained-site-only head and every backup download are byte-identical",
+  );
+  assert.deepEqual(await twoMibState(twoMib), restoredSixteen);
+  assert.deepEqual(
+    retainedRejected,
+    [],
+    "No live fallback, fresh-media or resident requests during retained recovery",
+  );
+  for (const name of [
+    "index.html",
+    "app.js",
+    "triptych_host_wasm_bg.wasm",
+    "deployment-manifest.json",
+    "saved-machine-store.js",
+  ])
+    assert.ok(
+      retainedServed.has(name),
+      `Retained recovery actually served ${name}`,
+    );
 
   for (const { label, seen } of profiles)
     for (const name of [
@@ -1286,6 +1708,15 @@ try {
     !migratedV2Seen.has("cpm22.img"),
     "v2 must not replace saved media with fresh distribution",
   );
+  for (const name of migratedV3Seen)
+    assert.ok(
+      !["config.json", "cpm22.img", "ccp.bin", "bdos.bin", "bios.bin"].includes(
+        name,
+      ) &&
+        !/^bootstrap.*\.bin$/.test(name) &&
+        !/^system-.*\.bin$/.test(name),
+      `v3 retains its exact saved media and bootstrap without fetching ${name}`,
+    );
   for (const name of [
     "system-triptych-cpm-8m-ab-v1.bin",
     "bootstrap-triptych-cpm-8m-ab-v1.bin",
@@ -1321,16 +1752,39 @@ try {
         "ATOM/run, Edit/NUC/run/save/reload/reopen/run",
         "Files/starter/prepare/compile/win/Edit/rebuild/selected-NUC-update/reload/download/separate-profile-reopen",
         "unmodified hosted app: v1 migration/exact legacy retention/backed-up import/reload/read",
+        "genuine v2 authority/exact historical-store retention/promotion/complete preceding backups/reload/read",
+        "genuine v3 authority/unchanged before promotion/exact historical-store retention/complete preceding backups/reload/read",
         "hosted A/B migration/blank B/selected B import/tools/ATOM/Edit/NUC/save/reload/full archive/remove B/restore/reload/run with complete backups",
-        "hosted two-MiB configure sixteen/blank P/import P/Apply/TYPE P/reload without fresh assets/exact v4 archive",
+        "hosted two-MiB all sixteen distinct media/Apply/TYPE A through P/exact archive/change P/import restore/complete preceding backups/reload",
+        "same-origin retained-CI-site-only v4 recovery/no live fallback or fresh media/resident requests/byte-identical head and every backup download",
       ],
       adventureDiskSha256: digest(downloadedBytes),
       migratedDiskSha256: digest(Buffer.from(migratedSaved.bytes)),
       migratedBackupSha256: digest(Buffer.from(migratedSaved.backups[0].bytes)),
+      migratedV3: {
+        rawHistoricalStores: v3RawBefore,
+        originalHeadSha256: digest(v3HeadBytes),
+        bootstrapSha256: digest(v3Bootstrap),
+        savedHeadSha256: digest(Buffer.from(v3Saved.bytes)),
+        backups: v3Saved.backups.map((backup) => ({
+          id: backup.id,
+          revision: backup.revision,
+          operationId: backup.operationId,
+          imageSha256: digest(Buffer.from(backup.bytes)),
+          bootstrapSha256: digest(Buffer.from(backup.bootstrap.bytes)),
+        })),
+      },
       abArchiveSha256: digest(abArchiveBytes),
       abMedia: media(workedAb),
       twoMibArchiveSha256: digest(twoMibArchiveBytes),
       twoMibMedia: sixteenState,
+      twoMibRestoredAuthority: restoredSixteen,
+      retainedRecovery: {
+        manifestSha256: digest(expectedManifest),
+        served: [...retainedServed].sort(),
+        rejected: retainedRejected,
+        ...retainedRecovery,
+      },
     }),
   );
 } finally {
