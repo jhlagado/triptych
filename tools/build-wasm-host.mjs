@@ -1,4 +1,5 @@
 import { spawnSync } from "node:child_process";
+import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import {
   copyFile,
@@ -14,6 +15,7 @@ import { join, resolve } from "node:path";
 
 import { buildCpmDistribution } from "./lib/cpm-distribution.mjs";
 import { buildBrowserToolCatalog } from "./lib/browser-tool-catalog.mjs";
+import { buildTwoMibSystem } from "./lib/two-mib-system.mjs";
 import {
   buildLargeDiskSystem,
   LARGE_DISK_SYSTEM_ASSET,
@@ -115,6 +117,76 @@ try {
       repositoryRoot,
       distribution,
     );
+    const twoMibProfiles = [];
+    // Build and stage one tuple at a time. Only descriptors survive this loop;
+    // private source/assembly evidence is not duplicated in the served assets.
+    for (let configuredCount = 1; configuredCount <= 16; configuredCount++) {
+      const tuple = await buildTwoMibSystem(repositoryRoot, configuredCount, {
+        allowDirty: !process.argv.includes("--release"),
+      });
+      const { descriptor } = tuple;
+      assert.deepEqual(
+        {
+          revision: descriptor.machine.revision,
+          dirty: descriptor.machine.dirty,
+        },
+        distribution.manifest.triptych,
+        "two-MiB and default distribution source identity",
+      );
+      const { packageIntegrity, ...atom } = descriptor.atom;
+      assert.deepEqual(
+        atom,
+        distribution.manifest.atom,
+        "two-MiB and default distribution ATOM identity",
+      );
+      const first = twoMibProfiles[0];
+      if (first) {
+        for (const [actual, expected, label] of [
+          [
+            packageIntegrity,
+            first.atom.packageIntegrity,
+            "ATOM package integrity",
+          ],
+          [
+            descriptor.machine.generatorSha256,
+            first.machine.generatorSha256,
+            "generator",
+          ],
+          [
+            descriptor.bios.sourceSha256,
+            first.bios.sourceSha256,
+            "BIOS source",
+          ],
+          [
+            descriptor.bootstrap.sourceSha256,
+            first.bootstrap.sourceSha256,
+            "bootstrap source",
+          ],
+          [
+            descriptor.residents.ccp.sourceSha256,
+            first.residents.ccp.sourceSha256,
+            "CCP source",
+          ],
+          [
+            descriptor.residents.bdos.sourceSha256,
+            first.residents.bdos.sourceSha256,
+            "BDOS source",
+          ],
+        ])
+          assert.equal(actual, expected, `one two-MiB family ${label}`);
+      }
+      await Promise.all([
+        writeFile(join(stagedOutput, descriptor.system.asset), tuple.system, {
+          flag: "wx",
+        }),
+        writeFile(
+          join(stagedOutput, descriptor.bootstrap.asset),
+          tuple.bootstrap,
+          { flag: "wx" },
+        ),
+      ]);
+      twoMibProfiles.push(descriptor);
+    }
     const bootRom = distribution.bootstrap;
     const ccp = systemDisk.slice(0, 0x800);
     const bdos = systemDisk.slice(0x800, 0x1600);
@@ -128,6 +200,8 @@ try {
       ...[
         "disk-workspace.js",
         "disk-profile.js",
+        "two-mib-system.js",
+        "drive-set-v4.js",
         "drive-set.js",
         "drive-set-store.js",
         "working-disk-revisions.js",
@@ -203,6 +277,7 @@ try {
           schema: "triptych-browser-deployment-v1",
           distribution: distribution.manifest,
           diskProfiles: [largeSystem.profile, largeAbSystem.profile],
+          twoMibProfiles,
           host: {
             wasmBindgen: version,
             cargoLockSha256: createHash("sha256")

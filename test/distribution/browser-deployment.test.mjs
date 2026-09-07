@@ -4,6 +4,7 @@ import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { addTwoMibDeploymentFixture } from "../support/two-mib-deployment-fixture.mjs";
 
 const checker = resolve(
   import.meta.dirname,
@@ -32,10 +33,20 @@ async function replaceAsset(name, bytes) {
   await saveManifest();
 }
 
-function check(expectedRevision = revision, release = true) {
+function check(
+  expectedRevision = revision,
+  release = true,
+  requireTwoMib = false,
+) {
   return spawnSync(
     process.execPath,
-    [checker, directory, expectedRevision, ...(release ? ["--release"] : [])],
+    [
+      checker,
+      directory,
+      expectedRevision,
+      ...(release ? ["--release"] : []),
+      ...(requireTwoMib ? ["--require-two-mib"] : []),
+    ],
     { encoding: "utf8", timeout: 10_000 },
   );
 }
@@ -156,6 +167,241 @@ beforeEach(async () => {
     [...assets].map(([path, bytes]) => writeFile(join(directory, path), bytes)),
   );
   await saveManifest();
+});
+
+describe("additive two-MiB deployment qualification", () => {
+  it("requires an explicit complete-family gate while preserving historical acceptance", () => {
+    expect(check().status).toBe(0);
+    rejected(check(revision, true, true), "two-MiB profiles must be an array");
+  });
+
+  it("accepts all sixteen tuples and preserves historical profile and asset identities", async () => {
+    const historicalProfiles = structuredClone(manifest.diskProfiles);
+    const historicalAssets = structuredClone(manifest.assets);
+    await addTwoMibDeploymentFixture(directory, manifest);
+    await saveManifest();
+    const result = check(revision, true, true);
+    expect(result.status, result.stderr).toBe(0);
+    expect(JSON.parse(result.stdout).assets).toBe(64);
+    expect(manifest.diskProfiles).toEqual(historicalProfiles);
+    expect(manifest.assets.slice(0, historicalAssets.length)).toEqual(
+      historicalAssets,
+    );
+    for (const asset of historicalAssets)
+      expect(sha256(await readFile(join(directory, asset.path)))).toBe(
+        asset.sha256,
+      );
+    manifest.twoMibProfiles.reverse();
+    await saveManifest();
+    expect(check(revision, true, true).status).toBe(0);
+  });
+
+  it.each([
+    { counts: [1] },
+    { counts: [16] },
+    { counts: [1, 16] },
+    { counts: [] },
+  ])(
+    "permits runtime subset $counts but requires all sixteen for qualification",
+    async ({ counts }) => {
+      await addTwoMibDeploymentFixture(directory, manifest, counts);
+      await saveManifest();
+      const result = check();
+      expect(result.status, result.stderr).toBe(0);
+      rejected(
+        check(revision, true, true),
+        "all sixteen two-MiB profiles are required",
+      );
+    },
+  );
+
+  it.each(["two-mib-system.js", "drive-set-v4.js"])(
+    "rejects missing required module %s even with a consistent asset inventory",
+    async (name) => {
+      await addTwoMibDeploymentFixture(directory, manifest);
+      await rm(join(directory, name));
+      manifest.assets = manifest.assets.filter((asset) => asset.path !== name);
+      await saveManifest();
+      rejected(
+        check(revision, true, true),
+        `missing required two-MiB module ${name}`,
+      );
+    },
+  );
+
+  it.each([null, {}, "profiles"])(
+    "rejects malformed profile collection %j",
+    async (value) => {
+      manifest.twoMibProfiles = value;
+      await saveManifest();
+      rejected(check(), "two-MiB profiles must be an array");
+    },
+  );
+
+  it.each([0, 17, 1.5, "2"])(
+    "rejects invalid configured count %j",
+    async (count) => {
+      await addTwoMibDeploymentFixture(directory, manifest, [1]);
+      manifest.twoMibProfiles[0].configuredCount = count;
+      await saveManifest();
+      rejected(check(), "two-MiB configured counts must be distinct integers");
+    },
+  );
+
+  it("rejects duplicate profiles and missing n16 despite sixteen rows", async () => {
+    await addTwoMibDeploymentFixture(directory, manifest);
+    manifest.twoMibProfiles[15] = structuredClone(manifest.twoMibProfiles[0]);
+    await saveManifest();
+    rejected(
+      check(revision, true, true),
+      "two-MiB configured counts must be distinct integers",
+    );
+  });
+
+  it.each([1, 16])(
+    "rejects an otherwise complete family missing n%i",
+    async (count) => {
+      await addTwoMibDeploymentFixture(directory, manifest);
+      manifest.twoMibProfiles = manifest.twoMibProfiles.filter(
+        (profile) => profile.configuredCount !== count,
+      );
+      await saveManifest();
+      rejected(
+        check(revision, true, true),
+        "all sixteen two-MiB profiles are required",
+      );
+    },
+  );
+
+  it("rejects malformed unselected descriptors", async () => {
+    await addTwoMibDeploymentFixture(directory, manifest);
+    manifest.twoMibProfiles[15].extra = true;
+    await saveManifest();
+    rejected(check(), "descriptor fields");
+  });
+
+  it.each(["revision", "dirty"])(
+    "requires every profile to match outer machine %s",
+    async (field) => {
+      await addTwoMibDeploymentFixture(directory, manifest);
+      manifest.twoMibProfiles[15].machine[field] =
+        field === "revision" ? "b".repeat(40) : true;
+      await saveManifest();
+      rejected(check(revision, true, true), `outer machine ${field}`);
+    },
+  );
+
+  it("rejects absent or different outer ATOM identity", async () => {
+    await addTwoMibDeploymentFixture(directory, manifest);
+    const atom = structuredClone(manifest.distribution.atom);
+    delete manifest.distribution.atom;
+    await saveManifest();
+    rejected(check(revision, true, true), "default distribution ATOM identity");
+    manifest.distribution.atom = atom;
+    manifest.distribution.atom.seed.sha256 = "b".repeat(64);
+    await saveManifest();
+    rejected(check(revision, true, true), "default distribution ATOM identity");
+  });
+
+  it.each([
+    [
+      "package integrity",
+      (p) => {
+        p.atom.packageIntegrity = `sha512-${"B".repeat(86)}==`;
+      },
+      "ATOM package integrity",
+    ],
+    [
+      "generator",
+      (p) => {
+        p.machine.generatorSha256 = "b".repeat(64);
+      },
+      "generator",
+    ],
+    [
+      "BIOS source",
+      (p) => {
+        p.bios.sourceSha256 = "b".repeat(64);
+      },
+      "BIOS source",
+    ],
+    [
+      "bootstrap source",
+      (p) => {
+        p.bootstrap.sourceSha256 = "b".repeat(64);
+      },
+      "bootstrap source",
+    ],
+    [
+      "CCP source",
+      (p) => {
+        p.residents.ccp.sourceSha256 = "b".repeat(64);
+      },
+      "CCP source",
+    ],
+    [
+      "BDOS source",
+      (p) => {
+        p.residents.bdos.sourceSha256 = "b".repeat(64);
+      },
+      "BDOS source",
+    ],
+  ])("rejects mixed family %s metadata", async (_label, mutate, diagnostic) => {
+    await addTwoMibDeploymentFixture(directory, manifest, [3, 4]);
+    mutate(manifest.twoMibProfiles[1]);
+    await saveManifest();
+    rejected(check(), `one two-MiB family ${diagnostic}`);
+  });
+
+  it("rejects neighboring BIOS substitution with updated system and BIOS hashes", async () => {
+    const tuples = await addTwoMibDeploymentFixture(
+      directory,
+      manifest,
+      [3, 4],
+    );
+    const selected = manifest.twoMibProfiles[0];
+    const bytes = Buffer.from(tuples[0].system);
+    bytes.set(tuples[1].system.subarray(5632, 6656), 5632);
+    selected.system.sha256 = sha256(bytes);
+    selected.bios.sha256 = sha256(bytes.subarray(5632, 6656));
+    await replaceAsset(selected.system.asset, bytes);
+    rejected(check(), "nonzero unused DPH padding");
+  });
+
+  it.each([0, 2048, 5632, 6656, 16383])(
+    "rejects two-MiB component or tail corruption at %i",
+    async (offset) => {
+      const [tuple] = await addTwoMibDeploymentFixture(
+        directory,
+        manifest,
+        [16],
+      );
+      const selected = manifest.twoMibProfiles[0];
+      const bytes = Buffer.from(tuple.system);
+      bytes[offset] ^= 1;
+      selected.system.sha256 = sha256(bytes);
+      await replaceAsset(selected.system.asset, bytes);
+      rejected(
+        check(),
+        offset < 6656 ? "asset digest differs" : "nonzero reserved system tail",
+      );
+    },
+  );
+
+  it("rejects wrong named bootstrap and retained-release paths despite matching bytes", async () => {
+    await addTwoMibDeploymentFixture(directory, manifest, [3, 4]);
+    const selected = manifest.twoMibProfiles[0];
+    selected.bootstrap.asset = manifest.twoMibProfiles[1].bootstrap.asset;
+    await saveManifest();
+    rejected(check(), "bootstrap asset");
+    selected.bootstrap.asset = "bootstrap-triptych-cpm-2m-n03-v1.bin";
+    selected.residents.manifest = selected.residents.manifest.replace(
+      "n03",
+      "n04",
+    );
+    await saveManifest();
+    rejected(check(), "release manifest");
+  });
 });
 
 afterEach(async () => {
