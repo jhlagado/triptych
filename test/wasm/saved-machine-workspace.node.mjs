@@ -395,6 +395,57 @@ test("valid old receipt cannot activate over a newer head", async () => {
   assert.equal(f.events.includes("activate"), false);
 });
 
+for (const difference of [
+  "paired profile count",
+  "instance identity",
+  "disk name",
+  "P occupancy",
+  "bootstrap final byte",
+  "P final byte",
+])
+  test(`matching publication metadata cannot hide changed ${difference}`, async () => {
+    const original = machine(1),
+      candidate = machine(3),
+      f = await fixture({ value: original }),
+      token = await begin(f),
+      commit = f.store.commitChange;
+    f.workspace.stage(token, candidate);
+    let publication;
+    f.store.commitChange = async (...args) => {
+      publication = await commit(...args);
+      const substituted = f.head();
+      const snapshot = substituted.snapshot;
+      if (difference === "paired profile count") {
+        snapshot.configuredCount = 15;
+        snapshot.bootstrap.profile = "triptych-cpu-v0.1-2m-n15";
+        snapshot.slots.pop();
+      }
+      if (difference === "instance identity")
+        snapshot.slots[15].instanceId = "550e8400-e29b-41d4-a716-000000000099";
+      if (difference === "disk name") snapshot.slots[15].name = "other.img";
+      if (difference === "P occupancy") snapshot.slots[15] = null;
+      if (difference === "bootstrap final byte")
+        snapshot.bootstrap.bytes[255]++;
+      if (difference === "P final byte") snapshot.slots[15].bytes[2097151]++;
+      // Validate the replacement independently: rejection must be complete
+      // snapshot inequality, not malformed geometry, metadata, or identities.
+      copySavedMachine(snapshot);
+      assert.equal(sameSavedMachine(snapshot, candidate), false);
+      assert.deepEqual(substituted.token, publication.token);
+      assert.deepEqual(substituted.receipt, publication.receipt);
+      f.setHead(substituted);
+      return publication;
+    };
+    await assert.rejects(f.workspace.commit(token), /Committed disk changed/);
+    assert.equal(f.workspace.state, "recovery");
+    assert.deepEqual(f.workspace.recovery.receipt, publication.receipt);
+    assert.equal(f.events.filter((event) => event === "prepare").length, 1);
+    assert.equal(f.events.filter((event) => event === "discard").length, 1);
+    assert.equal(f.events.includes("activate"), false);
+    assert.equal(f.events.includes("resume"), false);
+    assert(sameSavedMachine(f.guest(), original));
+  });
+
 test("historical recovery baseline retains store identity and never exports unsafe live state", async () => {
   const f = await fixture({ historical: "disk-revisions" });
   f.runtime.checkpoint = () => {
