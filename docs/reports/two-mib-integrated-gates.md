@@ -85,4 +85,18 @@ the historical large-disk gates. It retains the earlier gates and requires the
 native/WASM hosts they build. The browser CI timeout is now 45 minutes: the
 previous Linux check took about seventeen minutes, and the new 31-case matrix
 adds two-worker instruction-level proofs whose combined CI cost remains to be
-measured. The new wrapper and complete expanded check still require execution.
+measured.
+
+At `41fb8a1`, the required wrapper completed all 31 jobs successfully in
+928,779 ms with two concurrent proofs. Its fifteen scheduler tests also passed.
+The complete local log is
+`/tmp/triptych-two-mib-host-smoke.Te931B/integrated-full-lifetime-matrix.log`.
+This is the measured combined wrapper cost, rather than the sum of earlier
+individual invocation durations. It does not establish the combined Linux CI
+duration or replace the complete expanded repository check.
+
+Browser activation is integrated at `5113515`; its
+[application report](two-mib-browser-activation.md) records 180 passing packaged
+Chromium cases, candidate preparation, independent review and sixteen-media
+measurements. The full expanded check and released-site qualification remain
+separate requirements.
