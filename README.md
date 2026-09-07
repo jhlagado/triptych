@@ -19,8 +19,9 @@ fixing the eventual product name in source identifiers or electrical designs.
 The current design direction is
 [two-MiB disks with configurable drive slots](docs/plans/two-mib-configurable-drives.md):
 two-KiB allocation blocks, normally two or four configured drives, with sixteen
-as the maximum target. Implementation is in progress; bootable host and browser
-support is not yet qualified.
+as the maximum. The
+[release qualification record](docs/reports/two-mib-release-qualification.md)
+identifies tested revisions and release evidence.
 Existing small-disk and [eight-MiB profiles](docs/plans/eight-mib-disks.md)
 remain available; no saved disk is converted automatically. The completed
 [browser development workspace](docs/plans/browser-development-workspace.md)
@@ -194,7 +195,9 @@ system upgrade. Session disk files are raw recovery data, not last-flush
 checkpoint archives, and are not automatically repacked. The
 [native archive plan](docs/plans/native-saved-archives.md) explains that boundary;
 the [verification report](docs/reports/native-saved-archive-sessions.md) records
-local macOS tests and the outstanding Linux and release checks.
+the local macOS test scope. The
+[release qualification record](docs/reports/two-mib-release-qualification.md)
+tracks integrated qualification.
 
 The Stage 5 WebAssembly proof additionally needs the exactly matching
 `wasm-bindgen` 0.2.127 command-line tool:

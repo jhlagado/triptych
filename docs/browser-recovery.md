@@ -1,7 +1,9 @@
 # Browser disk and deployment recovery
 
 These instructions cover version-four saved-machine storage and the retained
-historical formats. Version-four browser release qualification is still pending.
+historical formats. The
+[release qualification record](reports/two-mib-release-qualification.md)
+identifies tested revisions and release evidence.
 Select a recovery build from the
 [published releases](https://github.com/jhlagado/triptych/releases) only when
 its notes identify qualification for your saved schema, the exact retained

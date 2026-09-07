@@ -1,15 +1,18 @@
 # Two-MiB configurable-drive roadmap
 
-Date: 2026-09-07. Status: production BIOS profiles and image-format tests passed;
-native/WASM ATOM smoke tests passed at counts 1, 2, 4 and 16. Persistence,
-complete tool qualification and release integration remain in progress.
+Initial implementation status (2026-09-07): production BIOS profiles and
+image-format tests passed; native/WASM ATOM smoke tests passed at counts
+1, 2, 4 and 16. Persistence,
+complete tool qualification and release integration were still in progress.
+The [release qualification record](../reports/two-mib-release-qualification.md)
+identifies subsequently tested revisions and release evidence.
 
 The user selected two-MiB disks with two-KiB blocks. The target is a configurable
 one-to-sixteen-slot machine, normally two or four slots, with independent A–P
 support at the maximum. The [selected design](../specifications/cpm-two-mib-v1.md)
 fixes geometry, memory accounting and preservation rules. The
-[design report](../reports/two-mib-design.md) records the evidence and remaining
-feasibility gate. This direction replaces eight-MiB expansion as the next work;
+[design report](../reports/two-mib-design.md) records the initial evidence and
+feasibility work. This direction replaces eight-MiB expansion as the next work;
 existing functionality, safety fixes and saved media remain supported.
 
 ## First milestone
