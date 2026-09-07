@@ -25,7 +25,7 @@ const sessions = [
       ["boot", "", prompt],
       ["atom-compile", "ATOM HELLO.ASM\r", prompt, "HELLO.COM written"],
       ["atom-run", "HELLO\r", prompt, "Hello from ATOM"],
-      ["open", "EDIT INPUT.NU\r", "\x1b[1;1H"],
+      ["open", "EDIT INPUT.NU\r", "\x1b[1;1H", "^S Save  ^Q Quit"],
       ["find", "\x06'O'\r", cursor],
       ["replace", "\x12'Y'\r", cursor],
       ["save", "\x13", cursor],
@@ -39,7 +39,7 @@ const sessions = [
     steps: [
       ["boot", "", prompt],
       ["type", "TYPE INPUT.NU\r", prompt],
-      ["reopen", "EDIT INPUT.NU\r", "\x1b[1;1H"],
+      ["reopen", "EDIT INPUT.NU\r", "\x1b[1;1H", "^S Save  ^Q Quit"],
       ["quit", "\x11", prompt],
       ["run", "INPUT\r", finalSuffix],
     ],
@@ -70,6 +70,10 @@ function wasmSession(bootstrap, disk, session) {
         ]);
         if (
           transcript.length > before &&
+          (expectedOutput === undefined ||
+            transcript
+              .subarray(before)
+              .includes(Buffer.from(expectedOutput, "latin1"))) &&
           transcript
             .subarray(-suffix.length)
             .equals(Buffer.from(suffix, "latin1"))

@@ -161,14 +161,14 @@
       "source": {
         "kind": "git",
         "repository": "https://github.com/jhlagado/edit.git",
-        "revision": "2427501773e8d158d556631b8a4ba1cb972fcb4a",
+        "revision": "dbbda081b58077c98b509625176739bd9c5608ec",
         "path": "src/editor.asm"
       },
       "recipe": "verified-release",
       "artifact": {
         "path": "third_party/edit/EDIT.COM",
-        "bytes": 3107,
-        "sha256": "73265438a4f2df9a3f507f1bdcd49c48ebabe46cbcdb96e58dc0ee39f8b6a905",
+        "bytes": 5513,
+        "sha256": "6be83f6edb9ee92387c7b3817f473fbbc389a58ab1a20d9a2a6101e695fb77c4",
         "manifest": "third_party/edit/manifest.json",
         "provenance": "third_party/edit/release.provenance.json"
       },

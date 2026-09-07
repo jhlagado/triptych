@@ -1,9 +1,13 @@
 import assert from "node:assert/strict";
 
-// EDIT 0.1.1, source 2427501773e8d158d556631b8a4ba1cb972fcb4a:
-// editor-memory.asmi, EditorLiteralInput, EditorSearchBegin,
-// EditorReplaceApply and EditorBufferOpenGap define these boundaries.
+// EDIT 0.2.0: 5513-byte native ATOM artifact, SHA-256
+// 6be83f6edb9ee92387c7b3817f473fbbc389a58ab1a20d9a2a6101e695fb77c4.
+// Addresses are verified against that artifact's descriptive D8 symbol ledger.
+// Logical text consists of the occupied prefix and suffix around the gap.
 const TEXT = 0x2000;
+const CAPACITY = 0xb800;
+const GAP_START = 0x1f4a;
+const GAP_END = 0x1f4c;
 const LENGTH = 0x1ec8;
 const QUERY_LENGTH = 0x1ed4;
 const DMA = 0x1e48;
@@ -17,6 +21,22 @@ const pad = (bytes) => {
 };
 const ram = (cpu, address, length) =>
   Buffer.from(cpu.read_ram(address, length));
+
+function logicalText(cpu) {
+  const length = ram(cpu, LENGTH, 2).readUInt16LE();
+  const start = ram(cpu, GAP_START, 2).readUInt16LE();
+  const end = ram(cpu, GAP_END, 2).readUInt16LE();
+  assert(start <= end && end <= CAPACITY, "valid arena-relative gap bounds");
+  assert.equal(
+    length,
+    CAPACITY - (end - start),
+    "length agrees with occupied gap spans",
+  );
+  return Buffer.concat([
+    ram(cpu, TEXT, start),
+    ram(cpu, TEXT + end, CAPACITY - end),
+  ]);
+}
 
 export function createSuite(_kind, { workLetter = "B" } = {}) {
   assert.match(workLetter, /^[A-P]$/);
@@ -94,7 +114,7 @@ export function createSuite(_kind, { workLetter = "B" } = {}) {
       checkMemory(cpu) {
         if (expectedText) {
           assert.deepEqual(
-            ram(cpu, TEXT, expectedText.length),
+            logicalText(cpu),
             expectedText,
             `${id}: logical text`,
           );
@@ -181,6 +201,9 @@ export function createSuite(_kind, { workLetter = "B" } = {}) {
       ram(cpu, SAVE_STATE, 1),
       // High bytes of the persistent horizontal/desired visual columns.
       ram(cpu, HORIZONTAL_HIGH, 2),
+      // Rejection must preserve physical storage too, including unused gap bytes.
+      ram(cpu, GAP_START, 4),
+      ram(cpu, TEXT, CAPACITY),
     ]);
   add("grow-exact", "\x12QQ\r", "Replaced", {
     memory(cpu) {

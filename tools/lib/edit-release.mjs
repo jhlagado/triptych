@@ -5,10 +5,10 @@ import { join } from "node:path";
 
 import { installCpm22File } from "./cpm22-disk.mjs";
 
-export const EDIT_REVISION = "2427501773e8d158d556631b8a4ba1cb972fcb4a";
+export const EDIT_REVISION = "dbbda081b58077c98b509625176739bd9c5608ec";
 export const EDIT_SHA256 =
-  "73265438a4f2df9a3f507f1bdcd49c48ebabe46cbcdb96e58dc0ee39f8b6a905";
-export const EDIT_BYTES = 3107;
+  "6be83f6edb9ee92387c7b3817f473fbbc389a58ab1a20d9a2a6101e695fb77c4";
+export const EDIT_BYTES = 5513;
 
 function sha256(bytes) {
   return createHash("sha256").update(bytes).digest("hex");
@@ -28,7 +28,9 @@ export async function readVerifiedEditRelease(repositoryRoot) {
   assert.equal(sha256(bytes), EDIT_SHA256, "Edit release digest");
   assert.equal(manifest.format, "edit-build-manifest-v1");
   assert.equal(manifest.artifact, "EDIT.COM");
-  assert.equal(manifest.version, "0.1.1");
+  assert.equal(manifest.version, "0.2.0");
+  assert.equal(manifest.sourceFormat, "native-atom");
+  assert.equal(manifest.releaseBaselineMatch, true);
   assert.equal(manifest.assembler.name, "atom-z80");
   assert.equal(
     manifest.assembler.revision,

@@ -1,14 +1,17 @@
 {
   "format": "edit-build-manifest-v1",
   "artifact": "EDIT.COM",
-  "version": "0.1.1",
-  "bytes": 3107,
-  "sha256": "73265438a4f2df9a3f507f1bdcd49c48ebabe46cbcdb96e58dc0ee39f8b6a905",
+  "version": "0.2.0",
+  "releaseBaselineMatch": true,
+  "bytes": 5513,
+  "sha256": "6be83f6edb9ee92387c7b3817f473fbbc389a58ab1a20d9a2a6101e695fb77c4",
   "assembler": {
     "name": "atom-z80",
     "revision": "802b5c2d320bec777f427755ff2d7338e3b80a05"
   },
   "loadAddress": 256,
   "entryAddress": 256,
-  "contract": "docs/specification.md"
+  "contract": "docs/specification.md",
+  "sourceFormat": "native-atom",
+  "symbolLedger": "src/editor-symbols.json"
 }

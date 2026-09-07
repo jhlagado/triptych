@@ -1,12 +1,17 @@
 {
-  "name": "Edit 0.1.1",
+  "name": "Edit 0.2.0",
   "repository": "https://github.com/jhlagado/edit.git",
-  "revision": "2427501773e8d158d556631b8a4ba1cb972fcb4a",
-  "release": "https://github.com/jhlagado/edit/releases/tag/v0.1.1",
-  "ci": "https://github.com/jhlagado/edit/actions/runs/33933433991",
+  "revision": "dbbda081b58077c98b509625176739bd9c5608ec",
+  "ci": "https://github.com/jhlagado/edit/actions/runs/34134268198",
   "artifact": "EDIT.COM",
-  "bytes": 3107,
-  "sha256": "73265438a4f2df9a3f507f1bdcd49c48ebabe46cbcdb96e58dc0ee39f8b6a905",
+  "bytes": 5513,
+  "sha256": "6be83f6edb9ee92387c7b3817f473fbbc389a58ab1a20d9a2a6101e695fb77c4",
   "license": "GPL-3.0-or-later",
-  "imported": "2026-09-05"
+  "imported": "2026-09-08",
+  "verification": {
+    "status": "ci-artifact-verified",
+    "source": "Downloaded edit-release artifact from the successful Linux check of the pinned revision; EDIT.COM and manifest.json match the local native ATOM build byte for byte.",
+    "artifactId": 10023573294,
+    "artifactDigest": "sha256:5a0a91d19337c73ebe05649251592db47efcfe26007510390200d268e8332ebe"
+  }
 }
