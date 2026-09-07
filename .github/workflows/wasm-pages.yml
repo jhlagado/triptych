@@ -45,7 +45,7 @@ jobs:
       - name: Build browser host
         run: npm run build:wasm-browser -- --release
       - name: Verify exact release files
-        run: node tools/check-browser-deployment.mjs dist/wasm-browser "$GITHUB_SHA" --release
+        run: node tools/check-browser-deployment.mjs dist/wasm-browser "$GITHUB_SHA" --release --require-two-mib
       - name: Exercise final browser release
         env:
           PLAYWRIGHT_JSON_OUTPUT_FILE: ${{ runner.temp }}/browser-runtime-acceptance.json

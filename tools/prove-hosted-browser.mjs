@@ -6,6 +6,7 @@ import { execFileSync } from "node:child_process";
 import { chromium, expect } from "@playwright/test";
 import { installCpm22File, readCpm22File } from "./lib/cpm22-disk.mjs";
 import { decodeDriveSet } from "../crates/triptych-host-wasm/web/drive-set.js";
+import { checkServedTwoMibAssets } from "./lib/served-two-mib-assets.mjs";
 
 // The directory must be the downloaded CI artifact, not a local rebuild.
 const [address, directoryArgument, revision] = process.argv.slice(2);
@@ -23,7 +24,13 @@ assert.ok(
 const directory = resolve(directoryArgument);
 execFileSync(
   process.execPath,
-  ["tools/check-browser-deployment.mjs", directory, revision, "--release"],
+  [
+    "tools/check-browser-deployment.mjs",
+    directory,
+    revision,
+    "--release",
+    "--require-two-mib",
+  ],
   { stdio: "inherit" },
 );
 const expectedManifest = await readFile(
@@ -303,6 +310,7 @@ try {
   const freshSeen = observe(page, "fresh");
   const terminal = page.locator("#terminal");
   await boot(page);
+  await checkServedTwoMibAssets(page, base.href, manifest);
   await command(page, "ATOM HELLO.ASM");
   await expect(terminal).toContainText("HELLO.COM written");
   await command(page, "HELLO");
@@ -1076,6 +1084,14 @@ try {
   );
   for (const name of ["config.json", "bootstrap.bin"])
     assert.ok(freshSeen.has(name), `fresh profile loads verified ${name}`);
+  for (const name of [
+    "two-mib-system.js",
+    "drive-set-v4.js",
+    ...manifest.twoMibProfiles
+      .filter((profile) => [1, 16].includes(profile.configuredCount))
+      .flatMap((profile) => [profile.system.asset, profile.bootstrap.asset]),
+  ])
+    assert.ok(freshSeen.has(name), `browser consumed verified ${name}`);
   assert.ok(
     migratedSeen.has("bootstrap.bin"),
     "legacy profile loads its verified historical bootstrap",
