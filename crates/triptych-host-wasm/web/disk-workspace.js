@@ -35,9 +35,6 @@ function copyToken(value) {
   throw new Error("Invalid saved drive-set token.");
 }
 
-const sameToken = (a, b) =>
-  JSON.stringify(copyToken(a)) === JSON.stringify(copyToken(b));
-
 function copyReceipt(value) {
   copyToken({ kind: "v3", revision: value?.revision });
   if (
@@ -68,6 +65,23 @@ function savedHead(value) {
   return { token, snapshot: copyDriveSet(value.snapshot), receipt };
 }
 
+const LEGACY_PROTOCOL = {
+  copySnapshot: copyDriveSet,
+  sameSnapshot: sameSet,
+  copyToken,
+  copyReceipt,
+  savedHead,
+  publication(value) {
+    const receipt = copyReceipt(value);
+    return { token: { kind: "v3", revision: receipt.revision }, receipt };
+  },
+  checkpointResult: (publication) => ({
+    kind: "saved",
+    receipt: publication.receipt,
+  }),
+  commitResult: (publication) => copyReceipt(publication.receipt),
+  captureAfterDrain: false,
+};
 /** Hold this lease for the writable workspace's entire lifetime. Acquisition
  * never waits for another tab: missing/denied/unavailable locks mean read-only.
  * Close/drain the workspace before release; never release during a transaction.
@@ -133,13 +147,26 @@ export async function acquireDiskWriter({
  * every scheduled slice and guest-input path. Recovery uses only the durable
  * head and requires explicit consent to discard volatile state on replacement.
  */
-export function createDiskWorkspace({
-  store,
-  writer,
-  runtime,
-  token = { kind: "empty" },
-  operationId = () => globalThis.crypto.randomUUID(),
-}) {
+export function createDiskWorkspace(options) {
+  return createWorkspaceCoordinator(options, LEGACY_PROTOCOL);
+}
+
+// Internal shared engine. Only the two named entry modules choose a fixed wire
+// adapter; application callers use createDiskWorkspace/createSavedMachineWorkspace.
+export function createWorkspaceCoordinator(
+  {
+    store,
+    writer,
+    runtime,
+    token = { kind: "empty" },
+    operationId = () => globalThis.crypto.randomUUID(),
+  },
+  protocol,
+) {
+  const { copySnapshot, copyToken, copyReceipt, savedHead } = protocol;
+  const sameSet = protocol.sameSnapshot;
+  const sameToken = (a, b) =>
+    JSON.stringify(copyToken(a)) === JSON.stringify(copyToken(b));
   let headToken = copyToken(token);
   let state = "running";
   let epoch = 0;
@@ -180,11 +207,11 @@ export function createDiskWorkspace({
   };
   const save = async (value) => {
     owned();
-    const receipt = copyReceipt(
+    const publication = protocol.publication(
       await store.saveCheckpoint(copyToken(headToken), value),
     );
-    headToken = { kind: "v3", revision: receipt.revision };
-    return receipt;
+    headToken = copyToken(publication.token);
+    return publication;
   };
 
   const settle = (job, result, error) => {
@@ -207,8 +234,8 @@ export function createDiskWorkspace({
       try {
         if (job.generation !== epoch)
           throw new Error("Superseded machine checkpoint.");
-        const receipt = await save(job.snapshot);
-        settle(job, { kind: "saved", receipt });
+        const publication = await save(job.snapshot);
+        settle(job, protocol.checkpointResult(publication));
       } catch (error) {
         settle(job, undefined, error);
         if (state !== "closed" && job.generation === epoch) {
@@ -232,7 +259,7 @@ export function createDiskWorkspace({
       if (state !== "running")
         throw new Error("Disk management gates autosaves.");
       owned();
-      const snapshot = copyDriveSet(value);
+      const snapshot = copySnapshot(value);
       let resolve, reject;
       const promise = new Promise((yes, no) => {
         resolve = yes;
@@ -291,14 +318,22 @@ export function createDiskWorkspace({
         runtime.pause();
         if (!runtime.ready())
           throw new Error("Guest storage or input is not idle.");
-        const baseline = copyDriveSet(runtime.checkpoint());
+        // Legacy timing stays unchanged. The new path drains accepted saves
+        // while paused before retaining an additional full management baseline.
+        let baseline = protocol.captureAfterDrain
+          ? undefined
+          : copySnapshot(runtime.checkpoint());
         const identity = operationId();
         if (typeof identity !== "string" || !identity || identity.length > 256)
           throw new Error("Invalid disk operation identity.");
-        const receipt = await enqueue(async () => {
+        const publication = await enqueue(async () => {
           if (generation !== epoch)
             throw new Error("Superseded management request.");
           forgetPending();
+          if (protocol.captureAfterDrain) {
+            owned();
+            baseline = copySnapshot(runtime.checkpoint());
+          }
           try {
             return await save(baseline);
           } catch (error) {
@@ -316,7 +351,7 @@ export function createDiskWorkspace({
           token,
           operationId: identity,
           baseline,
-          expected: { kind: "v3", revision: receipt.revision },
+          expected: copyToken(publication.token),
         };
         state = "managing";
         return token;
@@ -378,7 +413,7 @@ export function createDiskWorkspace({
         "recovery",
       ]);
       return {
-        snapshot: copyDriveSet(current.baseline),
+        snapshot: copySnapshot(current.baseline),
         token: copyToken(current.expected),
         operationId: current.operationId,
       };
@@ -389,7 +424,7 @@ export function createDiskWorkspace({
         throw new Error(
           "This operation is already bound to its candidate; retry or cancel.",
         );
-      current.candidate = copyDriveSet(value);
+      current.candidate = copySnapshot(value);
     },
     cancel(token) {
       const current = session(token, ["managing", "preparing"]);
@@ -411,7 +446,7 @@ export function createDiskWorkspace({
       state = "preparing";
       let prepared;
       try {
-        prepared = await runtime.prepare(copyDriveSet(current.candidate));
+        prepared = await runtime.prepare(copySnapshot(current.candidate));
         session(token, ["preparing"]);
         owned();
       } catch (error) {
@@ -425,18 +460,19 @@ export function createDiskWorkspace({
       state = "publishing";
       current.attempted = true;
       return enqueue(async () => {
-        let receipt;
+        let receipt, publication;
         try {
           if (state === "closed")
             throw new Error("Workspace closed before publication.");
           owned();
-          receipt = copyReceipt(
+          publication = protocol.publication(
             await store.commitChange(
               copyToken(current.expected),
               current.operationId,
-              copyDriveSet(current.candidate),
+              copySnapshot(current.candidate),
             ),
           );
+          receipt = publication.receipt;
         } catch (error) {
           try {
             const head = await store.load();
@@ -461,18 +497,18 @@ export function createDiskWorkspace({
         try {
           // Idempotent retries can return an OLD receipt. Never boot it over a
           // newer head, even though the original publication succeeded.
-          const head = await store.load();
+          const rawHead = await store.load();
+          let head;
+          try {
+            head = savedHead(rawHead);
+          } catch {
+            throw new Error(
+              "Committed disk changed; reload or recover before continuing.",
+            );
+          }
           if (
-            head?.kind !== "ready" ||
-            !sameToken(head.token, {
-              kind: "v3",
-              revision: receipt.revision,
-            }) ||
+            !sameToken(head.token, publication.token) ||
             head.receipt?.operationId !== current.operationId ||
-            !sameToken(
-              { kind: "v3", revision: head.receipt?.revision },
-              head.token,
-            ) ||
             head.receipt?.digest !== receipt.digest ||
             receipt.operationId !== current.operationId ||
             !sameSet(head.snapshot, current.candidate)
@@ -496,7 +532,7 @@ export function createDiskWorkspace({
           recovery = undefined;
           resume();
           active = undefined;
-          return copyReceipt(receipt);
+          return protocol.commitResult(publication);
         } catch (error) {
           // Ownership may already have transferred. Do not free either CPU or
           // resume the old one after activation starts; retain durable recovery.
