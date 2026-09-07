@@ -72,6 +72,14 @@ assembly, distribution descriptors or release pins. Linux remains a separate
 execution gate; the tests here ran on macOS. The complete repository check
 remains the integration coordinator's responsibility.
 
+An independent review of worker commits `d3c35bc` and `99166e9` found no
+actionable issues. The reviewer reran all 20 focused tests with an isolated
+build directory on macOS/Rust 1.98, checked the production dependency tree and
+compared the moved files with their originals. The lead separately read the
+full helper, callers, tests and actual native acquisition path, with the same
+verdict. Triptych integrated the commits as `b8cc34e` and `fce29ee`; minimum
+Rust-version execution and Linux qualification remain unproved by this review.
+
 ## Filesystem limits
 
 Locks are advisory: other programs must cooperate. The inode comparisons

@@ -6,8 +6,8 @@ host-only [`triptych-cpm-cli`](../triptych-cpm-cli/) package provides the
 the CLI requires Rust 1.89. Neither package emulates a CPU.
 
 `triptych-cpm` manages development copies of the legacy IBM 3740 disk and the
-new 8 MiB disk profile. File listing, import and export use user 0. Migration
-preserves files belonging to all sixteen users. It does not emulate a CPU.
+2 MiB and 8 MiB disk profiles. File listing, import and export use user 0.
+Migration preserves files belonging to all sixteen users.
 
 ```text
 triptych-cpm create SOURCE-IMAGE WORKING-IMAGE
@@ -24,14 +24,19 @@ pads its 256,256 bytes to 256,512 bytes so the existing native host can expose
 complete 512-byte backing sectors. The additional bytes are outside the CP/M
 disk parameter block and are not filesystem capacity.
 
-`FORMAT` is `ibm3740` or `triptych-cpm-8m-v1`. The latter has exactly
+`FORMAT` is `ibm3740`, `triptych-cpm-2m-v1` or `triptych-cpm-8m-v1`.
+The 2 MiB profile has 2,097,152 bytes, a 16,384-byte system area, 2 KiB
+allocation blocks and 1,024 directory entries. Initially free file storage
+is 2,048,000 bytes; see its
+[geometry contract](../../docs/specifications/cpm-two-mib-v1.md).
+The 8 MiB profile has exactly
 8,388,608 bytes, a 16,384-byte system area, 2 KiB allocation blocks and 512
 directory entries. Its initially free file storage is 8,355,840 bytes. The
 [disk-profile contract](../../docs/specifications/cpm-disk-profiles-v1.md)
 records the complete geometry and the separate guest qualification gates.
 
 `SYSTEM-AREA` must be a file containing the complete target system area:
-6,656 bytes for the legacy format or 16,384 for the large format. The caller
+6,656 bytes for the legacy format or 16,384 for either larger format. The caller
 must supply compatible resident software; the utility checks the area length,
 not whether those bytes can boot. `format` creates an empty filesystem with
 that area. `migrate` copies logical files into a new filesystem and preserves

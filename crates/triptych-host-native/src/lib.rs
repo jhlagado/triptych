@@ -99,7 +99,7 @@ struct DriveFile {
 
 /// Fixed configured slots with independently owned, exclusively locked media.
 /// Locks exclude cooperating processes, not arbitrary editors or path changes.
-/// Image-management tools must remain offline until they implement this policy.
+/// The CP/M CLI follows this policy; other tools must keep mounted images offline.
 pub struct FileSectorStore {
     drives: Vec<Option<DriveFile>>,
 }
