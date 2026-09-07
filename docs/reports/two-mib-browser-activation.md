@@ -93,16 +93,26 @@ fifteen sampling points. Those coarse JavaScript-heap readings do not establish
 peak browser-process memory, total WASM/storage buffers or an ESP32 RAM budget.
 The test retains its JSON measurement as a Playwright attachment.
 
+A separate [management-memory measurement](browser-management-memory.md) now
+records calibrated renderer RSS samples for three n01 and three n16 runs.
+Median sampled management peaks were 260.05 MiB and 584.81 MiB respectively;
+raw samples and the exact deployment manifest are retained with the report.
+These are desktop process measurements, not true high-water marks or hardware
+memory requirements.
+
 ## Remaining qualification
 
-The integrated source still requires the complete `npm run check`, Linux CI,
-clean release artifacts and actual hosted/recovery execution. The hosted
+The complete `npm run check` passed at `cc037d2`, including all 180 browser cases
+and the 31-job tool matrix. Subsequent native-launcher integration requires an
+expanded full check, Linux CI, clean release artifacts and actual hosted/recovery
+execution. The hosted
 verifier now exercises sixteen-slot activation, P file execution, saved reload
 without fresh resident fetches and exact v4 archive identities and hashes. That
 implementation has been reviewed but has not yet passed on a released site.
 
-The native engine already supports sparse A–P paths. A convenient saved-archive
-launcher remains separate work. Native file writes can reach backing files
+The native engine supports sparse A–P paths. The
+[saved-archive launcher](native-saved-archive-sessions.md) has passed local
+terminal tests and is integrated for complete qualification. Native file writes can reach backing files
 before a guest flush; interrupted session files therefore cannot be described as
 last-acknowledged checkpoint archives. ESP32 storage timing and power-loss
 behavior require hardware measurements.

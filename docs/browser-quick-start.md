@@ -100,6 +100,13 @@ sixteen permit 56,576 bytes. These are loader limits, not guarantees that every
 program's stack and work buffers fit. The
 [tool-lifetime report](reports/two-mib-tool-lifetimes.md) records tested cases.
 
+Browser memory is a separate cost: sixteen inserted disks contain 32 MiB of
+image data, with additional copies during management and saving. Desktop tests
+measured a median sampled renderer peak of about 585 MiB while managing all
+sixteen. Start with two or four slots and insert only the media you need; the
+[memory report](reports/browser-management-memory.md) gives the workload and
+measurement limits. These desktop results do not qualify phone or ESP32 memory.
+
 ### Retained eight-MiB A/B profiles
 
 Download the saved drive set before changing the disk layout. In disk

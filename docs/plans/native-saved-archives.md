@@ -1,7 +1,7 @@
 # Native saved-archive sessions
 
-Date: 2026-09-07. Implementation is in a separate development branch;
-local file and terminal checks passed. Integration and release qualification
+Date: 2026-09-07. The implementation is integrated; local file and terminal
+checks passed. The expanded full repository gate and release qualification
 remain pending; see the [verification report](../reports/native-saved-archive-sessions.md).
 
 The first native launcher accepts the same `.tds` archive exported by the

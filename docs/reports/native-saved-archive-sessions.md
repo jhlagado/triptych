@@ -1,7 +1,8 @@
 # Native saved-archive verification
 
 Date: 2026-09-07. These are local macOS results from an isolated development
-worktree. Integration, Linux execution and release qualification remain pending.
+worktree, integrated at `58503a9`. The expanded full repository gate, Linux
+execution and release qualification remain pending.
 
 The copy-only launcher described in the
 [native archive plan](../plans/native-saved-archives.md) opened an actual
