@@ -147,9 +147,17 @@ test("supplied machine link preserves the usual machine and keeps independent sa
   const separate = await state(page, "triptych-supplied");
   expect(separate.drives.A.files).not.toContain("HELLO.COM");
   expect(separate.drives.B.files).toContain("CAVERNS.COM");
+  await send(page, "ERA B:README.TXT");
+  await prompt(page, "A>");
+  await expect
+    .poll(async () => (await state(page, "triptych-supplied")).drives.B.files)
+    .not.toContain("README.TXT");
+  const changed = await state(page, "triptych-supplied");
+  expect(changed.drives.A).toEqual(separate.drives.A);
+  expect(await state(page)).toEqual(usual);
   await page.reload();
   await prompt(page, "A>");
-  expect(await state(page, "triptych-supplied")).toEqual(separate);
+  expect(await state(page, "triptych-supplied")).toEqual(changed);
   await page.goto("/");
   await prompt(page, "A>");
   expect(await state(page)).toEqual(usual);
