@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./legacy-fixture.mjs";
 import { readFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { decodeDriveSet } from "../../../crates/triptych-host-wasm/web/drive-set.js";
@@ -402,6 +402,12 @@ test("a retained deployment alone reopens complete A/B work and exact complete-s
   const siteRoute = (directory, recovering) => async (route) => {
     const url = new URL(route.request().url());
     const name = url.pathname === "/" ? "index.html" : url.pathname.slice(1);
+    // Only the initial historical launch uses the explicit legacy fixture.
+    // Recovery must still reject config fetches and use retained assets only.
+    if (!recovering && url.origin === origin && name === "config.json") {
+      await route.fallback();
+      return;
+    }
     if (url.origin !== origin || !files.has(name)) {
       unexpected.push(route.request().url());
       await route.abort();
@@ -424,8 +430,8 @@ test("a retained deployment alone reopens complete A/B work and exact complete-s
       body: await readFile(join(directory, name)),
     });
   };
-  // Initial and recovery phases both use exact identified assets, never live
-  // route.fetch()/continue() fallback. Only the initial fresh launch may seed.
+  // Both phases use exact identified assets, except the initial explicit legacy
+  // config fixture above. Recovery has no fallback and cannot fetch fresh media.
   const initialRoute = siteRoute(sourceDirectory, false);
   await page.route("**/*", initialRoute);
   await page.goto("/");

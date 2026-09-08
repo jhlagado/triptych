@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./legacy-fixture.mjs";
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 

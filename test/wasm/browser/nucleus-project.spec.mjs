@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, useLegacyConfiguration } from "./legacy-fixture.mjs";
 import { readFile } from "node:fs/promises";
 import { spawn } from "node:child_process";
 import { readCpm22File } from "../../../tools/lib/cpm22-disk.mjs";
@@ -228,6 +228,7 @@ test("adventure edit/build/update/reload/download/reopen preserves its separate 
   });
   try {
     const reopened = await other.newPage();
+    await useLegacyConfiguration(reopened);
     await boot(reopened);
     await manage(reopened);
     await reopened.locator("#disk-input").setInputFiles(path);

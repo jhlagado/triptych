@@ -8,16 +8,33 @@ can contain changes that have not yet been deployed. The
 [browser A/B report](reports/eight-mib-browser-ab.md) records implementation
 and pre-release acceptance evidence.
 
-In a desktop browser, wait for `A>` and click the terminal to type. A fresh
-profile starts with the supplied single-drive disk. Previously saved media
-reopen automatically, so their files and drive layout may differ. Opening a
-new website release does not silently replace their operating system or tools.
+In a desktop browser, wait for `A>` and click the terminal to type. A new
+machine starts with two supplied eight-MiB disk images:
+
+- **A: system and tools** — CP/M, ATOM, NUC, EDIT and the source samples.
+- **B: games** — `CAVERNS.COM`, `HYPERDRV.COM` and `README.TXT`.
+
+Previously saved media reopen automatically, so their files and drive layout
+may differ. Opening a new website release does not replace their operating
+system, tools or games. For the supplied pair with its own separate saves, use
+[Open the supplied A+B machine](https://jhlagado.github.io/triptych/?machine=supplied).
+That link is also in the terminal's **Supplied disks** section. It preserves
+your usual machine; returning to the link reopens that separate machine's saved
+work. It is not a reset button. Both workspaces use this browser's storage, so
+download backups before clearing browser data or moving to another device.
+
+The same section has direct downloads of the published
+[A: image](https://jhlagado.github.io/triptych/drive-a-system.img) and
+[B: image](https://jhlagado.github.io/triptych/drive-b-games.img).
+These are starter images, not backups of your saved work. The public build
+produces and verifies both images; no manual browser-database setup is needed.
 
 ## Play Hyperdrive
 
 Open the [Triptych terminal](https://jhlagado.github.io/triptych/) and type
-`HYPERDRV` at `A>`. This is Ken Stone's original 1982 VIC-20 adventure,
-not John Hardy's later Hyperdrive II. Fresh disks include `HYPERDRV.COM`.
+`B:`, then `HYPERDRV` at `B>`. This is Ken Stone's original 1982 VIC-20
+adventure, not John Hardy's later Hyperdrive II. The supplied B: image includes
+`HYPERDRV.COM`; saves made while playing on B stay on B.
 
 Type `HELP` for the story and commands. Space or Enter advances long text;
 Q skips its remaining pages. `INVENTORY` shows your equipment. Use `SAVE CAMP`
@@ -32,8 +49,8 @@ source and player documentation; development walkthroughs contain spoilers.
 
 ## Play Caverns
 
-Fresh disks include `CAVERNS.COM`, John Hardy's revised 1982–83 adventure.
-At `A>`, type `CAVERNS` and press Enter. The full story and current rules appear
+The supplied B: image includes `CAVERNS.COM`, John Hardy's revised 1982–83
+adventure. Enter `B:`, then `CAVERNS` at `B>`. The full story and current rules appear
 at startup; `HELP` repeats them. Space or Enter advances each page; Q or Escape
 skips the remaining explanation. `INVENTORY`, `INVENT`, `I` and `LIST` show what
 you carry.
@@ -51,9 +68,10 @@ spoilers.
 
 ## Assemble and run
 
-On the supplied disk, enter each command followed by Enter:
+On drive A, enter each command followed by Enter:
 
 ```text
+A:
 ATOM HELLO.ASM
 HELLO
 ```
@@ -104,7 +122,10 @@ listing shows committed files in user area 0, not the staged changes. Files
 use CP/M 8.3 names; downloads include 128-byte record padding. Empty imports
 and read-only replacements are rejected.
 
-### Add capacity and drive B
+### Add capacity and drive B to an older machine
+
+The supplied machine already has both eight-MiB drives. These operations are
+for an older saved machine or a deliberate change to its disk layout.
 
 Download the saved drive set before changing the disk layout. In disk
 management, select A and choose one of these explicit changes:
@@ -191,7 +212,7 @@ For normal development, start with `DIR`, `TYPE filename`, `ATOM source.asm`,
 `NUC source.nu`, `EDIT filename`, and a program name without `.COM`. `ERA`
 deletes files; keep backups before experimenting with disk-changing commands.
 
-The baseline is drive A and an 80×24 terminal. The explicit large-disk profiles
+The browser terminal is 80×24. The explicit large-disk profiles
 support eight-MiB A alone or A with optional eight-MiB B. Compatibility covers
 the published feature matrix and tested application corpus, not every CP/M
 application. See the [tool-arena report](reports/eight-mib-tool-arenas.md) for
