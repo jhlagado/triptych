@@ -4,6 +4,7 @@ import { readFile, readdir } from "node:fs/promises";
 import { resolve, join } from "node:path";
 import { webcrypto } from "node:crypto";
 import { fetchLargeAbDiskSystem } from "../crates/triptych-host-wasm/web/disk-profile.js";
+import { fetchPublicDriveSet } from "../crates/triptych-host-wasm/web/public-distribution.js";
 
 const directory = resolve(process.argv[2] ?? "dist/wasm-browser");
 const expectedRevision = process.argv[3];
@@ -57,6 +58,9 @@ assert.deepEqual(
 for (const name of [
   "index.html",
   "app.js",
+  "public-distribution.js",
+  "drive-a-system.img",
+  "drive-b-games.img",
   "terminal.js",
   "working-disk-store.js",
   "working-disk-revisions.js",
@@ -201,6 +205,23 @@ assert.ok(
 // The browser and offline checker share the closed A/B descriptor, asset and
 // slot checks. This intentionally does not compare E300 residents to E400 ones.
 await fetchLargeAbDiskSystem({
+  deployment: manifest,
+  baseUrl: "https://deployment.invalid/",
+  crypto: webcrypto,
+  fetch: async (url) => {
+    const bytes = await readFile(
+      join(directory, new URL(url).pathname.slice(1)),
+    );
+    return { ok: true, arrayBuffer: async () => Uint8Array.from(bytes).buffer };
+  },
+});
+assert.equal(
+  JSON.parse(await readFile(join(directory, "config.json"), "utf8"))
+    .publicDrives,
+  true,
+  "new visitors must receive the public A/B pair",
+);
+await fetchPublicDriveSet({
   deployment: manifest,
   baseUrl: "https://deployment.invalid/",
   crypto: webcrypto,

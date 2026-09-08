@@ -1,3 +1,4 @@
+import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import {
@@ -49,6 +50,12 @@ beforeEach(async () => {
   abSystem.fill(0x66, 0x800, 0x1600);
   abSystem.fill(0x77, 0x1600, 0x1900);
   const abBootstrap = Buffer.alloc(256, 0x88);
+  // Synthetic deployment bytes test exact archival and role validation, not
+  // filesystem contents or guest execution.
+  const publicA = Buffer.alloc(8388608, 0xe5);
+  abSystem.copy(publicA);
+  const publicB = Buffer.alloc(8388608, 0xe5);
+  publicB.fill(0, 0, 16384);
   const assets = new Map([
     ["bootstrap.bin", bootstrap],
     ["ccp.bin", disk.subarray(0, 0x800)],
@@ -58,10 +65,13 @@ beforeEach(async () => {
     [systemAsset, largeSystem],
     [abSystemAsset, abSystem],
     [abBootstrapAsset, abBootstrap],
+    ["drive-a-system.img", publicA],
+    ["drive-b-games.img", publicB],
   ]);
   for (const name of [
     "index.html",
     "app.js",
+    "public-distribution.js",
     "terminal.js",
     "style.css",
     "config.json",
@@ -84,7 +94,18 @@ beforeEach(async () => {
     "triptych_host_wasm_bg.wasm.d.ts",
   ])
     assets.set(name, Buffer.from(`synthetic ${name}\n`));
-  expect(assets.size).toBe(30);
+  assets.set(
+    "config.json",
+    Buffer.from(
+      JSON.stringify({
+        diskUrl: "cpm22.img",
+        diskName: "triptych-cpm22.img",
+        systemCcp: "triptych",
+        publicDrives: true,
+      }),
+    ),
+  );
+  expect(assets.size).toBe(33);
   manifest = {
     schema: "triptych-browser-deployment-v1",
     distribution: {
@@ -93,6 +114,25 @@ beforeEach(async () => {
       targetProfile: "triptych-cpu-v0.1",
       disk: { bytes: disk.length, sha256: sha256(disk) },
       bootstrap: { bytes: bootstrap.length, sha256: sha256(bootstrap) },
+    },
+    publicDrives: {
+      schema: "triptych-public-drives-v1",
+      profile: "triptych-cpu-v0.1-8m-ab",
+      bootstrapAsset: abBootstrapAsset,
+      drives: Object.fromEntries(
+        [
+          ["A", "drive-a-system.img", publicA],
+          ["B", "drive-b-games.img", publicB],
+        ].map(([letter, path, bytes]) => [
+          letter,
+          {
+            path,
+            name: path,
+            bytes: bytes.length,
+            sha256: sha256(bytes),
+          },
+        ]),
+      ),
     },
     diskProfiles: [
       {
@@ -172,8 +212,10 @@ describe("exact current-build browser recovery archive", () => {
       (await readdir(source)).sort(),
     );
     for (const name of await readdir(source))
-      expect(await readFile(join(archive, "site", name))).toEqual(
+      assert.deepEqual(
+        await readFile(join(archive, "site", name)),
         await readFile(join(source, name)),
+        name,
       );
     expect(await verifyBrowserRecoveryArchive(options())).toEqual(receipt);
   });
@@ -320,7 +362,14 @@ describe("exact current-build browser recovery archive", () => {
     );
   });
 
-  it.each(["drive-set.js", "drive-set-store.js", abBootstrapAsset])(
+  it.each([
+    "drive-set.js",
+    "drive-set-store.js",
+    abBootstrapAsset,
+    "public-distribution.js",
+    "drive-a-system.img",
+    "drive-b-games.img",
+  ])(
     "rejects missing current-build asset %s before reserving an archive",
     async (name) => {
       manifest.assets = manifest.assets.filter((asset) => asset.path !== name);

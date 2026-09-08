@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, useLegacyConfiguration } from "./legacy-fixture.mjs";
 import { readFile } from "node:fs/promises";
 import {
   installCpm22File,
@@ -256,6 +256,7 @@ test("a second tab is read-only and cannot enter disk management", async ({
 }) => {
   await boot(page);
   const other = await context.newPage();
+  await useLegacyConfiguration(other);
   await boot(other);
   await expect(other.locator("#save-status")).toContainText("Read-only tab");
   await other.locator("#files").click();

@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./legacy-fixture.mjs";
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { decodeDriveSet } from "../../../crates/triptych-host-wasm/web/drive-set.js";

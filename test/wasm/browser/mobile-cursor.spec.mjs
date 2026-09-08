@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, useLegacyConfiguration } from "./legacy-fixture.mjs";
 import { readFile } from "node:fs/promises";
 
 const terminalSource = await readFile(
@@ -123,6 +123,7 @@ for (const entry of ["touch", "Keyboard"]) {
     });
     try {
       const page = await context.newPage();
+      await useLegacyConfiguration(page);
       await bootEditor(page);
       if (entry === "touch") await page.locator("#terminal").tap();
       else await page.locator("#show-keyboard").tap();
@@ -210,6 +211,7 @@ test("Files clears the Ctrl latch, isolates keyboard input and closes without re
   });
   try {
     const page = await context.newPage();
+    await useLegacyConfiguration(page);
     await bootEditor(page);
     await page.locator("#terminal-control-key").tap();
     await expect(page.locator("#terminal-control-key")).toHaveAttribute(
