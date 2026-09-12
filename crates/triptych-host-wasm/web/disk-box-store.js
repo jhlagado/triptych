@@ -633,6 +633,15 @@ export async function openDiskBoxStore({
       if (!row) return undefined;
       return (await envelope(row, row.key)).manifest;
     },
+    async readRawSnapshot() {
+      // One transaction keeps head, receipts and content at the same durable
+      // revision, even if another save is queued while the export is read.
+      // Do not validate here: recovery must preserve malformed records too.
+      const rows = await readRows([...localStores, ...history]);
+      return Object.fromEntries(
+        [STATE, BLOBS, ...HISTORY].map((name) => [name, rows[name] ?? []]),
+      );
+    },
     readRawRecords(store) {
       if (HISTORY.includes(store)) return historical.readRawRecords(store);
       requireValue([STATE, BLOBS].includes(store), "unknown recovery store");

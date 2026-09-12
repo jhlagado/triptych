@@ -1,6 +1,59 @@
 import { test, expect } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 
+test("complete raw recovery captures historical and current stores in one transaction", async ({
+  page,
+}) => {
+  expect(
+    await page.evaluate(async () => {
+      const store = await open();
+      const initial = await store.load();
+      const candidate = await fixture();
+      await store.saveCheckpoint(
+        initial.token,
+        "recovery-snapshot",
+        candidate.manifest,
+        candidate.blobs,
+      );
+      const transactions = [];
+      const original = IDBDatabase.prototype.transaction;
+      IDBDatabase.prototype.transaction = function (names, mode, ...rest) {
+        transactions.push({
+          names: typeof names === "string" ? [names] : Array.from(names),
+          mode,
+        });
+        return original.call(this, names, mode, ...rest);
+      };
+      let captured;
+      try {
+        captured = await store.readRawSnapshot();
+      } finally {
+        IDBDatabase.prototype.transaction = original;
+        store.close();
+      }
+      return {
+        count: transactions.length,
+        readonly: transactions.every((tx) => tx.mode === "readonly"),
+        completeScope:
+          transactions.length === 1 &&
+          transactions[0].names.every((name) => Array.isArray(captured[name])),
+        current: captured["disk-box-state-v1"].some(
+          (row) => row.key === "head",
+        ),
+        bytes: captured["disk-box-blobs-v1"].length,
+        stores: Object.keys(captured).length,
+      };
+    }),
+  ).toEqual({
+    count: 1,
+    readonly: true,
+    completeScope: true,
+    current: true,
+    bytes: 1,
+    stores: 8,
+  });
+});
+
 test("a forged nonhead receipt at the head revision cannot authorize a retry", async ({
   page,
 }) => {
@@ -404,10 +457,10 @@ test("published-only activation stores metadata, ejected private disks persist, 
       manifest.configurations.push({
         id: "550e8400-e29b-41d4-a716-446655440001",
         name: "Published only",
-        configuredCount: 2,
+        configuredCount: 1,
         bootstrap: { profile: "legacy-e400", bytes: Array(256).fill(0) },
         systemDisk: { kind: "published", image },
-        slots: [{ kind: "published", image }, null],
+        slots: [{ kind: "published", image }],
       });
       manifest.selectedConfigurationId = manifest.configurations[0].id;
       const first = await store.saveCheckpoint(
