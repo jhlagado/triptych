@@ -1,10 +1,36 @@
 import { open } from "node:fs/promises";
 import { constants } from "node:fs";
+import assert from "node:assert/strict";
 import { join } from "node:path";
 import { validateDiskLibraryRetention } from "./disk-library-retention.mjs";
+import { validateDiskCatalogue } from "../../crates/triptych-host-wasm/web/disk-catalogue.js";
 
 const MAX_METADATA = 16 * 1024 * 1024;
 const MAX_TOTAL = 1024 * 1024 * 1024;
+
+/** The first source reference for identical published bytes stays immutable.
+ * Changing any other metadata requires an explicit new publication identity.
+ */
+export function retainPublishedImageMetadata(previous, incoming) {
+  const catalogue = (images) =>
+    validateDiskCatalogue({
+      schema: "triptych-disk-catalogue-v1",
+      images,
+    }).images;
+  const before = catalogue(previous);
+  return catalogue(incoming).map((image) => {
+    const retained = before.find(
+      (row) => row.id === image.id && row.revision === image.revision,
+    );
+    if (!retained) return image;
+    assert.deepEqual(
+      { ...retained, source: image.source },
+      image,
+      `immutable catalogue metadata changed: ${image.id}`,
+    );
+    return retained;
+  });
+}
 
 async function boundedRead(path, limit, expected, openFile) {
   const file = await openFile(

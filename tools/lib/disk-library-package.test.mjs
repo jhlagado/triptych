@@ -4,7 +4,41 @@ import { mkdtemp, writeFile, rm, symlink, open } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { readDiskLibraryPackage } from "./disk-library-package.mjs";
+import {
+  readDiskLibraryPackage,
+  retainPublishedImageMetadata,
+} from "./disk-library-package.mjs";
+
+test("unchanged published bytes retain first source but never conceal other metadata changes", () => {
+  const image = {
+    id: "games",
+    revision: "a".repeat(64),
+    name: "Games",
+    geometry: "triptych-cpm-2m-v1",
+    byteLength: 2097152,
+    sha256: "a".repeat(64),
+    asset: `games-${"a".repeat(64)}.img`,
+    source: "https://example.test/first",
+    license: "MIT",
+    systemProfile: null,
+  };
+  const next = { ...image, source: "https://example.test/later" };
+  assert.deepEqual(retainPublishedImageMetadata([image], [next]), [image]);
+  assert.equal(next.source, "https://example.test/later");
+  for (const delta of [
+    { name: "Renamed" },
+    { license: "GPL-3.0-only" },
+    { sha256: "b".repeat(64) },
+  ])
+    assert.throws(
+      () => retainPublishedImageMetadata([image], [{ ...next, ...delta }]),
+      /immutable catalogue/,
+    );
+  const newRevision = { ...next, revision: "b".repeat(64) };
+  assert.deepEqual(retainPublishedImageMetadata([image], [newRevision]), [
+    newRevision,
+  ]);
+});
 
 const empty = () => ({
   schema: "triptych-disk-library-retention-v1",
