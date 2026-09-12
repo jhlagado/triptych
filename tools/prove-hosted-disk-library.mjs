@@ -87,6 +87,7 @@ const contexts = [],
   observed = [],
   failures = [],
   checks = [];
+const pageChecks = new WeakMap();
 try {
   async function pageFor(label, mobile = false) {
     const context = await browser.newContext({
@@ -106,30 +107,64 @@ try {
     page.on("pageerror", (error) =>
       failures.push(`${label}: ${error.message}`),
     );
-    // Disable cache without changing requests or substituting responses.
-    const session = await context.newCDPSession(page);
-    await session.send("Network.enable");
-    await session.send("Network.setCacheDisabled", { cacheDisabled: true });
     const seen = new Set();
+    const pending = [];
+    const session = await context.newCDPSession(page);
+    await session.send("Network.enable", {
+      maxResourceBufferSize: 16 * 1024 * 1024,
+      maxTotalBufferSize: 128 * 1024 * 1024,
+    });
+    await session.send("Network.setCacheDisabled", { cacheDisabled: true });
+    pageChecks.set(page, pending);
     observed.push({ label, seen });
-    page.on("response", (response) => {
-      const url = new URL(response.url());
-      if (url.origin !== base.origin || !url.pathname.startsWith(base.pathname))
-        return;
-      const path = url.pathname.slice(base.pathname.length) || "index.html";
-      const asset = assets.get(path);
-      if (!asset && path !== "deployment-manifest.json") return;
-      checks.push(
-        (async () => {
-          assert(response.ok(), `${label}/${path}: HTTP ${response.status()}`);
-          const bytes = await response.body();
-          if (asset) {
-            assert.equal(bytes.length, asset.bytes, `${label}/${path}: length`);
-            assert.equal(hash(bytes), asset.sha256, `${label}/${path}: digest`);
-          } else assert.deepEqual(bytes, expectedManifest);
-          seen.add(path);
-        })().catch((error) => failures.push(error.message)),
-      );
+    session.on(
+      "Fetch.requestPaused",
+      ({ requestId, request, responseStatusCode }) => {
+        const url = new URL(request.url);
+        const path = url.pathname.slice(base.pathname.length) || "index.html";
+        const asset = assets.get(path);
+        const check = (async () => {
+          try {
+            if (!asset && path !== "deployment-manifest.json") return;
+            assert(
+              responseStatusCode >= 200 && responseStatusCode < 300,
+              `${label}/${path}: HTTP ${responseStatusCode}`,
+            );
+            // Pause delivery, read THIS original server response, then continue
+            // it unchanged. No second fetch, fulfillment, header or body override.
+            // This avoids Chromium discarding consumed Fetch stream bodies.
+            const body = await session.send("Fetch.getResponseBody", {
+              requestId,
+            });
+            const bytes = Buffer.from(
+              body.body,
+              body.base64Encoded ? "base64" : "utf8",
+            );
+            if (asset) {
+              assert.equal(
+                bytes.length,
+                asset.bytes,
+                `${label}/${path}: length`,
+              );
+              assert.equal(
+                hash(bytes),
+                asset.sha256,
+                `${label}/${path}: digest`,
+              );
+            } else assert.deepEqual(bytes, expectedManifest);
+            seen.add(path);
+          } finally {
+            await session.send("Fetch.continueResponse", { requestId });
+          }
+        })().catch((error) =>
+          failures.push(`${label}/${path}: ${error.message}`),
+        );
+        pending.push(check);
+        checks.push(check);
+      },
+    );
+    await session.send("Fetch.enable", {
+      patterns: [{ urlPattern: `${base.href}*`, requestStage: "Response" }],
     });
     return page;
   }
@@ -144,7 +179,24 @@ try {
       )
       .toBe(true);
   }
+  async function drainResponses(page) {
+    // A response event precedes completion of its body. Navigation can discard
+    // Chromium's body buffer, so finish every check before leaving this page.
+    const pending = pageChecks.get(page);
+    let count;
+    do {
+      await page.waitForLoadState("networkidle");
+      count = pending.length;
+      await Promise.all(pending);
+    } while (pending.length !== count);
+    assert.deepEqual(
+      failures,
+      [],
+      "browser response verification failed before navigation",
+    );
+  }
   async function boot(page, url = base.href) {
+    if (page.url() !== "about:blank") await drainResponses(page);
     await page.goto(url);
     await expect(page.locator("#status")).toHaveAttribute(
       "data-state",
@@ -464,8 +516,7 @@ try {
   await prompt(mobile);
   assert.equal(configuration(await state(mobile)).configuredCount, 4);
   for (const context of contexts)
-    for (const page of context.pages())
-      await page.waitForLoadState("networkidle");
+    for (const page of context.pages()) await drainResponses(page);
   await Promise.all(checks);
   assert.deepEqual(
     failures,
