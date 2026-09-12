@@ -5,6 +5,7 @@ import { readFile } from "node:fs/promises";
 import {
   fetchTwoMibSystem,
   admitTwoMibSavedMachine,
+  validateTwoMibDeployment,
 } from "../../crates/triptych-host-wasm/web/two-mib-system.js";
 
 const sha = (bytes) => createHash("sha256").update(bytes).digest("hex");
@@ -14,6 +15,45 @@ const word = (bytes, offset, value) => {
   bytes[offset] = value & 255;
   bytes[offset + 1] = value >>> 8;
 };
+
+test("metadata-only validation returns owned descriptors without fetching assets", (t) => {
+  t.mock.method(globalThis, "fetch", () =>
+    assert.fail("metadata validation must not fetch"),
+  );
+  const input = deployment(fixture(4));
+  const validated = validateTwoMibDeployment(input, 4);
+  assert.equal(validated.configuredCount, 4);
+  assert.equal(validated.layout.bios, 0xfa00);
+  input.twoMibProfiles[0].bootstrap.sha256 = "0".repeat(64);
+  assert.notEqual(validated.bootstrap.sha256, "0".repeat(64));
+  assert.equal(validateTwoMibDeployment(deployment(fixture(4)), 16), null);
+});
+
+test("metadata-only validation retains existing layout, binding and accessor rejection", () => {
+  const badLayout = deployment(fixture(4));
+  badLayout.twoMibProfiles[0].layout.bios++;
+  assert.throws(() => validateTwoMibDeployment(badLayout, 4), /bios differs/);
+  const badAsset = deployment(fixture(4));
+  badAsset.assets[0].sha256 = "0".repeat(64);
+  assert.throws(() => validateTwoMibDeployment(badAsset, 4), /asset identity/);
+  let called = false;
+  const accessor = deployment(fixture(4));
+  Object.defineProperty(accessor, "twoMibProfiles", {
+    get() {
+      called = true;
+      return [];
+    },
+  });
+  assert.throws(
+    () => validateTwoMibDeployment(accessor, 4),
+    /invalid twoMibProfiles/,
+  );
+  assert.equal(called, false);
+  assert.throws(
+    () => validateTwoMibDeployment(deployment(fixture(4)), 17),
+    /configured count/,
+  );
+});
 
 // Deliberately independent synthetic layout fixtures exercise the browser
 // contract without importing a Node builder into its production module. They

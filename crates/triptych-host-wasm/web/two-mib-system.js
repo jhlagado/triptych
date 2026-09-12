@@ -355,6 +355,14 @@ function capture(deployment, count) {
   return selected ?? null;
 }
 
+/** Validate and own the existing closed deployment descriptor without loading
+ * any asset bytes. Returns null when the requested count is unavailable. This
+ * is metadata validation only; runtime and image admission remain separate.
+ */
+export function validateTwoMibDeployment(deployment, configuredCount) {
+  return capture(deployment, configuredCount);
+}
+
 async function hash(bytes, crypto) {
   requireValue(
     crypto?.subtle && typeof crypto.subtle.digest === "function",
