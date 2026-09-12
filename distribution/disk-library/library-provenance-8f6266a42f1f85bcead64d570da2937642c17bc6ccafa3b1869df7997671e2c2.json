@@ -1,0 +1,904 @@
+{
+  "schema": "triptych-disk-library-provenance-v1",
+  "machine": {
+    "revision": "9d3284692b51744d743330b65bf253278ac7263f",
+    "dirty": false
+  },
+  "sourceDistribution": {
+    "schema": "triptych-cpm-distribution-v1",
+    "triptych": {
+      "revision": "9d3284692b51744d743330b65bf253278ac7263f",
+      "dirty": false
+    },
+    "targetProfile": "triptych-cpu-v0.1",
+    "lockSha256": "5757cf36786fad657970c460a7a288454fe70962c9ef75c0123456f64938b427",
+    "packageLockSha256": "5a03968ed27ecc00e8b02d629c4f74b2e154c3abb5770ad4aaeb20d9a752756a",
+    "atom": {
+      "repository": "https://github.com/jhlagado/atom.git",
+      "revision": "802b5c2d320bec777f427755ff2d7338e3b80a05",
+      "package": "atom-z80",
+      "seed": {
+        "bytes": 64236,
+        "sha256": "fdea19fbd8aeb6211469f043491610455a71547902cf451c3e684e49a8fa0fd6"
+      }
+    },
+    "components": [
+      {
+        "id": "ccp",
+        "bytes": 2048,
+        "sha256": "e74d61f096f6c9de01d77cd990a3255c4f0d46d771992a5e54b7993ed51fe18b",
+        "source": {
+          "kind": "git",
+          "repository": "https://github.com/jhlagado/portable-cpm.git",
+          "revision": "2adfb035ec4de9a3a6dc629677fc8a0072cf0f74",
+          "path": "src/ccp.asm"
+        },
+        "target": {
+          "origin": 58368,
+          "capacity": 2048
+        },
+        "install": {
+          "kind": "system-records",
+          "firstRecord": 0,
+          "recordCount": 16
+        }
+      },
+      {
+        "id": "bdos",
+        "bytes": 3584,
+        "sha256": "02956431e3af849d99eecbffbb89a0c7a29487f91301575d1dd511127ab4d43b",
+        "source": {
+          "kind": "git",
+          "repository": "https://github.com/jhlagado/portable-cpm.git",
+          "revision": "2adfb035ec4de9a3a6dc629677fc8a0072cf0f74",
+          "path": "src/bdos.asm"
+        },
+        "target": {
+          "origin": 60416,
+          "capacity": 3584
+        },
+        "install": {
+          "kind": "system-records",
+          "firstRecord": 16,
+          "recordCount": 28
+        }
+      },
+      {
+        "id": "bios",
+        "bytes": 1024,
+        "sha256": "8bb107b756a4794e0f9f7856f42bd236f2d9c8b9380a515eb2dc12a9b55f3414",
+        "source": {
+          "kind": "triptych",
+          "path": "system/cpm/bios.asm"
+        },
+        "target": {
+          "origin": 64000,
+          "capacity": 1024
+        },
+        "install": {
+          "kind": "system-records",
+          "firstRecord": 44,
+          "recordCount": 8
+        }
+      },
+      {
+        "id": "atom",
+        "bytes": 15033,
+        "sha256": "9121b6a37342d9c53fb7d05a0cfa9ba8c5429b34767ecef2df81bf8833c04954",
+        "source": {
+          "kind": "git",
+          "repository": "https://github.com/jhlagado/atom.git",
+          "revision": "802b5c2d320bec777f427755ff2d7338e3b80a05",
+          "path": "assets/atom-cpm22.com"
+        },
+        "target": {
+          "origin": 256,
+          "capacity": 58112
+        },
+        "install": {
+          "kind": "file",
+          "name": "ATOM.COM",
+          "padByte": 26
+        }
+      },
+      {
+        "id": "nucleus",
+        "bytes": 21271,
+        "sha256": "1c047ac1ed5ff1c4e914321b66476b842a1b28cc0dfef4cfdb86f691ca037334",
+        "source": {
+          "kind": "git",
+          "repository": "https://github.com/jhlagado/nucleus.git",
+          "revision": "b5276a85fd36600a10dbd65039f0af3afc033f0d",
+          "path": "asm/vertical-slice/cpm22-native-compiler.asm"
+        },
+        "target": {
+          "origin": 256,
+          "capacity": 58112
+        },
+        "install": {
+          "kind": "file",
+          "name": "NUC.COM",
+          "padByte": 26
+        }
+      },
+      {
+        "id": "edit",
+        "bytes": 5513,
+        "sha256": "6be83f6edb9ee92387c7b3817f473fbbc389a58ab1a20d9a2a6101e695fb77c4",
+        "source": {
+          "kind": "git",
+          "repository": "https://github.com/jhlagado/edit.git",
+          "revision": "dbbda081b58077c98b509625176739bd9c5608ec",
+          "path": "src/editor.asm"
+        },
+        "target": {
+          "origin": 256,
+          "capacity": 58112
+        },
+        "install": {
+          "kind": "file",
+          "name": "EDIT.COM",
+          "padByte": 26
+        }
+      },
+      {
+        "id": "caverns80",
+        "bytes": 22896,
+        "sha256": "6e4c4154d7136645c18effccfc5d60ca3d59ae7b19a963b389608ecaf18e2dfb",
+        "source": {
+          "kind": "git",
+          "repository": "https://github.com/jhlagado/caverns80.git",
+          "revision": "0a0a67fda6163fdad982be7d5d20031d2b151c4d",
+          "path": "src/main.asm"
+        },
+        "target": {
+          "origin": 256,
+          "capacity": 58112
+        },
+        "install": {
+          "kind": "file",
+          "name": "CAVERNS.COM",
+          "padByte": 26
+        }
+      },
+      {
+        "id": "hyperdrive",
+        "bytes": 15152,
+        "sha256": "a3db132195631da3cd80885d9072b7b7cf1bb96118fc24363be71b93c7be3870",
+        "source": {
+          "kind": "git",
+          "repository": "https://github.com/jhlagado/hyperdrive.git",
+          "revision": "624fd56518a80762821c5bfcc3355e9a76d1eb34",
+          "path": "cpm/main.asm"
+        },
+        "target": {
+          "origin": 256,
+          "capacity": 58112
+        },
+        "install": {
+          "kind": "file",
+          "name": "HYPERDRV.COM",
+          "padByte": 26
+        }
+      },
+      {
+        "id": "HELLO.ASM",
+        "bytes": 87,
+        "sha256": "80aa0cdf203669d26f024e0b1999b864f1bd846fc4f9734fbf6d6138f8b05e2e",
+        "source": {
+          "kind": "triptych",
+          "path": "distribution/samples/HELLO.ASM"
+        }
+      },
+      {
+        "id": "INPUT.NU",
+        "bytes": 95,
+        "sha256": "cd0add4818216f0b0c8e152ed59e7a15cbef162c070ab84926b980fd951ee712",
+        "source": {
+          "kind": "triptych",
+          "path": "distribution/samples/INPUT.NU"
+        }
+      },
+      {
+        "id": "LARGE.ASM",
+        "bytes": 2116,
+        "sha256": "922dff2ac6d3de8b900f6a4360cfb5a277025242bf61e28381dedf270fb18ca6",
+        "source": {
+          "kind": "triptych",
+          "path": "distribution/samples/LARGE.ASM"
+        }
+      }
+    ],
+    "disk": {
+      "bytes": 256512,
+      "logicalBytes": 256256,
+      "sha256": "d66ccb03badd01302e81d638d5c637f098be2561f89ebdc8d818dab0a6855448"
+    },
+    "bootstrap": {
+      "bytes": 256,
+      "sha256": "54c6bfd356b4b42f8c51f3b85777a9d2be7aa680945335783c4dd7a6dae8921e"
+    }
+  },
+  "componentLock": {
+    "schema": "triptych-component-lock-v1",
+    "targetProfile": "triptych-cpu-v0.1",
+    "disk": {
+      "bytes": 256512,
+      "recordBytes": 128,
+      "systemRecords": 52
+    },
+    "atom": {
+      "repository": "https://github.com/jhlagado/atom.git",
+      "revision": "802b5c2d320bec777f427755ff2d7338e3b80a05",
+      "package": "atom-z80",
+      "seed": {
+        "bytes": 64236,
+        "sha256": "fdea19fbd8aeb6211469f043491610455a71547902cf451c3e684e49a8fa0fd6"
+      }
+    },
+    "components": [
+      {
+        "id": "ccp",
+        "role": "resident",
+        "source": {
+          "kind": "git",
+          "repository": "https://github.com/jhlagado/portable-cpm.git",
+          "revision": "2adfb035ec4de9a3a6dc629677fc8a0072cf0f74",
+          "path": "src/ccp.asm"
+        },
+        "recipe": "verified-release",
+        "artifact": {
+          "path": "third_party/portable-cpm/ccp.bin",
+          "bytes": 2048,
+          "sha256": "e74d61f096f6c9de01d77cd990a3255c4f0d46d771992a5e54b7993ed51fe18b",
+          "manifest": "third_party/portable-cpm/manifest.json",
+          "provenance": "third_party/portable-cpm/ccp.provenance.json"
+        },
+        "target": {
+          "origin": 58368,
+          "capacity": 2048
+        },
+        "install": {
+          "kind": "system-records",
+          "firstRecord": 0,
+          "recordCount": 16
+        },
+        "licence": {
+          "spdx": "GPL-3.0-or-later",
+          "provenance": "third_party/portable-cpm/README.md"
+        }
+      },
+      {
+        "id": "bdos",
+        "role": "resident",
+        "source": {
+          "kind": "git",
+          "repository": "https://github.com/jhlagado/portable-cpm.git",
+          "revision": "2adfb035ec4de9a3a6dc629677fc8a0072cf0f74",
+          "path": "src/bdos.asm"
+        },
+        "recipe": "verified-release",
+        "artifact": {
+          "path": "third_party/portable-cpm/bdos.bin",
+          "bytes": 3584,
+          "sha256": "02956431e3af849d99eecbffbb89a0c7a29487f91301575d1dd511127ab4d43b",
+          "manifest": "third_party/portable-cpm/manifest.json",
+          "provenance": "third_party/portable-cpm/bdos.provenance.json"
+        },
+        "target": {
+          "origin": 60416,
+          "capacity": 3584
+        },
+        "install": {
+          "kind": "system-records",
+          "firstRecord": 16,
+          "recordCount": 28
+        },
+        "licence": {
+          "spdx": "GPL-3.0-or-later",
+          "provenance": "third_party/portable-cpm/README.md"
+        }
+      },
+      {
+        "id": "bios",
+        "role": "resident",
+        "source": {
+          "kind": "triptych",
+          "path": "system/cpm/bios.asm"
+        },
+        "recipe": "atom-binary",
+        "target": {
+          "origin": 64000,
+          "capacity": 1024
+        },
+        "install": {
+          "kind": "system-records",
+          "firstRecord": 44,
+          "recordCount": 8
+        },
+        "licence": {
+          "spdx": "GPL-3.0-or-later",
+          "provenance": "NOTICE.md"
+        }
+      },
+      {
+        "id": "atom",
+        "role": "application",
+        "source": {
+          "kind": "git",
+          "repository": "https://github.com/jhlagado/atom.git",
+          "revision": "802b5c2d320bec777f427755ff2d7338e3b80a05",
+          "path": "assets/atom-cpm22.com"
+        },
+        "recipe": "atom-cpm22",
+        "target": {
+          "origin": 256,
+          "capacity": 58112
+        },
+        "install": {
+          "kind": "file",
+          "name": "ATOM.COM",
+          "padByte": 26
+        },
+        "licence": {
+          "spdx": "GPL-3.0-only",
+          "provenance": "NOTICE.md"
+        }
+      },
+      {
+        "id": "nucleus",
+        "role": "application",
+        "source": {
+          "kind": "git",
+          "repository": "https://github.com/jhlagado/nucleus.git",
+          "revision": "b5276a85fd36600a10dbd65039f0af3afc033f0d",
+          "path": "asm/vertical-slice/cpm22-native-compiler.asm"
+        },
+        "recipe": "verified-release",
+        "artifact": {
+          "path": "third_party/nucleus/NUC.COM",
+          "bytes": 21271,
+          "sha256": "1c047ac1ed5ff1c4e914321b66476b842a1b28cc0dfef4cfdb86f691ca037334",
+          "manifest": "third_party/nucleus/NUC.manifest.json",
+          "provenance": "third_party/nucleus/PROVENANCE.json"
+        },
+        "target": {
+          "origin": 256,
+          "capacity": 58112
+        },
+        "install": {
+          "kind": "file",
+          "name": "NUC.COM",
+          "padByte": 26
+        },
+        "licence": {
+          "spdx": "GPL-3.0-only",
+          "provenance": "third_party/nucleus/README.md"
+        }
+      },
+      {
+        "id": "edit",
+        "role": "application",
+        "source": {
+          "kind": "git",
+          "repository": "https://github.com/jhlagado/edit.git",
+          "revision": "dbbda081b58077c98b509625176739bd9c5608ec",
+          "path": "src/editor.asm"
+        },
+        "recipe": "verified-release",
+        "artifact": {
+          "path": "third_party/edit/EDIT.COM",
+          "bytes": 5513,
+          "sha256": "6be83f6edb9ee92387c7b3817f473fbbc389a58ab1a20d9a2a6101e695fb77c4",
+          "manifest": "third_party/edit/manifest.json",
+          "provenance": "third_party/edit/release.provenance.json"
+        },
+        "target": {
+          "origin": 256,
+          "capacity": 58112
+        },
+        "install": {
+          "kind": "file",
+          "name": "EDIT.COM",
+          "padByte": 26
+        },
+        "licence": {
+          "spdx": "GPL-3.0-or-later",
+          "provenance": "third_party/edit/README.md"
+        }
+      },
+      {
+        "id": "caverns80",
+        "role": "application",
+        "source": {
+          "kind": "git",
+          "repository": "https://github.com/jhlagado/caverns80.git",
+          "revision": "0a0a67fda6163fdad982be7d5d20031d2b151c4d",
+          "path": "src/main.asm"
+        },
+        "recipe": "verified-release",
+        "artifact": {
+          "path": "third_party/caverns80/CAVERNS.COM",
+          "bytes": 22896,
+          "sha256": "6e4c4154d7136645c18effccfc5d60ca3d59ae7b19a963b389608ecaf18e2dfb",
+          "manifest": "third_party/caverns80/manifest.json",
+          "provenance": "third_party/caverns80/release.provenance.json"
+        },
+        "target": {
+          "origin": 256,
+          "capacity": 58112
+        },
+        "install": {
+          "kind": "file",
+          "name": "CAVERNS.COM",
+          "padByte": 26
+        },
+        "licence": {
+          "spdx": "GPL-3.0-only",
+          "provenance": "third_party/caverns80/README.md"
+        }
+      },
+      {
+        "id": "hyperdrive",
+        "role": "application",
+        "source": {
+          "kind": "git",
+          "repository": "https://github.com/jhlagado/hyperdrive.git",
+          "revision": "624fd56518a80762821c5bfcc3355e9a76d1eb34",
+          "path": "cpm/main.asm"
+        },
+        "recipe": "verified-release",
+        "artifact": {
+          "path": "third_party/hyperdrive/HYPERDRV.COM",
+          "bytes": 15152,
+          "sha256": "a3db132195631da3cd80885d9072b7b7cf1bb96118fc24363be71b93c7be3870",
+          "manifest": "third_party/hyperdrive/manifest.json",
+          "provenance": "third_party/hyperdrive/release.provenance.json"
+        },
+        "target": {
+          "origin": 256,
+          "capacity": 58112
+        },
+        "install": {
+          "kind": "file",
+          "name": "HYPERDRV.COM",
+          "padByte": 26
+        },
+        "licence": {
+          "spdx": "GPL-3.0-only",
+          "provenance": "third_party/hyperdrive/README.md"
+        }
+      }
+    ]
+  },
+  "residentLock": {
+    "schema": "triptych-component-lock-v1",
+    "targetProfile": "triptych-cpu-v0.1-2m-n04",
+    "disk": {
+      "bytes": 2097152,
+      "recordBytes": 128,
+      "systemRecords": 128
+    },
+    "atom": {
+      "repository": "https://github.com/jhlagado/atom.git",
+      "revision": "802b5c2d320bec777f427755ff2d7338e3b80a05",
+      "package": "atom-z80",
+      "seed": {
+        "bytes": 64236,
+        "sha256": "fdea19fbd8aeb6211469f043491610455a71547902cf451c3e684e49a8fa0fd6"
+      }
+    },
+    "components": [
+      {
+        "id": "ccp",
+        "role": "resident",
+        "source": {
+          "kind": "git",
+          "repository": "https://github.com/jhlagado/portable-cpm.git",
+          "revision": "d28fc52774c967d1422b3b814d51c069247504c1",
+          "path": "src/ccp.asm"
+        },
+        "recipe": "verified-release",
+        "artifact": {
+          "path": "third_party/portable-cpm/2m/v0.1.4/profiles/triptych-cpu-v0.1-2m-n04/ccp.bin",
+          "bytes": 2048,
+          "sha256": "e74d61f096f6c9de01d77cd990a3255c4f0d46d771992a5e54b7993ed51fe18b",
+          "manifest": "third_party/portable-cpm/2m/v0.1.4/profiles/triptych-cpu-v0.1-2m-n04/manifest.json",
+          "provenance": "third_party/portable-cpm/2m/v0.1.4/profiles/triptych-cpu-v0.1-2m-n04/ccp.provenance.json"
+        },
+        "target": {
+          "origin": 58368,
+          "capacity": 2048
+        },
+        "install": {
+          "kind": "system-records",
+          "firstRecord": 0,
+          "recordCount": 16
+        },
+        "licence": {
+          "spdx": "GPL-3.0-or-later",
+          "provenance": "third_party/portable-cpm/2m/v0.1.4/README.md"
+        }
+      },
+      {
+        "id": "bdos",
+        "role": "resident",
+        "source": {
+          "kind": "git",
+          "repository": "https://github.com/jhlagado/portable-cpm.git",
+          "revision": "d28fc52774c967d1422b3b814d51c069247504c1",
+          "path": "src/bdos.asm"
+        },
+        "recipe": "verified-release",
+        "artifact": {
+          "path": "third_party/portable-cpm/2m/v0.1.4/profiles/triptych-cpu-v0.1-2m-n04/bdos.bin",
+          "bytes": 3584,
+          "sha256": "52f481e90cf12c4610db1609f7d4247ff3b00eb31705fca06a52701a3723714e",
+          "manifest": "third_party/portable-cpm/2m/v0.1.4/profiles/triptych-cpu-v0.1-2m-n04/manifest.json",
+          "provenance": "third_party/portable-cpm/2m/v0.1.4/profiles/triptych-cpu-v0.1-2m-n04/bdos.provenance.json"
+        },
+        "target": {
+          "origin": 60416,
+          "capacity": 3584
+        },
+        "install": {
+          "kind": "system-records",
+          "firstRecord": 16,
+          "recordCount": 28
+        },
+        "licence": {
+          "spdx": "GPL-3.0-or-later",
+          "provenance": "third_party/portable-cpm/2m/v0.1.4/README.md"
+        }
+      }
+    ]
+  },
+  "system": {
+    "schema": "triptych-two-mib-system-v1",
+    "id": "triptych-cpm-2m-v1",
+    "residentProfile": "triptych-cpu-v0.1-2m-n04",
+    "configuredCount": 4,
+    "imageBytes": 2097152,
+    "systemBytes": 16384,
+    "layout": {
+      "ccp": 58368,
+      "bdos": 60416,
+      "bios": 64000,
+      "allocationBase": 65024,
+      "allocationBytes": 512,
+      "commonLimit": 64768,
+      "dphBase": 64768,
+      "dphEnd": 64832
+    },
+    "system": {
+      "asset": "system-triptych-cpm-2m-n04-v1.bin",
+      "bytes": 16384,
+      "sha256": "61dd21e3f89be888e3530ec3b414691c343f7ad2c29aa15fac4ff2510c3a5a3e"
+    },
+    "bootstrap": {
+      "asset": "bootstrap-triptych-cpm-2m-n04-v1.bin",
+      "bytes": 256,
+      "sha256": "54c6bfd356b4b42f8c51f3b85777a9d2be7aa680945335783c4dd7a6dae8921e",
+      "source": "roms/cpu/bootstrap-2m.asm",
+      "sourceSha256": "672ef6371811791e857a8e96c0205ef9c581bcd1aae548e6f0ac0cb39684f053",
+      "preparedSourceSha256": "3c3ada54b78ed9a98d410126f233e33d706882badce69185bfd5e639d58e785c"
+    },
+    "residents": {
+      "lock": "distribution/residents-2m/n04.lock.json",
+      "lockSha256": "a8deece1936c848f5d319a0ad0d4406a9d38b10e44ea5472f2d65695d01dbee0",
+      "manifest": "third_party/portable-cpm/2m/v0.1.4/profiles/triptych-cpu-v0.1-2m-n04/manifest.json",
+      "manifestSha256": "ea412cdd2a02f78c9922ca19dc1da7fa46c905dba4ff83f5cbbfe4a559133e68",
+      "repository": "https://github.com/jhlagado/portable-cpm.git",
+      "version": "0.1.4",
+      "revision": "d28fc52774c967d1422b3b814d51c069247504c1",
+      "ccp": {
+        "source": "third_party/portable-cpm/2m/v0.1.4/src/ccp.asm",
+        "sourceSha256": "99c06cdf58cf2ac99b4e6a2c9e209f828eda82e20df8bf63dbc6f822c51f6504",
+        "preparedSourceSha256": "38155757ca2d1cb37c696ab10970c053b1a6b4a091cfb0e227f7e0797894f1c3",
+        "sha256": "e74d61f096f6c9de01d77cd990a3255c4f0d46d771992a5e54b7993ed51fe18b",
+        "offset": 0,
+        "origin": 58368,
+        "bytes": 2048
+      },
+      "bdos": {
+        "source": "third_party/portable-cpm/2m/v0.1.4/src/bdos.asm",
+        "sourceSha256": "ed58617ff3055700d38a112014f5720ae0ac338d098d4cf3d26aab6b33233946",
+        "preparedSourceSha256": "817ed6b6a9d91f4911a1bc5a906068dfb0be245db588e0fc577b870139abccc5",
+        "sha256": "52f481e90cf12c4610db1609f7d4247ff3b00eb31705fca06a52701a3723714e",
+        "offset": 2048,
+        "origin": 60416,
+        "bytes": 3584
+      }
+    },
+    "bios": {
+      "source": "system/cpm/bios-2m.asm",
+      "sourceSha256": "3481edd316608cf5efa4e6d5b285e5539223e5bb9005e45f69e5ada1986c1e21",
+      "preparedSourceSha256": "6d017256ef2f2bf0913a596d53fa73970deca368ac2f8dfdb6e96a17fe3ba502",
+      "sha256": "138e57de21314591b9366d3158b684f253513ffa301e403cda18335be5d15de8",
+      "commonEnd": 64723,
+      "directoryBuffer": 64563,
+      "dpb": 64548,
+      "checksumVector": 64691
+    },
+    "atom": {
+      "repository": "https://github.com/jhlagado/atom.git",
+      "revision": "802b5c2d320bec777f427755ff2d7338e3b80a05",
+      "package": "atom-z80",
+      "seed": {
+        "bytes": 64236,
+        "sha256": "fdea19fbd8aeb6211469f043491610455a71547902cf451c3e684e49a8fa0fd6"
+      },
+      "packageIntegrity": "sha512-IkseL2Xdf8dsnwGL0ewDfnjYaHvklujdcvyQ/vOs2+3mkIFGgsp5O0q77MhTPMvvR3Gkz2A8X+vVCGrOR4030A=="
+    },
+    "machine": {
+      "revision": "9d3284692b51744d743330b65bf253278ac7263f",
+      "dirty": false,
+      "generator": "tools/lib/cpm-two-mib-profile.mjs",
+      "generatorSha256": "8d33db1150132fd568c28a170e473341ab2c582c4410479f6d5502103e6e8372"
+    }
+  },
+  "components": [
+    {
+      "id": "atom",
+      "bytes": 15033,
+      "sha256": "9121b6a37342d9c53fb7d05a0cfa9ba8c5429b34767ecef2df81bf8833c04954",
+      "source": {
+        "kind": "git",
+        "repository": "https://github.com/jhlagado/atom.git",
+        "revision": "802b5c2d320bec777f427755ff2d7338e3b80a05",
+        "path": "assets/atom-cpm22.com"
+      },
+      "target": {
+        "origin": 256,
+        "capacity": 58112
+      },
+      "install": {
+        "kind": "file",
+        "name": "ATOM.COM",
+        "padByte": 26
+      },
+      "licence": {
+        "spdx": "GPL-3.0-only",
+        "provenance": "NOTICE.md"
+      },
+      "artifact": null
+    },
+    {
+      "id": "nucleus",
+      "bytes": 21271,
+      "sha256": "1c047ac1ed5ff1c4e914321b66476b842a1b28cc0dfef4cfdb86f691ca037334",
+      "source": {
+        "kind": "git",
+        "repository": "https://github.com/jhlagado/nucleus.git",
+        "revision": "b5276a85fd36600a10dbd65039f0af3afc033f0d",
+        "path": "asm/vertical-slice/cpm22-native-compiler.asm"
+      },
+      "target": {
+        "origin": 256,
+        "capacity": 58112
+      },
+      "install": {
+        "kind": "file",
+        "name": "NUC.COM",
+        "padByte": 26
+      },
+      "licence": {
+        "spdx": "GPL-3.0-only",
+        "provenance": "third_party/nucleus/README.md"
+      },
+      "artifact": {
+        "path": "third_party/nucleus/NUC.COM",
+        "bytes": 21271,
+        "sha256": "1c047ac1ed5ff1c4e914321b66476b842a1b28cc0dfef4cfdb86f691ca037334",
+        "manifest": "third_party/nucleus/NUC.manifest.json",
+        "provenance": "third_party/nucleus/PROVENANCE.json"
+      }
+    },
+    {
+      "id": "edit",
+      "bytes": 5513,
+      "sha256": "6be83f6edb9ee92387c7b3817f473fbbc389a58ab1a20d9a2a6101e695fb77c4",
+      "source": {
+        "kind": "git",
+        "repository": "https://github.com/jhlagado/edit.git",
+        "revision": "dbbda081b58077c98b509625176739bd9c5608ec",
+        "path": "src/editor.asm"
+      },
+      "target": {
+        "origin": 256,
+        "capacity": 58112
+      },
+      "install": {
+        "kind": "file",
+        "name": "EDIT.COM",
+        "padByte": 26
+      },
+      "licence": {
+        "spdx": "GPL-3.0-or-later",
+        "provenance": "third_party/edit/README.md"
+      },
+      "artifact": {
+        "path": "third_party/edit/EDIT.COM",
+        "bytes": 5513,
+        "sha256": "6be83f6edb9ee92387c7b3817f473fbbc389a58ab1a20d9a2a6101e695fb77c4",
+        "manifest": "third_party/edit/manifest.json",
+        "provenance": "third_party/edit/release.provenance.json"
+      }
+    },
+    {
+      "id": "caverns80",
+      "bytes": 22896,
+      "sha256": "6e4c4154d7136645c18effccfc5d60ca3d59ae7b19a963b389608ecaf18e2dfb",
+      "source": {
+        "kind": "git",
+        "repository": "https://github.com/jhlagado/caverns80.git",
+        "revision": "0a0a67fda6163fdad982be7d5d20031d2b151c4d",
+        "path": "src/main.asm"
+      },
+      "target": {
+        "origin": 256,
+        "capacity": 58112
+      },
+      "install": {
+        "kind": "file",
+        "name": "CAVERNS.COM",
+        "padByte": 26
+      },
+      "licence": {
+        "spdx": "GPL-3.0-only",
+        "provenance": "third_party/caverns80/README.md"
+      },
+      "artifact": {
+        "path": "third_party/caverns80/CAVERNS.COM",
+        "bytes": 22896,
+        "sha256": "6e4c4154d7136645c18effccfc5d60ca3d59ae7b19a963b389608ecaf18e2dfb",
+        "manifest": "third_party/caverns80/manifest.json",
+        "provenance": "third_party/caverns80/release.provenance.json"
+      }
+    },
+    {
+      "id": "hyperdrive",
+      "bytes": 15152,
+      "sha256": "a3db132195631da3cd80885d9072b7b7cf1bb96118fc24363be71b93c7be3870",
+      "source": {
+        "kind": "git",
+        "repository": "https://github.com/jhlagado/hyperdrive.git",
+        "revision": "624fd56518a80762821c5bfcc3355e9a76d1eb34",
+        "path": "cpm/main.asm"
+      },
+      "target": {
+        "origin": 256,
+        "capacity": 58112
+      },
+      "install": {
+        "kind": "file",
+        "name": "HYPERDRV.COM",
+        "padByte": 26
+      },
+      "licence": {
+        "spdx": "GPL-3.0-only",
+        "provenance": "third_party/hyperdrive/README.md"
+      },
+      "artifact": {
+        "path": "third_party/hyperdrive/HYPERDRV.COM",
+        "bytes": 15152,
+        "sha256": "a3db132195631da3cd80885d9072b7b7cf1bb96118fc24363be71b93c7be3870",
+        "manifest": "third_party/hyperdrive/manifest.json",
+        "provenance": "third_party/hyperdrive/release.provenance.json"
+      }
+    }
+  ],
+  "samples": [
+    {
+      "id": "HELLO.ASM",
+      "bytes": 87,
+      "sha256": "80aa0cdf203669d26f024e0b1999b864f1bd846fc4f9734fbf6d6138f8b05e2e",
+      "source": {
+        "kind": "triptych",
+        "path": "distribution/samples/HELLO.ASM"
+      },
+      "licence": {
+        "spdx": "GPL-3.0-or-later",
+        "provenance": "NOTICE.md"
+      }
+    },
+    {
+      "id": "INPUT.NU",
+      "bytes": 95,
+      "sha256": "cd0add4818216f0b0c8e152ed59e7a15cbef162c070ab84926b980fd951ee712",
+      "source": {
+        "kind": "triptych",
+        "path": "distribution/samples/INPUT.NU"
+      },
+      "licence": {
+        "spdx": "GPL-3.0-or-later",
+        "provenance": "NOTICE.md"
+      }
+    },
+    {
+      "id": "LARGE.ASM",
+      "bytes": 2116,
+      "sha256": "922dff2ac6d3de8b900f6a4360cfb5a277025242bf61e28381dedf270fb18ca6",
+      "source": {
+        "kind": "triptych",
+        "path": "distribution/samples/LARGE.ASM"
+      },
+      "licence": {
+        "spdx": "GPL-3.0-or-later",
+        "provenance": "NOTICE.md"
+      }
+    }
+  ],
+  "generatedReadme": {
+    "source": "tools/lib/public-drive-distribution.mjs",
+    "bytes": 311,
+    "sha256": "0f91d855e832943e2bb5426d610d7373b74c8b6134d8684c99743d326d2681c0",
+    "licence": {
+      "spdx": "GPL-3.0-or-later",
+      "provenance": "LICENSE"
+    }
+  },
+  "images": [
+    {
+      "asset": "library-system-2m-n04-20f331a4b984a4a580dd191cec5f8aca78071067e8495741e54edc4b70933f92.img",
+      "sha256": "20f331a4b984a4a580dd191cec5f8aca78071067e8495741e54edc4b70933f92",
+      "bytes": 2097152,
+      "systemProfile": "triptych-cpu-v0.1-2m-n04",
+      "files": [
+        {
+          "name": "ATOM.COM",
+          "bytes": 15104,
+          "sha256": "55fd30414fa8627901cc2f8130bb975b8322ff88160f82a751413a4eda72973c"
+        },
+        {
+          "name": "EDIT.COM",
+          "bytes": 5632,
+          "sha256": "e6abba89599b4aacc104b59b3833995279d2773d7f70ecb5ce40758bb4165ea4"
+        },
+        {
+          "name": "HELLO.ASM",
+          "bytes": 128,
+          "sha256": "17306a951d1b192ccbd857c22bfaf9f82f54a7c3d1c21fd862d3b57286e19cf7"
+        },
+        {
+          "name": "INPUT.NU",
+          "bytes": 128,
+          "sha256": "7b4a5c82d418c627443131083d0918076ce0dfba544c38cbf87120e3771cde07"
+        },
+        {
+          "name": "LARGE.ASM",
+          "bytes": 2176,
+          "sha256": "71d8b0472601670664cf7afaef79117161d2d86eacfa402fb3db8606e264cf84"
+        },
+        {
+          "name": "NUC.COM",
+          "bytes": 21376,
+          "sha256": "6879d3c534b81c0557ba9c0c62f856e29d01ce55d89dcf734074f4543cb88802"
+        }
+      ]
+    },
+    {
+      "asset": "library-games-2m-0b76f72ef106306905c7ea64b9f68b6f6671d123aecae79baa954eb0aa08eb40.img",
+      "sha256": "0b76f72ef106306905c7ea64b9f68b6f6671d123aecae79baa954eb0aa08eb40",
+      "bytes": 2097152,
+      "systemProfile": null,
+      "files": [
+        {
+          "name": "CAVERNS.COM",
+          "bytes": 22912,
+          "sha256": "86cb51190599c1ce8b5bba8a766f109bd40b8be4a56fbda950e61207bc01ad50"
+        },
+        {
+          "name": "HYPERDRV.COM",
+          "bytes": 15232,
+          "sha256": "88c160b0fa08e09ca5eb4bea97a8ffc1c50b66ede017f76fdfcc6ca7fd86f4d0"
+        },
+        {
+          "name": "README.TXT",
+          "bytes": 311,
+          "sha256": "0f91d855e832943e2bb5426d610d7373b74c8b6134d8684c99743d326d2681c0"
+        }
+      ]
+    }
+  ]
+}

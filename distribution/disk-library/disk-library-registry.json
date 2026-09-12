@@ -1,8 +1,171 @@
 {
-  "schema": "triptych-disk-library-retention-v1",
-  "assets": [],
-  "images": [],
-  "admissions": [],
-  "recipes": [],
-  "defaults": []
+  "admissions": [
+    {
+      "bindings": [
+        {
+          "asset": "library-retained-61dd21e3f89be888e3530ec3b414691c343f7ad2c29aa15fac4ff2510c3a5a3e.bin",
+          "path": "system-triptych-cpm-2m-n04-v1.bin"
+        },
+        {
+          "asset": "library-retained-54c6bfd356b4b42f8c51f3b85777a9d2be7aa680945335783c4dd7a6dae8921e.bin",
+          "path": "bootstrap-triptych-cpm-2m-n04-v1.bin"
+        }
+      ],
+      "envelope": "library-admission-49c38f6b31bf9c06fbd6d763ec7788aeed18499f50228582bf42b9cfe2abb700.json",
+      "id": "49c38f6b31bf9c06fbd6d763ec7788aeed18499f50228582bf42b9cfe2abb700"
+    }
+  ],
+  "assets": [
+    {
+      "bytes": 1424,
+      "path": "library-catalogue-3c12571f9c3d3762c0b170b04d2a917a8656354ced5be2a906756e65ae8bd616.json",
+      "sha256": "3c12571f9c3d3762c0b170b04d2a917a8656354ced5be2a906756e65ae8bd616"
+    },
+    {
+      "bytes": 28488,
+      "path": "library-provenance-8f6266a42f1f85bcead64d570da2937642c17bc6ccafa3b1869df7997671e2c2.json",
+      "sha256": "8f6266a42f1f85bcead64d570da2937642c17bc6ccafa3b1869df7997671e2c2"
+    },
+    {
+      "bytes": 4163,
+      "path": "library-admission-49c38f6b31bf9c06fbd6d763ec7788aeed18499f50228582bf42b9cfe2abb700.json",
+      "sha256": "49c38f6b31bf9c06fbd6d763ec7788aeed18499f50228582bf42b9cfe2abb700"
+    },
+    {
+      "bytes": 2097152,
+      "path": "library-system-2m-n04-20f331a4b984a4a580dd191cec5f8aca78071067e8495741e54edc4b70933f92.img",
+      "sha256": "20f331a4b984a4a580dd191cec5f8aca78071067e8495741e54edc4b70933f92"
+    },
+    {
+      "bytes": 2097152,
+      "path": "library-games-2m-0b76f72ef106306905c7ea64b9f68b6f6671d123aecae79baa954eb0aa08eb40.img",
+      "sha256": "0b76f72ef106306905c7ea64b9f68b6f6671d123aecae79baa954eb0aa08eb40"
+    },
+    {
+      "bytes": 16384,
+      "path": "library-retained-61dd21e3f89be888e3530ec3b414691c343f7ad2c29aa15fac4ff2510c3a5a3e.bin",
+      "sha256": "61dd21e3f89be888e3530ec3b414691c343f7ad2c29aa15fac4ff2510c3a5a3e"
+    },
+    {
+      "bytes": 256,
+      "path": "library-retained-54c6bfd356b4b42f8c51f3b85777a9d2be7aa680945335783c4dd7a6dae8921e.bin",
+      "sha256": "54c6bfd356b4b42f8c51f3b85777a9d2be7aa680945335783c4dd7a6dae8921e"
+    },
+    {
+      "bytes": 2097152,
+      "path": "library-seed-f6dd864da86d9f7fe5e6576598e42c6f06e20ad46ca17674685a446fa368a1ce.img",
+      "sha256": "f6dd864da86d9f7fe5e6576598e42c6f06e20ad46ca17674685a446fa368a1ce"
+    }
+  ],
+  "defaults": [
+    {
+      "id": "starter",
+      "revision": "d24c6e7c8556b98c22b3ffe559734f92e0ca479e072774532c576be6426ad474"
+    },
+    {
+      "id": "library",
+      "revision": "8e52c660c7e830b85c7453b285a4ac332003ee99c2889e7aae949eb6134b5186"
+    }
+  ],
+  "images": [
+    {
+      "asset": "library-system-2m-n04-20f331a4b984a4a580dd191cec5f8aca78071067e8495741e54edc4b70933f92.img",
+      "byteLength": 2097152,
+      "geometry": "triptych-cpm-2m-v1",
+      "id": "system-2m-n04",
+      "license": "Mixed GPL-3.0-only and GPL-3.0-or-later components; see disk-library-provenance.json.",
+      "name": "Triptych tools and system (four drives)",
+      "revision": "20f331a4b984a4a580dd191cec5f8aca78071067e8495741e54edc4b70933f92",
+      "sha256": "20f331a4b984a4a580dd191cec5f8aca78071067e8495741e54edc4b70933f92",
+      "source": "https://github.com/jhlagado/triptych/tree/9d3284692b51744d743330b65bf253278ac7263f",
+      "systemProfile": "triptych-cpu-v0.1-2m-n04"
+    },
+    {
+      "asset": "library-games-2m-0b76f72ef106306905c7ea64b9f68b6f6671d123aecae79baa954eb0aa08eb40.img",
+      "byteLength": 2097152,
+      "geometry": "triptych-cpm-2m-v1",
+      "id": "games-2m",
+      "license": "Mixed GPL-3.0-only and GPL-3.0-or-later components; see disk-library-provenance.json.",
+      "name": "Caverns and Hyperdrive",
+      "revision": "0b76f72ef106306905c7ea64b9f68b6f6671d123aecae79baa954eb0aa08eb40",
+      "sha256": "0b76f72ef106306905c7ea64b9f68b6f6671d123aecae79baa954eb0aa08eb40",
+      "source": "https://github.com/jhlagado/triptych/tree/9d3284692b51744d743330b65bf253278ac7263f",
+      "systemProfile": null
+    }
+  ],
+  "recipes": [
+    {
+      "admission": "49c38f6b31bf9c06fbd6d763ec7788aeed18499f50228582bf42b9cfe2abb700",
+      "bootstrap": "library-retained-54c6bfd356b4b42f8c51f3b85777a9d2be7aa680945335783c4dd7a6dae8921e.bin",
+      "configuredCount": 4,
+      "id": "starter",
+      "name": "Tools, games and personal disks",
+      "provenance": "library-provenance-8f6266a42f1f85bcead64d570da2937642c17bc6ccafa3b1869df7997671e2c2.json",
+      "revision": "d24c6e7c8556b98c22b3ffe559734f92e0ca479e072774532c576be6426ad474",
+      "slots": [
+        {
+          "image": {
+            "id": "system-2m-n04",
+            "revision": "20f331a4b984a4a580dd191cec5f8aca78071067e8495741e54edc4b70933f92"
+          },
+          "kind": "published"
+        },
+        {
+          "geometry": "triptych-cpm-2m-v1",
+          "kind": "writable-role",
+          "name": "Work",
+          "role": "work",
+          "seed": {
+            "asset": "library-seed-f6dd864da86d9f7fe5e6576598e42c6f06e20ad46ca17674685a446fa368a1ce.img",
+            "systemProfile": null
+          }
+        },
+        {
+          "image": {
+            "id": "games-2m",
+            "revision": "0b76f72ef106306905c7ea64b9f68b6f6671d123aecae79baa954eb0aa08eb40"
+          },
+          "kind": "published"
+        },
+        {
+          "geometry": "triptych-cpm-2m-v1",
+          "kind": "writable-role",
+          "name": "Saves",
+          "role": "saves",
+          "seed": {
+            "asset": "library-seed-f6dd864da86d9f7fe5e6576598e42c6f06e20ad46ca17674685a446fa368a1ce.img",
+            "systemProfile": null
+          }
+        }
+      ]
+    },
+    {
+      "admission": "49c38f6b31bf9c06fbd6d763ec7788aeed18499f50228582bf42b9cfe2abb700",
+      "bootstrap": "library-retained-54c6bfd356b4b42f8c51f3b85777a9d2be7aa680945335783c4dd7a6dae8921e.bin",
+      "configuredCount": 4,
+      "id": "library",
+      "name": "Protected library only",
+      "provenance": "library-provenance-8f6266a42f1f85bcead64d570da2937642c17bc6ccafa3b1869df7997671e2c2.json",
+      "revision": "8e52c660c7e830b85c7453b285a4ac332003ee99c2889e7aae949eb6134b5186",
+      "slots": [
+        {
+          "image": {
+            "id": "system-2m-n04",
+            "revision": "20f331a4b984a4a580dd191cec5f8aca78071067e8495741e54edc4b70933f92"
+          },
+          "kind": "published"
+        },
+        null,
+        {
+          "image": {
+            "id": "games-2m",
+            "revision": "0b76f72ef106306905c7ea64b9f68b6f6671d123aecae79baa954eb0aa08eb40"
+          },
+          "kind": "published"
+        },
+        null
+      ]
+    }
+  ],
+  "schema": "triptych-disk-library-retention-v1"
 }

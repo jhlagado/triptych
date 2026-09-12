@@ -1,0 +1,101 @@
+{
+  "schema": "triptych-browser-deployment-v1",
+  "twoMibProfiles": [
+    {
+      "schema": "triptych-two-mib-system-v1",
+      "id": "triptych-cpm-2m-v1",
+      "residentProfile": "triptych-cpu-v0.1-2m-n04",
+      "configuredCount": 4,
+      "imageBytes": 2097152,
+      "systemBytes": 16384,
+      "layout": {
+        "ccp": 58368,
+        "bdos": 60416,
+        "bios": 64000,
+        "allocationBase": 65024,
+        "allocationBytes": 512,
+        "commonLimit": 64768,
+        "dphBase": 64768,
+        "dphEnd": 64832
+      },
+      "system": {
+        "asset": "system-triptych-cpm-2m-n04-v1.bin",
+        "bytes": 16384,
+        "sha256": "61dd21e3f89be888e3530ec3b414691c343f7ad2c29aa15fac4ff2510c3a5a3e"
+      },
+      "bootstrap": {
+        "asset": "bootstrap-triptych-cpm-2m-n04-v1.bin",
+        "bytes": 256,
+        "sha256": "54c6bfd356b4b42f8c51f3b85777a9d2be7aa680945335783c4dd7a6dae8921e",
+        "source": "roms/cpu/bootstrap-2m.asm",
+        "sourceSha256": "672ef6371811791e857a8e96c0205ef9c581bcd1aae548e6f0ac0cb39684f053",
+        "preparedSourceSha256": "3c3ada54b78ed9a98d410126f233e33d706882badce69185bfd5e639d58e785c"
+      },
+      "residents": {
+        "lock": "distribution/residents-2m/n04.lock.json",
+        "lockSha256": "a8deece1936c848f5d319a0ad0d4406a9d38b10e44ea5472f2d65695d01dbee0",
+        "manifest": "third_party/portable-cpm/2m/v0.1.4/profiles/triptych-cpu-v0.1-2m-n04/manifest.json",
+        "manifestSha256": "ea412cdd2a02f78c9922ca19dc1da7fa46c905dba4ff83f5cbbfe4a559133e68",
+        "repository": "https://github.com/jhlagado/portable-cpm.git",
+        "version": "0.1.4",
+        "revision": "d28fc52774c967d1422b3b814d51c069247504c1",
+        "ccp": {
+          "source": "third_party/portable-cpm/2m/v0.1.4/src/ccp.asm",
+          "sourceSha256": "99c06cdf58cf2ac99b4e6a2c9e209f828eda82e20df8bf63dbc6f822c51f6504",
+          "preparedSourceSha256": "38155757ca2d1cb37c696ab10970c053b1a6b4a091cfb0e227f7e0797894f1c3",
+          "sha256": "e74d61f096f6c9de01d77cd990a3255c4f0d46d771992a5e54b7993ed51fe18b",
+          "offset": 0,
+          "origin": 58368,
+          "bytes": 2048
+        },
+        "bdos": {
+          "source": "third_party/portable-cpm/2m/v0.1.4/src/bdos.asm",
+          "sourceSha256": "ed58617ff3055700d38a112014f5720ae0ac338d098d4cf3d26aab6b33233946",
+          "preparedSourceSha256": "817ed6b6a9d91f4911a1bc5a906068dfb0be245db588e0fc577b870139abccc5",
+          "sha256": "52f481e90cf12c4610db1609f7d4247ff3b00eb31705fca06a52701a3723714e",
+          "offset": 2048,
+          "origin": 60416,
+          "bytes": 3584
+        }
+      },
+      "bios": {
+        "source": "system/cpm/bios-2m.asm",
+        "sourceSha256": "3481edd316608cf5efa4e6d5b285e5539223e5bb9005e45f69e5ada1986c1e21",
+        "preparedSourceSha256": "6d017256ef2f2bf0913a596d53fa73970deca368ac2f8dfdb6e96a17fe3ba502",
+        "sha256": "138e57de21314591b9366d3158b684f253513ffa301e403cda18335be5d15de8",
+        "commonEnd": 64723,
+        "directoryBuffer": 64563,
+        "dpb": 64548,
+        "checksumVector": 64691
+      },
+      "atom": {
+        "repository": "https://github.com/jhlagado/atom.git",
+        "revision": "802b5c2d320bec777f427755ff2d7338e3b80a05",
+        "package": "atom-z80",
+        "seed": {
+          "bytes": 64236,
+          "sha256": "fdea19fbd8aeb6211469f043491610455a71547902cf451c3e684e49a8fa0fd6"
+        },
+        "packageIntegrity": "sha512-IkseL2Xdf8dsnwGL0ewDfnjYaHvklujdcvyQ/vOs2+3mkIFGgsp5O0q77MhTPMvvR3Gkz2A8X+vVCGrOR4030A=="
+      },
+      "machine": {
+        "revision": "9d3284692b51744d743330b65bf253278ac7263f",
+        "dirty": false,
+        "generator": "tools/lib/cpm-two-mib-profile.mjs",
+        "generatorSha256": "8d33db1150132fd568c28a170e473341ab2c582c4410479f6d5502103e6e8372"
+      }
+    }
+  ],
+  "assets": [
+    {
+      "path": "system-triptych-cpm-2m-n04-v1.bin",
+      "bytes": 16384,
+      "sha256": "61dd21e3f89be888e3530ec3b414691c343f7ad2c29aa15fac4ff2510c3a5a3e"
+    },
+    {
+      "path": "bootstrap-triptych-cpm-2m-n04-v1.bin",
+      "bytes": 256,
+      "sha256": "54c6bfd356b4b42f8c51f3b85777a9d2be7aa680945335783c4dd7a6dae8921e"
+    }
+  ]
+}

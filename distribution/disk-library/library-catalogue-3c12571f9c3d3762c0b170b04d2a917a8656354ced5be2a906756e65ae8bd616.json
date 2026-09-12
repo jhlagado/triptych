@@ -1,0 +1,29 @@
+{
+  "schema": "triptych-disk-catalogue-v1",
+  "images": [
+    {
+      "id": "system-2m-n04",
+      "revision": "20f331a4b984a4a580dd191cec5f8aca78071067e8495741e54edc4b70933f92",
+      "name": "Triptych tools and system (four drives)",
+      "geometry": "triptych-cpm-2m-v1",
+      "byteLength": 2097152,
+      "sha256": "20f331a4b984a4a580dd191cec5f8aca78071067e8495741e54edc4b70933f92",
+      "source": "https://github.com/jhlagado/triptych/tree/9d3284692b51744d743330b65bf253278ac7263f",
+      "license": "Mixed GPL-3.0-only and GPL-3.0-or-later components; see disk-library-provenance.json.",
+      "systemProfile": "triptych-cpu-v0.1-2m-n04",
+      "asset": "library-system-2m-n04-20f331a4b984a4a580dd191cec5f8aca78071067e8495741e54edc4b70933f92.img"
+    },
+    {
+      "id": "games-2m",
+      "revision": "0b76f72ef106306905c7ea64b9f68b6f6671d123aecae79baa954eb0aa08eb40",
+      "name": "Caverns and Hyperdrive",
+      "geometry": "triptych-cpm-2m-v1",
+      "byteLength": 2097152,
+      "sha256": "0b76f72ef106306905c7ea64b9f68b6f6671d123aecae79baa954eb0aa08eb40",
+      "source": "https://github.com/jhlagado/triptych/tree/9d3284692b51744d743330b65bf253278ac7263f",
+      "license": "Mixed GPL-3.0-only and GPL-3.0-or-later components; see disk-library-provenance.json.",
+      "systemProfile": null,
+      "asset": "library-games-2m-0b76f72ef106306905c7ea64b9f68b6f6671d123aecae79baa954eb0aa08eb40.img"
+    }
+  ]
+}
