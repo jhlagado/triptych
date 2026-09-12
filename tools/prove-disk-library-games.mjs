@@ -165,7 +165,10 @@ async function prove(game, direct) {
     const marker =
       game === "HYPERD2" ? /stand beside the docking bay/i : /compass/i;
     if (game === "HYPERD2") command("N", /\?\s*$/);
-    else command("TAKE COMPASS", /\?\s*$/);
+    else {
+      assert.doesNotMatch(initialInventory, /compass/i);
+      command("TAKE COMPASS", /\?\s*$/);
+    }
     const savedInventory =
       game === "HYPERD2" ? command("LOOK", /\?\s*$/) : inventory();
     assert.match(savedInventory, marker);
@@ -188,7 +191,18 @@ async function prove(game, direct) {
     command("LOAD", /Game loaded[\s\S]*\?\s*$/);
     const restoredInventory =
       game === "HYPERD2" ? command("LOOK", /\?\s*$/) : inventory();
-    assert.match(restoredInventory, marker, "LOAD restores changed game state");
+    if (game === "HYPERD2")
+      assert.match(
+        restoredInventory,
+        marker,
+        "LOAD restores changed game state",
+      );
+    else
+      assert.equal(
+        restoredInventory,
+        savedInventory,
+        "LOAD restores the carried compass after DROP",
+      );
     quit();
     const saved = cpu.export_drive_checkpoint(target);
     if (direct) assert.deepEqual(names(saved), [`${game}.SAV`]);
@@ -213,11 +227,18 @@ async function prove(game, direct) {
     sample("loaded");
     const relaunched =
       game === "HYPERD2" ? command("LOOK", /\?\s*$/) : inventory();
-    assert.match(
-      relaunched,
-      marker,
-      "LOAD restores saved state after relaunch",
-    );
+    if (game === "HYPERD2")
+      assert.match(
+        relaunched,
+        marker,
+        "LOAD restores saved state after relaunch",
+      );
+    else
+      assert.equal(
+        relaunched,
+        savedInventory,
+        "LOAD restores the saved inventory after relaunch",
+      );
     quit();
     assert.deepEqual(
       cpu.export_drive_checkpoint(target),

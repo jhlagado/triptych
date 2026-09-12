@@ -499,6 +499,7 @@ try {
       snapshots,
       instructions: count,
       elapsedMs: Date.now() - started,
+      maxMs,
     });
     console.log(`${step.id}: WASM passed (${count} instructions)`);
   }
@@ -555,8 +556,8 @@ const completion = new Promise((done) =>
     done({ code, signal });
   }),
 );
-async function wait(length) {
-  const deadline = Date.now() + 180000;
+async function wait(length, maxMs = 180000) {
+  const deadline = Date.now() + Math.max(180000, maxMs);
   while (output.length < length) {
     assert(
       !error && !closed && Date.now() < deadline,
@@ -569,7 +570,7 @@ try {
   for (const checkpoint of reports) {
     if (checkpoint.input)
       child.stdin.write(Buffer.from(checkpoint.input, "latin1"));
-    await wait(checkpoint.transcript.length);
+    await wait(checkpoint.transcript.length, checkpoint.maxMs);
     assert.deepEqual(output, checkpoint.transcript, checkpoint.id);
     for (let d = 0; d < configuredCount; d++)
       if (nativePaths[d] !== null)

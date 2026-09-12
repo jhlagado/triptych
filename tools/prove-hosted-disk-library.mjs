@@ -356,7 +356,7 @@ try {
   await command(desktop, "SAVE");
   await command(desktop, "S");
   await command(desktop, "LOAD");
-  assert.match(await command(desktop, "LOOK"), /standing by the docking bay/i);
+  assert.match(await command(desktop, "LOOK"), /stand beside the docking bay/i);
   await quit(desktop, "HYPERD2");
   // The management barrier acknowledges the complete writable checkpoint.
   await desktop.locator("#library-ready").check();
@@ -387,7 +387,7 @@ try {
   }
   await gameStart(desktop, "HYPERD2");
   await command(desktop, "LOAD");
-  assert.match(await command(desktop, "LOOK"), /standing by the docking bay/i);
+  assert.match(await command(desktop, "LOOK"), /stand beside the docking bay/i);
   await quit(desktop, "HYPERD2");
   console.log(
     "All three games SAVE/LOAD changed state across reload on private D.",
@@ -755,6 +755,100 @@ try {
     .not.toBe(mobileScreen);
   await prompt(mobile);
   assert.equal(configuration(await state(mobile)).configuredCount, 4);
+  await mobile.locator("#show-keyboard").tap();
+  await expect(mobile.locator("body")).not.toHaveClass(
+    /terminal-keyboard-open/,
+  );
+  await library(mobile);
+  const mobileLink = publicLink(
+    await mobile.locator("#share-starter").getAttribute("href"),
+  );
+  const mobileInitial = await state(mobile);
+  const mobileWorkId = configuration(mobileInitial).slots[1].diskId;
+  await command(mobile, "SAVE 1 B:MOBILE.BIN", "A>");
+  await mobile.locator("#files").tap();
+  await mobile.locator("#saved-and-exited").check();
+  await mobile.locator("#begin-management").tap();
+  await expect(mobile.locator("#files-status")).toContainText("CPU paused.");
+  await expect(mobile.locator("#cancel-management")).toBeEnabled();
+  await mobile.locator("#close-files").tap();
+  const mobileSaved = await state(mobile);
+  const mobileWork = personal(mobileSaved, mobileWorkId);
+  assert.notEqual(
+    mobileWork.content.sha256,
+    personal(mobileInitial, mobileWorkId).content.sha256,
+  );
+  protectedDisksUncopied(mobileSaved);
+  async function mobileFile() {
+    return mobile.evaluate(
+      async ({ sha256, moduleUrl }) => {
+        const db = await new Promise((resolve, reject) => {
+          const request = indexedDB.open("triptych-cpu");
+          request.onsuccess = () => resolve(request.result);
+          request.onerror = () => reject(request.error);
+        });
+        let bytes;
+        try {
+          bytes = await new Promise((resolve, reject) => {
+            const tx = db.transaction("disk-box-blobs-v1");
+            const request = tx.objectStore("disk-box-blobs-v1").get(sha256);
+            tx.oncomplete = () =>
+              request.result
+                ? resolve(request.result.bytes)
+                : reject(new Error(`Missing mobile work blob ${sha256}.`));
+            tx.onabort = () => reject(tx.error);
+          });
+        } finally {
+          db.close();
+        }
+        const { CpmDisk } = await import(moduleUrl);
+        const disk = new CpmDisk(bytes);
+        try {
+          return Array.from(disk.read_file("MOBILE.BIN"));
+        } finally {
+          disk.free();
+        }
+      },
+      {
+        sha256: mobileWork.content.sha256,
+        moduleUrl: new URL("triptych_host_wasm.js", base).href,
+      },
+    );
+  }
+  const mobileBytes = await mobileFile();
+  assert.equal(mobileBytes.length, 256);
+  await boot(mobile, mobileLink);
+  assert.deepEqual(await state(mobile), mobileSaved);
+  assert.deepEqual(await mobileFile(), mobileBytes);
+  await command(mobile, "DIR B:MOBILE.BIN", "A>");
+  await library(mobile);
+  const mobileDownloading = mobile.waitForEvent("download");
+  await mobile.locator("#library-backup").tap();
+  const mobileBackup = await mobileDownloading;
+  assert.match(mobileBackup.suggestedFilename(), /\.tdbr$/);
+  const mobileDecoded = await decodeDiskBoxRecovery(
+    new Blob([await readFile(await mobileBackup.path())]),
+    { crypto: webcrypto },
+  );
+  assert.deepEqual(
+    mobileDecoded["disk-box-state-v1"].find((row) => row.key === "head")
+      .manifest,
+    mobileSaved.manifest,
+  );
+  for (const row of mobileDecoded["disk-box-blobs-v1"])
+    assert.equal(hash(row.bytes), row.sha256);
+  assert.deepEqual(
+    mobileDecoded["disk-box-blobs-v1"].map((row) => row.sha256).sort(),
+    [...mobileSaved.blobs].sort(),
+  );
+  assert(
+    mobileDecoded["disk-box-blobs-v1"].some(
+      (row) => row.sha256 === mobileWork.content.sha256,
+    ),
+  );
+  console.log(
+    "Mobile guest-created work survives its shared-link revisit byte-for-byte; complete recovery downloads with exact metadata and hash-valid private disks.",
+  );
   for (const context of contexts)
     for (const page of context.pages()) await drainResponses(page);
   await Promise.all(checks);
