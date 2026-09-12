@@ -110,6 +110,12 @@
           >
         </div>
         <div class="library-controls">
+          <div id="requested-recipe-preview" hidden>
+            <p id="requested-recipe-description"></p>
+            <button id="launch-requested" type="button">
+              Activate requested setup
+            </button>
+          </div>
           <button id="launch-starter" type="button">
             Activate tools and games setup
           </button>
@@ -127,6 +133,42 @@
             Download complete disk-box recovery
           </button>
         </div>
+        <details id="colossal-cave-guide" hidden>
+          <summary>Colossal Cave: start, save and resume</summary>
+          <p>
+            <a id="share-colossal-cave">Open the Colossal Cave setup preview</a
+            >. On a returning browser, choose
+            <strong>Activate requested setup</strong>
+            and confirm. Your other configurations and personal disks are
+            retained. This setup uses protected system A, personal work B,
+            protected Colossal Cave C and empty D.
+          </p>
+          <p>
+            These instructions are tested only with the four-drive (N4) profile.
+            Enter <code>C:</code>, then <code>ADVENTUR</code>. Keep C current so
+            the game can read <code>PHROGZ.DIN</code>.
+          </p>
+          <p>
+            To save, enter <code>SAVE</code> in the game and answer
+            <code>YES</code>. At the C&gt; prompt, enter
+            <code>SAVE 224 B:SAVED.COM</code> to store the suspended game on
+            personal B. To resume, select <code>C:</code> and enter
+            <code>B:SAVED</code>.
+          </p>
+          <p>
+            Before closing or reloading the page, open Files and recovery,
+            acknowledge that the guest program has exited, and choose Enter
+            disk management. Wait for CPU paused, then close Files. Download
+            your disk or a complete backup to keep saves outside this browser.
+          </p>
+          <p>
+            If you explicitly make a writable copy and insert it in C instead,
+            use <code>SAVE 224 SAVED.COM</code> after the game's SAVE/YES, then
+            <code>SAVED</code> to resume with C current. The protected published
+            image cannot hold saves. Reusing the same save filename replaces
+            that saved game; use a different filename to keep an earlier save.
+          </p>
+        </details>
       </details>
 
       <details id="supplied-disks">

@@ -2190,6 +2190,16 @@ async function renderLibrary() {
     encodeURIComponent(protectedRecipe.descriptor.revision);
   const retained = await registry();
   if (generation !== libraryRenderGeneration) return;
+  const cave = retained.metadata.defaults.find(
+    (reference) => reference.id === "colossal-cave-350",
+  );
+  document.querySelector("#colossal-cave-guide").hidden = !cave;
+  if (cave)
+    document.querySelector("#share-colossal-cave").href =
+      "?recipe=" +
+      encodeURIComponent(cave.id) +
+      "&revision=" +
+      encodeURIComponent(cave.revision);
   const catalogue = {
     schema: "triptych-disk-catalogue-v1",
     images: retained.metadata.images,
@@ -2322,19 +2332,38 @@ document
       libraryError(error);
     }
   });
-for (const [id, freshInstance, libraryOnly] of [
+for (const [id, freshInstance, libraryOnly, useRequested] of [
   ["launch-starter", false, false],
   ["launch-fresh", true, false],
   ["launch-library", false, true],
+  ["launch-requested", false, false, true],
 ])
   document.querySelector("#" + id).addEventListener("click", async () => {
     try {
-      const recipe = await libraryRecipe(libraryOnly ? "library" : "starter");
+      const recipe = useRequested
+        ? requestedRecipe
+        : await libraryRecipe(libraryOnly ? "library" : "starter");
+      if (!recipe)
+        throw new Error("No verified requested recipe is available.");
+      const arrangement = recipe.descriptor.slots
+        .map(
+          (slot, index) =>
+            `${String.fromCharCode(65 + index)}: ${
+              slot === null
+                ? "empty"
+                : slot.kind === "published"
+                  ? "protected published disk"
+                  : "personal writable disk"
+            }`,
+        )
+        .join(", ");
       if (
         !confirm(
-          (libraryOnly
-            ? "Activate protected A/C with empty B/D? "
-            : "Activate protected A/C and personal B/D? ") +
+          (useRequested
+            ? `Activate requested setup “${recipe.descriptor.name}”? Reuse its existing local instance unchanged if present; otherwise create a new configuration with ${arrangement}. `
+            : libraryOnly
+              ? "Activate protected A/C with empty B/D? "
+              : "Activate protected A/C and personal B/D? ") +
             "The current configuration and every personal disk will be retained. CP/M will restart.",
         )
       )
@@ -2516,6 +2545,9 @@ try {
       id: route.get("recipe"),
       revision: route.get("revision"),
     });
+    document.querySelector("#requested-recipe-preview").hidden = false;
+    document.querySelector("#requested-recipe-description").textContent =
+      `Requested public setup: ${requestedRecipe.descriptor.name} (${requestedRecipe.reference.id}, revision ${requestedRecipe.reference.revision}). Preview only: your selected configuration has not been replaced. Activate requested setup to select its existing local instance or create it once. All other configurations and personal disks are retained.`;
   }
   if (stored.kind === "unadopted") {
     if (!writer.owned)
@@ -2589,7 +2621,7 @@ try {
   if (new URL(location.href).searchParams.has("recipe")) {
     document.querySelector("#disk-library").open = true;
     libraryStatus.textContent =
-      "Launch recipe preview: use Activate tools and games setup to select your existing instance.";
+      "Launch recipe preview: use Activate requested setup to select this exact public recipe. Other setup buttons select their separately labelled recipes.";
   }
   try {
     if (!deployment) await loadDeployment();

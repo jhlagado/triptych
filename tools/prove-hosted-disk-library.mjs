@@ -154,7 +154,9 @@ try {
             } else assert.deepEqual(bytes, expectedManifest);
             seen.add(path);
           } finally {
-            await session.send("Fetch.continueResponse", { requestId });
+            // The standard continuation also resumes response-stage pauses.
+            // No overrides are supplied; every protocol error remains a failure.
+            await session.send("Fetch.continueRequest", { requestId });
           }
         })().catch((error) =>
           failures.push(`${label}/${path}: ${error.message}`),
@@ -613,10 +615,16 @@ try {
   assert.deepEqual((await state(cave.page)).manifest, caveSaved.manifest);
   assert.equal(hash(await downloadedC(cave.page)), caveHash);
   await command(cave.page, "SAVE 1 DENIED.COM", "Bdos Err On C: Bad Sector");
+  // The retained BDOS DISKERR waits for one character before warm boot.
+  // Acknowledge it separately so it cannot consume the next command's prefix.
+  await cave.page.keyboard.press("Enter");
+  await prompt(cave.page, "C>");
+  await command(cave.page, "DIR DENIED.COM", "C>");
+  assert.match(await cave.page.locator("#terminal").textContent(), /No file/i);
   assert.deepEqual(await state(cave.page), caveSaved);
   assert.equal(hash(await downloadedC(cave.page)), caveHash);
   console.log(
-    "Hosted Colossal Cave: protected C plays, saves executable on B, restores keys after reload, quits, and rejects a C write without changing its image.",
+    "Hosted Colossal Cave: protected C plays, saves on B, restores keys after reload, quits, and rejects a C write; live directory has no denied file and persisted image stays unchanged.",
   );
 
   const caveCopy = await mountCave("colossal-cave-personal-copy");
@@ -673,6 +681,42 @@ try {
   assert.equal(hash(await fetched(caveCopy.imageAsset, 2097152)), caveHash);
   console.log(
     "Hosted Colossal Cave: explicit personal C copy saves/restores independently; original hosted image and private B/D remain unchanged.",
+  );
+
+  const registry = JSON.parse(
+    await readFile(join(directory, "disk-library-registry.json")),
+  );
+  const caveDefault = registry.defaults.find((row) => row.id === caveId);
+  assert(caveDefault, "retained Colossal Cave default required");
+  const caveLink = new URL(base);
+  caveLink.searchParams.set("recipe", caveDefault.id);
+  caveLink.searchParams.set("revision", caveDefault.revision);
+  const caveRecipePage = await pageFor("colossal-cave-recipe");
+  await boot(caveRecipePage, publicLink(caveLink.href));
+  const caveRecipeState = await state(caveRecipePage);
+  const caveRecipeConfig = configuration(caveRecipeState);
+  assert.equal(caveRecipeConfig.configuredCount, 4);
+  assert.equal(caveRecipeConfig.bootstrap.profile, "triptych-cpu-v0.1-2m-n04");
+  assert.deepEqual(
+    caveRecipeConfig.slots.map((slot) => slot?.kind ?? null),
+    ["published", "personal", "published", null],
+  );
+  assert.equal(caveRecipeConfig.slots[0].image.id, "system-2m-n04");
+  assert.equal(caveRecipeConfig.slots[1].writable, true);
+  assert.equal(caveRecipeConfig.slots[2].image.id, caveId);
+  assert.equal(caveRecipeConfig.slots[2].image.sha256, caveHash);
+  assert.equal(caveRecipeState.manifest.personalDisks.length, 1);
+  protectedDisksUncopied(caveRecipeState);
+  await command(caveRecipePage, "C:", "C>");
+  await command(caveRecipePage, "ADVENTUR", "WOULD YOU LIKE INSTRUCTIONS?");
+  await command(caveRecipePage, "NO", "DOWN A GULLY.");
+  await command(caveRecipePage, "ENTER", "THERE IS A BOTTLE OF WATER HERE.");
+  await command(caveRecipePage, "TAKE KEYS", "OK");
+  await command(caveRecipePage, "INVENTORY", "SET OF KEYS");
+  await command(caveRecipePage, "QUIT", "DO YOU REALLY WANT TO QUIT NOW?");
+  await command(caveRecipePage, "YES", "C>");
+  console.log(
+    `Hosted Colossal Cave pinned recipe cold-launch and gameplay passed: ${caveLink.href}`,
   );
 
   const mobile = await pageFor("mobile", true);

@@ -19,7 +19,8 @@ tools-and-games configuration has four two-MiB drives:
 - **D: personal saves** — an initially empty writable disk.
 
 Published images are fetched by hash and are not copied into the personal
-disk store. Use B for sources and build outputs, and D for game saves. An
+disk store. Use B for sources and build outputs, and D for the starter games'
+saves. An
 existing disk box reopens its selected configuration. Earlier browser storage
 requires the explicit **Adopt my saved machine into the disk box** action;
 adoption preserves its disks and resident system instead of installing this
@@ -94,6 +95,53 @@ Back up your disk first. Installing the program does not require deleting your
 saved games. The [upstream player guide](https://github.com/jhlagado/caverns80/blob/cpm-caverns/docs/player-guide.md)
 is safe to read before playing; development audits and walkthrough tests contain
 spoilers.
+
+## Play Colossal Cave
+
+In **Disk box and published library**, expand **Colossal Cave: start, save and
+resume** and follow **Open the Colossal Cave setup preview**. The generated
+link contains the exact published recipe revision. In an existing disk box,
+choose **Activate requested setup** to activate it; opening the link alone
+preserves your selected configuration. This four-drive setup has protected
+system A, personal work B, protected Colossal Cave C and empty D. Returning to
+the same setup reuses its personal B disk and saves.
+
+To use your existing four-drive configuration instead, save and exit its guest
+program, select C in the library, acknowledge that files are closed and flushed,
+then choose **Insert** beside **Colossal Cave Adventure (350 points; four-drive
+profile)**. Keep the matching system disk on A. In either arrangement, type
+`C:` then `ADVENTUR`. Answer `NO` to skip the instructions. `ENTER`, `TAKE KEYS`
+and `INVENTORY` exercise the first room; `QUIT`, then `YES`, returns to CP/M.
+
+Colossal Cave uses a memory-image save, unlike Caverns and Hyperdrive. In the
+game, enter `SAVE`, then `YES`. At the resulting `C>` prompt, immediately enter:
+
+```text
+SAVE 224 B:SAVED.COM
+```
+
+This writes the suspended game to your personal B disk. Reusing `SAVED.COM`
+replaces that save; use another CP/M filename to keep an earlier position.
+Before reloading or
+closing the page, open **Files and recovery**, acknowledge that the guest
+program has exited, and choose **Enter disk management**. Once **CPU paused.**
+appears, close Files to resume; that management step checkpoints the writable
+disks. Download B or a complete backup to keep the save outside this browser.
+
+After a fresh boot, type `C:` then `B:SAVED` to resume. C must remain the
+current drive because `PHROGZ.DIN`, the game database, is on C. The 224-page
+save size is tested only for the four-drive `triptych-cpu-v0.1-2m-n04` profile.
+The game's text mentions a 90-minute delay; the tested saved executable resumed
+immediately.
+
+For a writable C disk, select the inserted Colossal Cave disk, give its copy a
+name, acknowledge closed/flushed files and choose **Make writable copy of
+inserted disk**. Then use the new personal disk's **Insert** button to mount it
+on C. After `SAVE` and `YES`, use `SAVE 224 SAVED.COM`; after a later boot, enter
+`C:` then `SAVED`. The published image stays unchanged. Writing directly to
+protected C produces `Bdos Err On C: Bad Sector` rather than a save file.
+The [Colossal Cave guide](../samples/colossal-cave/README.md) records the binary
+provenance, exact image hash and qualification limits.
 
 ## Assemble and run
 

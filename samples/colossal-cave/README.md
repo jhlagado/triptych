@@ -68,7 +68,13 @@ the full image hash above, under ID `colossal-cave-350`. The data disk's
 Integration uses the existing [library contract](../../docs/specifications/disk-library-v1.md)
 and [release procedure](../../docs/disk-library-releases.md). Published-image
 bytes remain immutable; played disks and saved executables belong to personal
-storage. No separate URL recipe is defined here.
+storage. The dedicated `colossal-cave-350` recipe uses that same
+`?recipe=…&revision=…` link format, with protected A/C, personal B and empty D.
+Use **Open the Colossal Cave setup preview** in the browser library to obtain
+its exact published revision. In an existing disk box, **Activate requested
+setup** selects this setup while retaining other configurations and personal
+disks. The [browser quick start](../../docs/browser-quick-start.md#play-colossal-cave)
+also describes manual insertion and the browser checkpoint step for saves.
 
 ## Run and save
 
