@@ -7,6 +7,7 @@ import {
   diskBoxReferences,
   prepareDiskBox,
   mountDiskBoxSlot,
+  prepareDiskBoxCheckpoint,
 } from "../../crates/triptych-host-wasm/web/disk-box.js";
 
 const id = (n) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
@@ -31,6 +32,44 @@ const image = {
   systemProfile: "triptych-cpu-v0.1-2m-n02",
 };
 const published = { kind: "published", image };
+
+test("guest checkpoints preserve protected references and ejected disks", async () => {
+  const input = fixture();
+  const bytes = Buffer.alloc(2097152, 3);
+  const pending = prepareDiskBoxCheckpoint(
+    input,
+    id(1),
+    new Map([[id(2), bytes]]),
+    webcrypto,
+  );
+  bytes.fill(9);
+  const result = await pending;
+  assert.deepEqual(result.manifest.configurations, input.configurations);
+  assert.deepEqual(result.manifest.personalDisks[1], input.personalDisks[1]);
+  assert.notEqual(result.manifest.personalDisks[0].content.sha256, hash);
+  assert.equal([...result.newBlobs.values()][0][0], 3);
+  await prepareDiskBox(result.manifest, result.newBlobs, webcrypto);
+  for (const diskId of [id(3), id(99)])
+    await assert.rejects(
+      prepareDiskBoxCheckpoint(
+        input,
+        id(1),
+        new Map([[diskId, bytes]]),
+        webcrypto,
+      ),
+      /protected/,
+    );
+  input.configurations[0].slots[1].writable = false;
+  await assert.rejects(
+    prepareDiskBoxCheckpoint(
+      input,
+      id(1),
+      new Map([[id(2), bytes]]),
+      webcrypto,
+    ),
+    /protected/,
+  );
+});
 function fixture() {
   return {
     ...emptyDiskBox(),

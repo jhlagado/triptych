@@ -92,8 +92,8 @@ for (const profile of [
     const result = await pending;
     assert.equal(ids, result.manifest.personalDisks.length);
     const config = result.manifest.configurations[0];
-    assert.equal(config.configuredCount, profile.endsWith("-a") ? 1 : 2);
-    if (profile === "legacy-e400") assert.equal(config.slots[1], null);
+    assert.equal(config.configuredCount, profile.endsWith("-ab") ? 2 : 1);
+    if (profile === "legacy-e400") assert.equal(config.slots.length, 1);
     assert.equal(config.bootstrap.profile, profile);
     assert.equal(
       result.manifest.personalDisks[0].geometry,

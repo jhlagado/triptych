@@ -3,14 +3,172 @@ import { createHash } from "node:crypto";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { before, describe, it } from "node:test";
+import { readFile } from "node:fs/promises";
 import { buildCpmDistribution } from "./cpm-distribution.mjs";
 import { buildLargeAbSystem } from "./large-ab-system.mjs";
-import { buildPublicDriveDistribution } from "./public-drive-distribution.mjs";
+import {
+  buildPublicDriveDistribution,
+  buildDiskLibraryDistribution,
+} from "./public-drive-distribution.mjs";
 import { installCpm22File, readCpm22File } from "./cpm22-disk.mjs";
 
 const root = resolve(import.meta.dirname, "../..");
 const hash = (bytes) => createHash("sha256").update(bytes).digest("hex");
 const games = ["CAVERNS.COM", "HYPERDRV.COM"];
+
+describe("published two-MiB library from existing captured artifacts", () => {
+  let distribution, twoMibSystem, componentLockBytes, CpmDisk;
+  before(async () => {
+    ({ CpmDisk } = await import(
+      pathToFileURL(resolve(root, "dist/wasm/triptych_host_wasm.js")).href
+    ));
+    // Deliberately consume already built artifacts. This group performs no build
+    // and is independently runnable by the coordinator against a captured site.
+    const directory = resolve(root, "dist/wasm-browser");
+    const deployment = JSON.parse(
+      await readFile(resolve(directory, "deployment-manifest.json"), "utf8"),
+    );
+    distribution = {
+      disk: await readFile(resolve(directory, "cpm22.img")),
+      manifest: deployment.distribution,
+    };
+    const descriptor = deployment.twoMibProfiles.find(
+      (profile) => profile.configuredCount === 4,
+    );
+    twoMibSystem = {
+      descriptor,
+      system: await readFile(resolve(directory, descriptor.system.asset)),
+      bootstrap: await readFile(resolve(directory, descriptor.bootstrap.asset)),
+      residentLockBytes: await readFile(
+        resolve(root, descriptor.residents.lock),
+      ),
+    };
+    componentLockBytes = await readFile(
+      resolve(root, "distribution/components.lock.json"),
+    );
+  });
+  const build = (overrides = {}) =>
+    buildDiskLibraryDistribution({
+      distribution,
+      twoMibSystem,
+      componentLockBytes,
+      CpmDisk,
+      ...overrides,
+    });
+
+  it("emits exact N4 system and data-only games with verified file provenance", () => {
+    const output = build();
+    assert.equal(output.catalogue.images.length, 2);
+    for (const [index, image] of output.images.entries()) {
+      const row = output.catalogue.images[index];
+      assert.equal(image.bytes.length, 2097152);
+      assert.equal(row.sha256, hash(image.bytes));
+      assert.equal(row.revision, row.sha256);
+      assert(image.asset.includes(row.sha256));
+      assert.equal(row.geometry, "triptych-cpm-2m-v1");
+      const disk = new CpmDisk(image.bytes);
+      try {
+        assert.equal(disk.geometry_id(), row.geometry);
+        if (index === 0) {
+          assert.deepEqual(
+            image.bytes.subarray(0, 16384),
+            Uint8Array.from(twoMibSystem.system),
+          );
+          assert.equal(row.systemProfile, "triptych-cpu-v0.1-2m-n04");
+          assert(!disk.file_names().some((name) => games.includes(name)));
+          for (const name of [
+            "ATOM.COM",
+            "NUC.COM",
+            "EDIT.COM",
+            "HELLO.ASM",
+            "INPUT.NU",
+            "LARGE.ASM",
+          ])
+            assert.deepEqual(
+              Buffer.from(disk.read_file(name)),
+              Buffer.from(readCpm22File(distribution.disk, name)),
+            );
+        } else {
+          assert.equal(row.systemProfile, null);
+          assert(image.bytes.subarray(0, 16384).every((byte) => byte === 0));
+          assert.deepEqual(
+            disk.file_names().sort(),
+            [...games, "README.TXT"].sort(),
+          );
+          for (const name of games)
+            assert.deepEqual(
+              Buffer.from(disk.read_file(name)),
+              Buffer.from(readCpm22File(distribution.disk, name)),
+            );
+          assert.match(
+            Buffer.from(disk.read_file("README.TXT")).toString("ascii"),
+            /current CP\/M drive/,
+          );
+        }
+      } finally {
+        disk.free();
+      }
+    }
+    assert.equal(output.bootstrap.sha256, hash(twoMibSystem.bootstrap));
+    assert.equal(
+      output.provenance.system.residentProfile,
+      output.bootstrap.profile,
+    );
+    for (const game of ["caverns80", "hyperdrive"])
+      assert.equal(
+        output.provenance.components.find((component) => component.id === game)
+          .licence.spdx,
+        "GPL-3.0-only",
+      );
+    assert.equal(output.provenance.samples.length, 3);
+  });
+
+  it("owns deterministic independent outputs without changing inputs", () => {
+    const before = structuredClone({ distribution, twoMibSystem });
+    const first = build(),
+      second = build();
+    assert.deepEqual(first, second);
+    first.images[0].bytes.fill(9);
+    assert.equal(
+      hash(second.images[0].bytes),
+      second.catalogue.images[0].sha256,
+    );
+    assert.equal(hash(first.images[1].bytes), first.catalogue.images[1].sha256);
+    assert.deepEqual(structuredClone({ distribution, twoMibSystem }), before);
+  });
+
+  for (const damage of [
+    "count",
+    "profile",
+    "system",
+    "bootstrap",
+    "component-lock",
+    "resident-lock",
+    "game-pin",
+  ])
+    it(`rejects changed library ${damage}`, () => {
+      const changed = structuredClone({
+        distribution,
+        twoMibSystem,
+        componentLockBytes,
+      });
+      if (damage === "count")
+        changed.twoMibSystem.descriptor.configuredCount = 3;
+      if (damage === "profile")
+        changed.twoMibSystem.descriptor.residentProfile =
+          "triptych-cpu-v0.1-2m-n03";
+      if (damage === "system") changed.twoMibSystem.system[0] ^= 1;
+      if (damage === "bootstrap") changed.twoMibSystem.bootstrap[0] ^= 1;
+      if (damage === "component-lock") changed.componentLockBytes[0] ^= 1;
+      if (damage === "resident-lock")
+        changed.twoMibSystem.residentLockBytes[0] ^= 1;
+      if (damage === "game-pin")
+        changed.distribution.manifest.components.find(
+          (component) => component.id === "caverns80",
+        ).sha256 = "0".repeat(64);
+      assert.throws(() => build(changed));
+    });
+});
 
 describe("fresh public system and games drives", () => {
   let distribution, largeAbSystem, CpmDisk;

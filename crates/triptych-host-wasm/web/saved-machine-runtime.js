@@ -73,10 +73,33 @@ export async function prepareSavedMachineRuntime({
   snapshot,
   TriptychCpu,
   writable = false,
+  slotWritable,
   deployment,
   crypto = globalThis.crypto,
 }) {
   requireValue(typeof writable === "boolean", "writable must be boolean");
+  // Global ownership can disable writes, never override protected mount policy.
+  // Capture policy before runtime admission yields to hashing or downloads.
+  let access;
+  if (slotWritable !== undefined) {
+    requireValue(
+      Array.isArray(slotWritable) &&
+        slotWritable.length >= 1 &&
+        slotWritable.length <= 16 &&
+        Reflect.ownKeys(slotWritable).length === slotWritable.length + 1,
+      "invalid slot write policy",
+    );
+    access = Array.from({ length: slotWritable.length }, (_, index) => {
+      const field = Object.getOwnPropertyDescriptor(slotWritable, index);
+      requireValue(
+        field &&
+          Object.hasOwn(field, "value") &&
+          typeof field.value === "boolean",
+        "invalid slot write policy",
+      );
+      return field.value;
+    });
+  }
   requireValue(typeof TriptychCpu === "function", "CPU constructor required");
   let owned;
   if (
@@ -125,12 +148,21 @@ export async function prepareSavedMachineRuntime({
       ),
     ),
   });
+  requireValue(
+    access === undefined || access.length === slots.length,
+    "slot policy count differs",
+  );
   const lengths = slots.map((slot) => slot?.bytes.byteLength ?? 0);
   const bootstrap = new Uint8Array(owned.bootstrap.bytes);
   const cpu = new TriptychCpu(bootstrap.slice());
   try {
     for (const [index, slot] of slots.entries())
-      if (slot !== null) cpu.install_drive(index, slot.bytes, writable);
+      if (slot !== null)
+        cpu.install_drive(
+          index,
+          slot.bytes,
+          writable && (access?.[index] ?? true),
+        );
     cpu.reset();
   } catch (error) {
     try {

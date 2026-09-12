@@ -90,9 +90,9 @@ export async function prepareSavedMachineAdoption(
   const v4 = Object.hasOwn(owned, "schema");
   const count = v4
     ? owned.configuredCount
-    : owned.bootstrap.profile === "triptych-cpu-v0.1-8m-a"
-      ? 1
-      : 2;
+    : owned.bootstrap.profile === "triptych-cpu-v0.1-8m-ab"
+      ? 2
+      : 1;
   const media = v4
     ? owned.slots
     : [owned.drives.A, owned.drives.B].slice(0, count);

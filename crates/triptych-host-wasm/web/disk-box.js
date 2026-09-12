@@ -104,7 +104,7 @@ function mount(value, disks) {
 function profileGeometry(profile, count) {
   if (profile === `triptych-cpu-v0.1-2m-n${String(count).padStart(2, "0")}`)
     return "triptych-cpm-2m-v1";
-  if (profile === "legacy-e400" && count === 2) return "ibm3740";
+  if (profile === "legacy-e400" && count === 1) return "ibm3740";
   if (
     (profile === "triptych-cpu-v0.1-8m-a" && count === 1) ||
     (profile === "triptych-cpu-v0.1-8m-ab" && count === 2)
@@ -353,4 +353,55 @@ export function mountDiskBoxSlot(value, configurationId, slot, binding) {
   );
   config.slots[slot] = binding;
   return validateDiskBoxManifest(result);
+}
+
+/** Prepare acknowledged guest writes only. Mounting or editing library metadata
+ * is a different operation: checkpoints cannot create disks or rewrite protected
+ * media. Every ejected disk and every other configuration remains in the box.
+ */
+export async function prepareDiskBoxCheckpoint(
+  value,
+  configurationId,
+  updates,
+  crypto = globalThis.crypto,
+) {
+  const manifest = validateDiskBoxManifest(value);
+  const configuration = manifest.configurations.find(
+    (item) => item.id === configurationId,
+  );
+  requireValue(
+    configuration && updates instanceof Map,
+    "invalid checkpoint selection",
+  );
+  requireValue(crypto?.subtle, "cryptography unavailable");
+  const writable = new Set(
+    configuration.slots
+      .filter((slot) => slot?.kind === "personal" && slot.writable)
+      .map((slot) => slot.diskId),
+  );
+  const captured = [];
+  for (const [diskId, input] of updates) {
+    requireValue(
+      writable.has(diskId),
+      "checkpoint targets unmounted or protected disk",
+    );
+    const disk = manifest.personalDisks.find((item) => item.id === diskId);
+    requireValue(
+      input instanceof Uint8Array &&
+        input.buffer instanceof ArrayBuffer &&
+        input.byteLength === disk.content.byteLength,
+      "invalid checkpoint bytes",
+    );
+    captured.push({ disk, bytes: new Uint8Array(input) });
+  }
+  const newBlobs = new Map();
+  for (const { disk, bytes } of captured) {
+    const sha256 = Array.from(
+      new Uint8Array(await crypto.subtle.digest("SHA-256", bytes)),
+      (byte) => byte.toString(16).padStart(2, "0"),
+    ).join("");
+    disk.content = { sha256, byteLength: bytes.length };
+    newBlobs.set(sha256, bytes);
+  }
+  return { manifest, newBlobs };
 }

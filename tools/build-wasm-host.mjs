@@ -17,7 +17,10 @@ import { pathToFileURL } from "node:url";
 import { buildCpmDistribution } from "./lib/cpm-distribution.mjs";
 import { buildBrowserToolCatalog } from "./lib/browser-tool-catalog.mjs";
 import { buildTwoMibSystem } from "./lib/two-mib-system.mjs";
-import { buildPublicDriveDistribution } from "./lib/public-drive-distribution.mjs";
+import {
+  buildPublicDriveDistribution,
+  buildDiskLibraryDistribution,
+} from "./lib/public-drive-distribution.mjs";
 import {
   buildLargeDiskSystem,
   LARGE_DISK_SYSTEM_ASSET,
@@ -120,7 +123,8 @@ try {
       distribution,
     );
     const twoMibProfiles = [];
-    // Build and stage one tuple at a time. Only descriptors survive this loop;
+    let librarySystem;
+    // Build and stage one tuple at a time. Retain N4 for the library images;
     // private source/assembly evidence is not duplicated in the served assets.
     for (let configuredCount = 1; configuredCount <= 16; configuredCount++) {
       const tuple = await buildTwoMibSystem(repositoryRoot, configuredCount, {
@@ -188,6 +192,13 @@ try {
         ),
       ]);
       twoMibProfiles.push(descriptor);
+      if (configuredCount === 4)
+        librarySystem = {
+          system: tuple.system,
+          bootstrap: tuple.bootstrap,
+          descriptor,
+          residentLockBytes: tuple.evidence.lockBytes,
+        };
     }
     const { CpmDisk, initSync } = await import(
       pathToFileURL(join(stagedOutput, "triptych_host_wasm.js")).href
@@ -198,6 +209,14 @@ try {
     const publicDistribution = buildPublicDriveDistribution({
       distribution,
       largeAbSystem,
+      CpmDisk,
+    });
+    const library = buildDiskLibraryDistribution({
+      distribution,
+      twoMibSystem: librarySystem,
+      componentLockBytes: await readFile(
+        join(repositoryRoot, "distribution/components.lock.json"),
+      ),
       CpmDisk,
     });
     const bootRom = distribution.bootstrap;
@@ -225,6 +244,8 @@ try {
         "disk-box.js",
         "disk-box-adoption.js",
         "disk-box-runtime.js",
+        "disk-box-media-change.js",
+        "disk-launch.js",
         "disk-box-store.js",
         "disk-catalogue.js",
         "saved-machine-workspace.js",
@@ -260,6 +281,19 @@ try {
         largeAbSystem.bootstrap,
       ),
       writeFile(join(stagedOutput, "cpm22.img"), systemDisk),
+      ...library.images.map(({ asset, bytes }) =>
+        writeFile(join(stagedOutput, asset), bytes, { flag: "wx" }),
+      ),
+      writeFile(
+        join(stagedOutput, "disk-catalogue.json"),
+        `${JSON.stringify(library.catalogue, null, 2)}\n`,
+        { flag: "wx" },
+      ),
+      writeFile(
+        join(stagedOutput, "disk-library-provenance.json"),
+        `${JSON.stringify(library.provenance, null, 2)}\n`,
+        { flag: "wx" },
+      ),
       ...Object.entries(publicDistribution.drives).map(([letter, drive]) =>
         writeFile(
           join(stagedOutput, publicDistribution.descriptor.drives[letter].path),
