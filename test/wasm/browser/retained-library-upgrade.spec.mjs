@@ -40,6 +40,14 @@ async function releases(request) {
     ),
   );
   const provenance = JSON.parse(assets.get(recipe.provenance));
+  // A release can publish disks beyond the starter's mounted A/C pair.
+  // Retain every image covered by that release while changing only games.
+  for (const entry of provenance.images) {
+    if (images.some((image) => image.asset === entry.asset)) continue;
+    const image = manifest.images.find((row) => row.asset === entry.asset);
+    expect(image).toBeTruthy();
+    images.push(structuredClone(image));
+  }
   const { CpmDisk } = createRequire(import.meta.url)(
     "../../../dist/wasm/triptych_host_wasm.js",
   );
@@ -90,6 +98,8 @@ async function releases(request) {
   );
   sources.set(images[0].asset, assets.get(images[0].asset));
   sources.set(images[1].asset, upgradedGames);
+  for (const image of images.slice(2))
+    sources.set(image.asset, assets.get(image.asset));
   const next = captureDiskLibraryRelease({
     catalogueBytes: json({ schema: "triptych-disk-catalogue-v1", images }),
     provenanceBytes: json(provenance),
@@ -106,6 +116,12 @@ async function releases(request) {
   expect(next.manifest.admissions[0].id).toBe(admission.id);
   expect(next.manifest.images[0]).toEqual(images[0]);
   expect(images[1].sha256).not.toBe(oldGames.sha256);
+  for (const image of images.slice(2)) {
+    expect(next.manifest.images).toContainEqual(image);
+    expect(Buffer.from(next.assets.get(image.asset))).toEqual(
+      assets.get(image.asset),
+    );
+  }
   return {
     old,
     merged,
