@@ -163,7 +163,7 @@ async function prove(game, direct) {
         .trim();
     const initialInventory = inventory();
     const marker =
-      game === "HYPERD2" ? /standing by the docking bay/i : /compass/i;
+      game === "HYPERD2" ? /stand beside the docking bay/i : /compass/i;
     if (game === "HYPERD2") command("N", /\?\s*$/);
     else command("TAKE COMPASS", /\?\s*$/);
     const savedInventory =
