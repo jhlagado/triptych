@@ -19,6 +19,16 @@ const OS = {
   },
 };
 const APPLICATIONS = {
+  hyperdrive: {
+    format: "hyperdrive-build-v1",
+    file: "HYPERDRV.COM",
+    source: "cpm/main.asm",
+  },
+  caverns80: {
+    format: "caverns-build-v1",
+    file: "CAVERNS.COM",
+    source: "src/main.asm",
+  },
   nucleus: {
     format: "nucleus-cpm22-artifact-v1",
     file: "NUC.COM",
@@ -210,6 +220,78 @@ export function validateDistributionManifest(
       atomRevision,
       "application assembler revision",
     );
+    if (["caverns80", "hyperdrive"].includes(component.id)) {
+      const game = component.id === "hyperdrive" ? "Hyperdrive" : "Caverns";
+      assert.equal(
+        manifest.sourceFormat,
+        "native-atom",
+        `${game} native source`,
+      );
+      const memory = manifest.memory;
+      assert.ok(
+        memory && typeof memory === "object" && !Array.isArray(memory),
+        `${game} memory report`,
+      );
+      for (const field of [
+        "start",
+        "endExclusive",
+        "allocatedBytes",
+        "stackStart",
+        "stackEndExclusive",
+        "stackBytes",
+        "dynamicAllocationBytes",
+      ]) {
+        assert.ok(
+          Number.isSafeInteger(memory[field]) && memory[field] >= 0,
+          `${game} memory ${field}`,
+        );
+      }
+      assert.equal(memory.start, manifest.loadAddress, `${game} memory origin`);
+      assert.equal(
+        memory.allocatedBytes,
+        memory.endExclusive - memory.start,
+        `${game} allocation accounting`,
+      );
+      assert.equal(
+        memory.allocatedBytes,
+        manifest.bytes,
+        `${game} allocation is contained in COM`,
+      );
+      assert.equal(
+        memory.dynamicAllocationBytes,
+        0,
+        `${game} has no dynamic allocation`,
+      );
+      assert.ok(
+        memory.endExclusive <=
+          component.target.origin + component.target.capacity,
+        `${game} runtime allocation exceeds target`,
+      );
+      assert.ok(
+        memory.endExclusive <= 0xe400 + offsets[targetProfile],
+        `${game} runtime allocation overlaps residents`,
+      );
+      assert.ok(
+        memory.stackStart >= memory.start &&
+          memory.stackEndExclusive <= memory.endExclusive,
+        `${game} stack outside allocation`,
+      );
+      assert.equal(
+        memory.stackBytes,
+        512,
+        `${game} stack must reserve 512 bytes`,
+      );
+      assert.equal(
+        memory.stackEndExclusive,
+        memory.endExclusive,
+        `${game} stack must be the final allocation`,
+      );
+      assert.equal(
+        memory.stackBytes,
+        memory.stackEndExclusive - memory.stackStart,
+        `${game} stack accounting`,
+      );
+    }
     if (component.id === "nucleus") {
       assert.equal(
         manifest.source,

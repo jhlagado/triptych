@@ -43,6 +43,9 @@ assert.equal(
   "triptych-drive-set-v4",
   "this active-app proof requires declared v4 durable authority",
 );
+const publicDrives = manifest.publicDrives;
+assert.equal(publicDrives.schema, "triptych-public-drives-v1");
+assert.equal(publicDrives.profile, "triptych-cpu-v0.1-8m-ab");
 const digest = (bytes) => createHash("sha256").update(bytes).digest("hex");
 async function download(name) {
   const response = await fetch(new URL(name, base), {
@@ -156,6 +159,7 @@ try {
             "ccp.bin",
             "bdos.bin",
             "bios.bin",
+            ...Object.values(publicDrives.drives).map((drive) => drive.path),
           ].includes(name) ||
           /^bootstrap.*\.bin$/.test(name) ||
           /^system-.*\.bin$/.test(name),
@@ -317,6 +321,10 @@ try {
     await prompt(page, drive);
   }
 
+  const media = (value) => ({
+    bootstrap: value.bootstrap,
+    drives: value.drives,
+  });
   const page = await newPage();
   const freshSeen = observe(page, "fresh");
   const terminal = page.locator("#terminal");
@@ -327,6 +335,90 @@ try {
     "fresh publication uses v4 authority",
   );
   await checkServedTwoMibAssets(page, base.href, manifest);
+  const supplied = await setState(page);
+  assert.equal(supplied.bootstrap.profile, publicDrives.profile);
+  assert.equal(
+    supplied.bootstrap.sha256,
+    manifest.assets.find((asset) => asset.path === publicDrives.bootstrapAsset)
+      .sha256,
+  );
+  for (const letter of ["A", "B"]) {
+    const expected = publicDrives.drives[letter];
+    assert.equal(supplied.drives[letter].bytes, expected.bytes);
+    assert.equal(supplied.drives[letter].sha256, expected.sha256);
+    assert.equal(supplied.drives[letter].name, expected.name);
+  }
+  for (const name of ["ATOM.COM", "NUC.COM", "EDIT.COM"])
+    assert.ok(supplied.drives.A.files[name], `${name}: supplied on A`);
+  assert.deepEqual(Object.keys(supplied.drives.B.files).sort(), [
+    "CAVERNS.COM",
+    "HYPERDRV.COM",
+    "README.TXT",
+  ]);
+  for (const name of ["CAVERNS.COM", "HYPERDRV.COM"])
+    assert.equal(
+      supplied.drives.A.files[name],
+      undefined,
+      `${name}: belongs on B`,
+    );
+
+  async function gamePrompt(suffix) {
+    await expect
+      .poll(
+        async () => (await terminal.textContent()).trimEnd().endsWith(suffix),
+        { timeout: 30_000 },
+      )
+      .toBe(true);
+  }
+  async function gameCommand(value) {
+    await terminal.focus();
+    await page.keyboard.type(value);
+    const entered = await terminal.textContent();
+    await page.keyboard.press("Enter");
+    await expect
+      .poll(() => terminal.textContent(), { timeout: 30_000 })
+      .not.toBe(entered);
+  }
+  async function playSuppliedGames(action) {
+    await command(page, "B:", "A", "B");
+    for (const game of ["CAVERNS", "HYPERDRV"]) {
+      await send(page, game, "B");
+      if (game === "CAVERNS") {
+        await gamePrompt("[Space/Enter: more, Q: skip]");
+        await page.keyboard.type("q");
+      }
+      await gamePrompt("?");
+      await gameCommand(action);
+      await expect(terminal).toContainText(
+        action === "SAVE" ? "Game saved" : "Game loaded",
+      );
+      await gamePrompt("?");
+      await gameCommand("QUIT");
+      await gamePrompt(
+        game === "CAVERNS" ? "Another adventure?" : "Return to CP/M? (Y/N)",
+      );
+      await gameCommand(game === "CAVERNS" ? "N" : "Y");
+      await prompt(page, "B");
+    }
+    await command(page, "A:", "B", "A");
+  }
+  await playSuppliedGames("SAVE");
+  await expect
+    .poll(async () => Object.keys((await setState(page)).drives.B.files))
+    .toEqual(expect.arrayContaining(["CAVERNS.SAV", "HYPERDRV.SAV"]));
+  const gamesSaved = await setState(page);
+  assert.deepEqual(
+    gamesSaved.drives.A,
+    supplied.drives.A,
+    "B game saves leave A exact",
+  );
+  await savedBoot(page);
+  assert.deepEqual(
+    media(await setState(page)),
+    media(gamesSaved),
+    "both game saves survive reload without reseeding",
+  );
+  await playSuppliedGames("LOAD");
   await command(page, "ATOM HELLO.ASM");
   await expect(terminal).toContainText("HELLO.COM written");
   await command(page, "HELLO");
@@ -377,7 +469,7 @@ try {
   await expect(terminal).toContainText("BASE>");
   await quitGame(page);
   await manage(page);
-  const beforeUpdate = await stored(page);
+  const beforeUpdate = await setState(page);
   await page
     .locator("#tool-list li")
     .filter({ hasText: "NUC.COM" })
@@ -385,7 +477,7 @@ try {
     .click();
   await expect(page.locator("#files-status")).toContainText("Staged NUC.COM");
   await apply(page);
-  const afterUpdate = await stored(page);
+  const afterUpdate = await setState(page);
   for (const name of [
     "IO.NU",
     "MAIN.NU",
@@ -399,31 +491,32 @@ try {
     "HELLO.COM",
     "INPUT.NU",
     "INPUT.COM",
-  ])
+  ]) {
+    assert.ok(
+      beforeUpdate.drives.A.files[name],
+      `${name}: source file exists before update`,
+    );
     assert.deepEqual(
-      readCpm22File(Uint8Array.from(afterUpdate.bytes), name),
-      readCpm22File(Uint8Array.from(beforeUpdate.bytes), name),
+      afterUpdate.drives.A.files[name],
+      beforeUpdate.drives.A.files[name],
       `${name}: selected update preserves file`,
     );
-  assert.equal(afterUpdate.backups.length, beforeUpdate.backups.length + 1);
-  assert.ok(
-    afterUpdate.backups.some(
-      (entry) =>
-        entry.revision === beforeUpdate.revision &&
-        digest(Buffer.from(entry.bytes)) ===
-          digest(Buffer.from(beforeUpdate.bytes)),
-    ),
-    "selected update retains exact preceding disk backup",
+  }
+  exactPrecedingBackup(beforeUpdate, afterUpdate, "selected NUC update");
+  assert.deepEqual(
+    afterUpdate.drives.B,
+    gamesSaved.drives.B,
+    "A development and updates preserve B games and saves",
   );
   assert.deepEqual(
-    readCpm22File(Uint8Array.from(afterUpdate.bytes), "NUC.COM"),
-    readCpm22File(await readFile(join(directory, "cpm22.img")), "NUC.COM"),
+    afterUpdate.drives.A.files["NUC.COM"],
+    supplied.drives.A.files["NUC.COM"],
     "installed NUC matches released padded bytes",
   );
   await page.locator("#close-files").click();
   await savedBoot(page);
   assert.deepEqual(
-    await stored(page),
+    await setState(page),
     afterUpdate,
     "reload preserves disk, revision and backups",
   );
@@ -436,7 +529,8 @@ try {
   const downloadPath = await downloaded.path();
   assert.ok(downloadPath, "disk download completed");
   const downloadedBytes = await readFile(downloadPath);
-  assert.deepEqual(downloadedBytes, Buffer.from(afterUpdate.bytes));
+  assert.equal(digest(downloadedBytes), afterUpdate.drives.A.sha256);
+  assert.equal(downloadedBytes.length, afterUpdate.drives.A.bytes);
 
   const reopened = await newPage();
   observe(reopened, "download-reopen");
@@ -452,7 +546,10 @@ try {
     "Staged exact disk adventure.img",
   );
   await apply(reopened);
-  assert.deepEqual((await stored(reopened)).bytes, afterUpdate.bytes);
+  assert.equal(
+    (await setState(reopened)).drives.A.sha256,
+    afterUpdate.drives.A.sha256,
+  );
   await reopened.locator("#close-files").click();
   await send(reopened, "GAME");
   await expect(reopened.locator("#terminal")).toContainText("BASE>");
@@ -982,10 +1079,6 @@ try {
       },
     );
   }
-  const media = (value) => ({
-    bootstrap: value.bootstrap,
-    drives: value.drives,
-  });
   function exactPrecedingBackup(before, after, label) {
     assert.equal(
       after.backups.length,
@@ -1029,8 +1122,41 @@ try {
     }
   }
   const ab = await newPage();
-  const abSeen = observe(ab, "eight-mib-ab");
-  await boot(ab);
+  // This is an explicit historical saved-machine migration, not a replacement
+  // of the public config. Fresh profiles above exercise the actual A/B default.
+  await ab.route(appUrl, (route) => route.abort());
+  await ab.goto(base.href);
+  await ab.evaluate(
+    async ({ storeUrl, disk, bootstrap }) => {
+      const { openSavedMachineStore } = await import(storeUrl);
+      const store = await openSavedMachineStore();
+      try {
+        const head = await store.load();
+        if (head.kind !== "empty")
+          throw new Error("Historical fixture was not empty");
+        await store.saveCheckpoint(head.token, {
+          bootstrap: {
+            profile: "legacy-e400",
+            bytes: Uint8Array.from(bootstrap),
+          },
+          drives: {
+            A: { name: "historical-small.img", bytes: Uint8Array.from(disk) },
+            B: null,
+          },
+        });
+      } finally {
+        store.close();
+      }
+    },
+    {
+      storeUrl: new URL("saved-machine-store.js", base).href,
+      disk: Array.from(await readFile(join(directory, "cpm22.img"))),
+      bootstrap: Array.from(await readFile(join(directory, "bootstrap.bin"))),
+    },
+  );
+  await ab.unrouteAll();
+  const abSeen = observe(ab, "historical-small-to-eight-mib-ab");
+  await boot(ab, true);
   await manage(ab);
   const beforeAb = await setState(ab);
   await expect(ab.locator("#enable-ab")).toBeEnabled();
@@ -1084,7 +1210,13 @@ try {
   await expect(ab.locator("#files-status")).toContainText(
     "Staged HELLO.ASM, INPUT.NU, NOTE.TXT",
   );
-  for (const name of ["ATOM.COM", "NUC.COM", "EDIT.COM"]) {
+  for (const name of [
+    "ATOM.COM",
+    "NUC.COM",
+    "EDIT.COM",
+    "CAVERNS.COM",
+    "HYPERDRV.COM",
+  ]) {
     await ab
       .locator("#tool-list li")
       .filter({ hasText: name })
@@ -1600,9 +1732,14 @@ try {
     const asset = manifest.assets.find((entry) => entry.path === name);
     const fresh =
       name &&
-      (["config.json", "cpm22.img", "ccp.bin", "bdos.bin", "bios.bin"].includes(
-        name,
-      ) ||
+      ([
+        "config.json",
+        "cpm22.img",
+        "ccp.bin",
+        "bdos.bin",
+        "bios.bin",
+        ...Object.values(publicDrives.drives).map((drive) => drive.path),
+      ].includes(name) ||
         /^bootstrap.*\.bin$/.test(name) ||
         /^system-.*\.bin$/.test(name));
     if ((!asset && name !== "deployment-manifest.json") || fresh) {
@@ -1683,10 +1820,15 @@ try {
   // have completed before collecting the final execution/identity verdict.
   await Promise.all(responseChecks);
   assert.ok(
-    freshSeen.has("cpm22.img"),
-    "fresh profile loads verified distribution",
+    !freshSeen.has("cpm22.img"),
+    "fresh profile does not load compatibility media",
   );
-  for (const name of ["config.json", "bootstrap.bin"])
+  for (const name of [
+    "config.json",
+    publicDrives.bootstrapAsset,
+    publicDrives.drives.A.path,
+    publicDrives.drives.B.path,
+  ])
     assert.ok(freshSeen.has(name), `fresh profile loads verified ${name}`);
   for (const name of [
     "two-mib-system.js",
@@ -1710,9 +1852,14 @@ try {
   );
   for (const name of migratedV3Seen)
     assert.ok(
-      !["config.json", "cpm22.img", "ccp.bin", "bdos.bin", "bios.bin"].includes(
-        name,
-      ) &&
+      ![
+        "config.json",
+        "cpm22.img",
+        "ccp.bin",
+        "bdos.bin",
+        "bios.bin",
+        ...Object.values(publicDrives.drives).map((drive) => drive.path),
+      ].includes(name) &&
         !/^bootstrap.*\.bin$/.test(name) &&
         !/^system-.*\.bin$/.test(name),
       `v3 retains its exact saved media and bootstrap without fetching ${name}`,
@@ -1739,6 +1886,12 @@ try {
     !migratedSeen.has("cpm22.img"),
     "migrated profile must not seed over user disk",
   );
+  for (const seen of [migratedSeen, migratedV2Seen, abSeen])
+    for (const drive of Object.values(publicDrives.drives))
+      assert.ok(
+        !seen.has(drive.path),
+        "historical saved media is not replaced by public starter images",
+      );
   assert.deepEqual(errors, [], "browser execution or asset identity errors");
   console.log(
     JSON.stringify({
@@ -1747,8 +1900,10 @@ try {
       revision,
       assets: manifest.assets.length,
       diskSha256: manifest.distribution.disk.sha256,
+      publicDrives,
       profiles: profiles.map(({ label }) => label),
       workflows: [
+        "actual public A tools/B games: exact assets, CAVERNS and HYPERDRV launch/save/quit/reload/load/quit, unchanged A",
         "ATOM/run, Edit/NUC/run/save/reload/reopen/run",
         "Files/starter/prepare/compile/win/Edit/rebuild/selected-NUC-update/reload/download/separate-profile-reopen",
         "unmodified hosted app: v1 migration/exact legacy retention/backed-up import/reload/read",

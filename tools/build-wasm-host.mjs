@@ -12,10 +12,12 @@ import {
   writeFile,
 } from "node:fs/promises";
 import { join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 
 import { buildCpmDistribution } from "./lib/cpm-distribution.mjs";
 import { buildBrowserToolCatalog } from "./lib/browser-tool-catalog.mjs";
 import { buildTwoMibSystem } from "./lib/two-mib-system.mjs";
+import { buildPublicDriveDistribution } from "./lib/public-drive-distribution.mjs";
 import {
   buildLargeDiskSystem,
   LARGE_DISK_SYSTEM_ASSET,
@@ -187,6 +189,17 @@ try {
       ]);
       twoMibProfiles.push(descriptor);
     }
+    const { CpmDisk, initSync } = await import(
+      pathToFileURL(join(stagedOutput, "triptych_host_wasm.js")).href
+    );
+    initSync({
+      module: await readFile(join(stagedOutput, "triptych_host_wasm_bg.wasm")),
+    });
+    const publicDistribution = buildPublicDriveDistribution({
+      distribution,
+      largeAbSystem,
+      CpmDisk,
+    });
     const bootRom = distribution.bootstrap;
     const ccp = systemDisk.slice(0, 0x800);
     const bdos = systemDisk.slice(0x800, 0x1600);
@@ -215,6 +228,7 @@ try {
         "working-disk-revisions.js",
         "tool-catalog.js",
         "source-bundle.js",
+        "public-distribution.js",
       ].map((path) =>
         copyFile(join(sourceDirectory, path), join(stagedOutput, path)),
       ),
@@ -241,6 +255,12 @@ try {
         largeAbSystem.bootstrap,
       ),
       writeFile(join(stagedOutput, "cpm22.img"), systemDisk),
+      ...Object.entries(publicDistribution.drives).map(([letter, drive]) =>
+        writeFile(
+          join(stagedOutput, publicDistribution.descriptor.drives[letter].path),
+          drive.bytes,
+        ),
+      ),
       writeFile(
         join(stagedOutput, "tool-catalog.json"),
         `${JSON.stringify(tools.catalog, null, 2)}\n`,
@@ -261,6 +281,7 @@ try {
             diskUrl: "cpm22.img",
             diskName: "triptych-cpm22.img",
             systemCcp: "triptych",
+            publicDrives: true,
           },
           undefined,
           2,
@@ -287,6 +308,7 @@ try {
           distribution: distribution.manifest,
           diskProfiles: [largeSystem.profile, largeAbSystem.profile],
           twoMibProfiles,
+          publicDrives: publicDistribution.descriptor,
           host: {
             wasmBindgen: version,
             cargoLockSha256: createHash("sha256")

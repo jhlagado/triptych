@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./legacy-fixture.mjs";
 import { fileURLToPath } from "node:url";
 
 test.beforeEach(async ({ context }) => {

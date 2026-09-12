@@ -1,0 +1,50 @@
+{
+  "format": "caverns-build-v1",
+  "artifact": "CAVERNS.COM",
+  "version": "0.1.1",
+  "loadAddress": 256,
+  "entryAddress": 256,
+  "bytes": 22896,
+  "sha256": "6e4c4154d7136645c18effccfc5d60ca3d59ae7b19a963b389608ecaf18e2dfb",
+  "assembler": {
+    "name": "atom-z80",
+    "revision": "802b5c2d320bec777f427755ff2d7338e3b80a05"
+  },
+  "sourceFormat": "native-atom",
+  "memory": {
+    "start": 256,
+    "endExclusive": 23152,
+    "allocatedBytes": 22896,
+    "stackStart": 22640,
+    "stackEndExclusive": 23152,
+    "stackBytes": 512,
+    "dynamicAllocationBytes": 0
+  },
+  "sourceSha256": "50fc8fc53adfbd788bc9e323dc0c794cf2bbdcf38cd190ceaf833f43ba751fa1",
+  "sourceFiles": {
+    "src/actions.asm": "d0aba81eb9a21eecd4c4c9746232145c6425f2de71d77965cd0ef29a4454468b",
+    "src/combat.asm": "fd05950fa230d82da371fa6f0f27a5cd583f91cf704a86fd7c3dc5e2e65ec706",
+    "src/commands.asm": "285833245c566afcf8bf5852199694a9d4e05ae31fbae30f5219c7e96e4b938f",
+    "src/const.asm": "7dc13d6dc4ffabd3e872abce15960eb76171645221c5fcbc9d4b658d1e9e337c",
+    "src/encountr.asm": "8cbc186fbadfc652432258cf8eac3d2bc3bf0b904bae5fc97c77bcddc9add3a7",
+    "src/examtext.asm": "90ea36e946e0f6b09b9d0ed59f4618ae0a9643cf30f0567f2e3b222298533a3d",
+    "src/game.asm": "40ddae5e1c555095c4b49380d89e0452b0a9a453cc4f840c9e8e2160e36e7af5",
+    "src/invinput.asm": "40c15cd635e0bebf6a9bf1aaba344ce0e2a385fbe34cab93f11ee2ba5a3da474",
+    "src/main.asm": "b83db8428e68fb1e30429ace3ff0c68b49afa11f52472912a76719a844f711b6",
+    "src/movement.asm": "3943aa0746ba073e2163e83c30de014f8eef1644e6b7be829917736103fbbeb4",
+    "src/numbers.asm": "28260847f9fc3e2610672d8c20555a9263109ca349ad42ba1da14979178e635b",
+    "src/objects.asm": "47b0cae6078f1b6c7659a657186b355a9edf94455d788a62d6638aaab6e42f69",
+    "src/pager.asm": "a623712236a0e397b67256e9779a080063230a9002f903add9575ebc1582ba99",
+    "src/parser.asm": "3d8e2a3061e285df1a7def1666bc0b0aa6ea7c15e217721430d4a975d0bc327e",
+    "src/prologue.asm": "261fced177dbb750835a06d47244cada2032c89d379374d6a6d3e8ab55934357",
+    "src/roomdisp.asm": "30848664fe0e6ae0117b0896c34fd9b81a0c188e9869c2c54877bf150834d9dc",
+    "src/savecode.asm": "ae3c5666a16c202b29cabfcb0defc195644e42fbae6fd6d0ff02514c182a08f5",
+    "src/savedisk.asm": "40c2fcdc5ee6b366dd3aa4b6281faf3f3903b8d1ff4237baeaefec674154d220",
+    "src/scoring.asm": "a9d2726524768fae3036655a7c9ab36f38c9b174e054fe9a0d8bf75250ea4116",
+    "src/startup.asm": "b905a65be8584e60747abcc2f85e45d08785f2300ace3c0c512ac3b510a3339a",
+    "src/strings.asm": "2cdd7b757cf2c694a6c0ef5a88eaf2c1d462cc48d76a17777d5bf677f8fed324",
+    "src/system.asm": "24ec62aa803d68fb5bf638fe260f75b4be1b620c8189493d96516689eacd9a55",
+    "src/tables.asm": "14fd2b55ecd936df10a407c83d45efff8c0caae9872e54c574763757a98a1029",
+    "src/vars.asm": "f4c71c20363ae99d711b3543e1b842a539b48557c3dc7b961e5c4c6f9dc9ed12"
+  }
+}

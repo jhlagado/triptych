@@ -185,6 +185,68 @@
         "spdx": "GPL-3.0-or-later",
         "provenance": "third_party/edit/README.md"
       }
+    },
+    {
+      "id": "caverns80",
+      "role": "application",
+      "source": {
+        "kind": "git",
+        "repository": "https://github.com/jhlagado/caverns80.git",
+        "revision": "0a0a67fda6163fdad982be7d5d20031d2b151c4d",
+        "path": "src/main.asm"
+      },
+      "recipe": "verified-release",
+      "artifact": {
+        "path": "third_party/caverns80/CAVERNS.COM",
+        "bytes": 22896,
+        "sha256": "6e4c4154d7136645c18effccfc5d60ca3d59ae7b19a963b389608ecaf18e2dfb",
+        "manifest": "third_party/caverns80/manifest.json",
+        "provenance": "third_party/caverns80/release.provenance.json"
+      },
+      "target": {
+        "origin": 256,
+        "capacity": 58112
+      },
+      "install": {
+        "kind": "file",
+        "name": "CAVERNS.COM",
+        "padByte": 26
+      },
+      "licence": {
+        "spdx": "GPL-3.0-only",
+        "provenance": "third_party/caverns80/README.md"
+      }
+    },
+    {
+      "id": "hyperdrive",
+      "role": "application",
+      "source": {
+        "kind": "git",
+        "repository": "https://github.com/jhlagado/hyperdrive.git",
+        "revision": "624fd56518a80762821c5bfcc3355e9a76d1eb34",
+        "path": "cpm/main.asm"
+      },
+      "recipe": "verified-release",
+      "artifact": {
+        "path": "third_party/hyperdrive/HYPERDRV.COM",
+        "bytes": 15152,
+        "sha256": "a3db132195631da3cd80885d9072b7b7cf1bb96118fc24363be71b93c7be3870",
+        "manifest": "third_party/hyperdrive/manifest.json",
+        "provenance": "third_party/hyperdrive/release.provenance.json"
+      },
+      "target": {
+        "origin": 256,
+        "capacity": 58112
+      },
+      "install": {
+        "kind": "file",
+        "name": "HYPERDRV.COM",
+        "padByte": 26
+      },
+      "licence": {
+        "spdx": "GPL-3.0-only",
+        "provenance": "third_party/hyperdrive/README.md"
+      }
     }
   ]
 }

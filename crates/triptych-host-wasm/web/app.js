@@ -19,6 +19,7 @@ import {
 } from "./saved-machine.js";
 import { prepareTwoMibConfiguration } from "./saved-machine-configuration.js";
 import { fetchTwoMibSystem } from "./two-mib-system.js";
+import { fetchPublicDriveSet } from "./public-distribution.js";
 import { prepareSourceBundle, mapSourceBundleOffset } from "./source-bundle.js";
 import {
   fetchLargeDiskSystem,
@@ -47,6 +48,16 @@ const showKeyboardButton = document.querySelector("#show-keyboard");
 const controlKeyButton = document.querySelector("#terminal-control-key");
 const mobileKeyButtons = document.querySelectorAll("[data-terminal-key]");
 const terminal = new TerminalBuffer();
+
+// A second, explicitly selected machine lets returning visitors play the
+// published starter disks without replacing their existing working machine.
+// This stable namespace persists game saves across visits and tool releases.
+const suppliedMachine =
+  new URL(location.href).searchParams.get("machine") === "supplied";
+const storageName = suppliedMachine ? "triptych-supplied" : "triptych-cpu";
+document.querySelector("#machine-choice").textContent = suppliedMachine
+  ? "Supplied A+B machine — its saves are separate from your usual machine."
+  : "Your working machine — existing saved disks are preserved.";
 
 let machine;
 let runtime;
@@ -791,7 +802,10 @@ for (const selector of ["#image-profile", "#adapt-image"]) {
 async function readBackup(id) {
   if (!id.startsWith("v2:")) return store.readBackup(id);
   const bootstrap = await defaultBootstrap();
-  const reader = await openSavedMachineStore({ legacyBootstrap: bootstrap });
+  const reader = await openSavedMachineStore({
+    name: storageName,
+    legacyBootstrap: bootstrap,
+  });
   try {
     return await reader.readBackup(id);
   } finally {
@@ -1663,8 +1677,9 @@ async function rawRecovery() {
 
 try {
   // Recovery storage does not depend on a working emulator or boot download.
-  writer = await acquireDiskWriter();
+  writer = await acquireDiskWriter({ name: `${storageName}:disk-writer` });
   const options = {
+    name: storageName,
     onBlocked: (text) => setSaveStatus(text, "error"),
   };
   store = await openSavedMachineStore(options);
@@ -1698,23 +1713,42 @@ try {
     });
     if (!response.ok) throw new Error("Could not load config.json.");
     const configuration = await response.json();
-    if (configuration.diskUrl === null)
-      throw new Error("No saved disk or distribution disk is available.");
-    const disk = await fetch(configuration.diskUrl, {
-      cache: "no-store",
-      redirect: "error",
-    });
-    if (!disk.ok) throw new Error("Could not load the distribution disk.");
-    initial = copySavedMachine({
-      bootstrap: { profile: "legacy-e400", bytes: await defaultBootstrap() },
-      drives: {
-        A: {
-          name: configuration.diskName,
-          bytes: new Uint8Array(await disk.arrayBuffer()),
+    if (configuration.publicDrives === true) {
+      const published = await fetch("deployment-manifest.json", {
+        cache: "no-store",
+        redirect: "error",
+      });
+      if (!published.ok)
+        throw new Error("Could not load the supplied disk manifest.");
+      initial = await fetchPublicDriveSet({
+        deployment: await published.json(),
+        baseUrl: location.href,
+      });
+    } else {
+      if (configuration.diskUrl === null)
+        throw new Error("No saved disk or distribution disk is available.");
+      const disk = await fetch(configuration.diskUrl, {
+        cache: "no-store",
+        redirect: "error",
+      });
+      if (!disk.ok) throw new Error("Could not load the distribution disk.");
+      initial = copySavedMachine({
+        bootstrap: { profile: "legacy-e400", bytes: await defaultBootstrap() },
+        drives: {
+          A: {
+            name: configuration.diskName,
+            bytes: new Uint8Array(await disk.arrayBuffer()),
+          },
+          B: null,
         },
-        B: null,
-      },
-    });
+      });
+    }
+    // Validate filesystem structure before publishing either fresh image.
+    for (const snapshot of Object.values(initial.drives)) {
+      if (!snapshot) continue;
+      const candidate = new CpmDisk(snapshot.bytes);
+      candidate.free();
+    }
     startupRuntime = await prepareMachine(initial);
     if (writer.owned) {
       const publication = await store.saveCheckpoint(

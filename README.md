@@ -6,7 +6,7 @@ shareable machine setups. Four drives are the proposed default, with up to
 sixteen supported. This work is planned, not yet deployed.
 
 The [browser quick start](docs/browser-quick-start.md) covers a complete
-ATOM/Edit/NUC session, browser saving, backup and restore.
+ATOM/Edit/NUC session, Caverns and Hyperdrive adventures, browser saving, backup and restore.
 
 Triptych is the working name for a modular 8-bit computer built from three
 cooperating ESP32-family modules:
@@ -101,7 +101,7 @@ npm run run:cpm22-native
 ```
 
 The default launcher builds a fresh disk from pinned CCP, BDOS, ATOM, NUC and
-Edit inputs plus the local BIOS and bootstrap. It prints the disk digest and
+Edit, Caverns and Hyperdrive inputs plus the local BIOS and bootstrap. It prints the disk digest and
 development manifest. Disk writes last for the session and are discarded on
 Ctrl-C. Set `TRIPTYCH_CPM22_IMAGE` only to select an explicit disposable source
 copy; that source is not modified. The shorter alias starts the same default:

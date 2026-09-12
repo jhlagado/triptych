@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./legacy-fixture.mjs";
 import { readFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { decodeDriveSet } from "../../../crates/triptych-host-wasm/web/drive-set.js";
@@ -149,7 +149,13 @@ test("A/B migration, B tool workflows, complete export and removal/restore prese
   await expect(page.locator("#files-status")).toContainText(
     "Staged HELLO.ASM, INPUT.NU",
   );
-  for (const name of ["ATOM.COM", "NUC.COM", "EDIT.COM"]) {
+  for (const name of [
+    "ATOM.COM",
+    "NUC.COM",
+    "EDIT.COM",
+    "CAVERNS.COM",
+    "HYPERDRV.COM",
+  ]) {
     await page
       .locator("#tool-list li")
       .filter({ hasText: name })

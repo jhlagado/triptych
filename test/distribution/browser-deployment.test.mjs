@@ -73,6 +73,12 @@ beforeEach(async () => {
   abSystem.fill(0x66, 0x800, 0x1600);
   abSystem.fill(0x77, 0x1600, 0x1900);
   const abBootstrap = Buffer.alloc(256, 0x88);
+  // Synthetic bytes exercise deployment identity and drive roles, not CP/M
+  // execution or filesystem contents (the real distribution suite covers those).
+  const publicA = Buffer.alloc(8388608, 0xe5);
+  abSystem.copy(publicA);
+  const publicB = Buffer.alloc(8388608, 0xe5);
+  publicB.fill(0, 0, 16384);
   const assets = new Map([
     ["bootstrap.bin", bootstrap],
     ["ccp.bin", disk.subarray(0, 0x800)],
@@ -82,10 +88,13 @@ beforeEach(async () => {
     [systemAsset, largeSystem],
     [abSystemAsset, abSystem],
     [abBootstrapAsset, abBootstrap],
+    ["drive-a-system.img", publicA],
+    ["drive-b-games.img", publicB],
   ]);
   for (const name of [
     "index.html",
     "app.js",
+    "public-distribution.js",
     "terminal.js",
     "style.css",
     "config.json",
@@ -109,7 +118,18 @@ beforeEach(async () => {
   ]) {
     assets.set(name, Buffer.from(`synthetic ${name}\n`));
   }
-  expect(assets.size).toBe(30);
+  assets.set(
+    "config.json",
+    Buffer.from(
+      JSON.stringify({
+        diskUrl: "cpm22.img",
+        diskName: "triptych-cpm22.img",
+        systemCcp: "triptych",
+        publicDrives: true,
+      }),
+    ),
+  );
+  expect(assets.size).toBe(33);
   manifest = {
     schema: "triptych-browser-deployment-v1",
     distribution: {
@@ -118,6 +138,25 @@ beforeEach(async () => {
       targetProfile: "triptych-cpu-v0.1",
       disk: { bytes: disk.length, sha256: sha256(disk) },
       bootstrap: { bytes: bootstrap.length, sha256: sha256(bootstrap) },
+    },
+    publicDrives: {
+      schema: "triptych-public-drives-v1",
+      profile: "triptych-cpu-v0.1-8m-ab",
+      bootstrapAsset: abBootstrapAsset,
+      drives: Object.fromEntries(
+        [
+          ["A", "drive-a-system.img", publicA],
+          ["B", "drive-b-games.img", publicB],
+        ].map(([letter, path, bytes]) => [
+          letter,
+          {
+            path,
+            name: path,
+            bytes: bytes.length,
+            sha256: sha256(bytes),
+          },
+        ]),
+      ),
     },
     diskProfiles: [
       {
@@ -417,10 +456,55 @@ describe("browser deployment verification CLI", () => {
       status: "passed",
       revision,
       dirty: false,
-      assets: 30,
+      assets: 33,
       diskSha256: manifest.distribution.disk.sha256,
     });
   });
+
+  it("rejects a missing public-drive descriptor", async () => {
+    delete manifest.publicDrives;
+    await saveManifest();
+    rejected(check(), "missing or unsupported public distribution");
+  });
+
+  it.each([undefined, false, "true"])(
+    "rejects a new-visitor publicDrives config value of %s",
+    async (publicDrives) => {
+      await replaceAsset(
+        "config.json",
+        Buffer.from(
+          JSON.stringify({
+            diskUrl: "cpm22.img",
+            publicDrives,
+          }),
+        ),
+      );
+      rejected(check(), "new visitors must receive the public A/B pair");
+    },
+  );
+
+  it.each(["A", "B"])(
+    "rejects mixed public %s image identity despite consistent asset bytes",
+    async (letter) => {
+      const entry = manifest.publicDrives.drives[letter];
+      const bytes = await readFile(join(directory, entry.path));
+      bytes[16384] ^= 1;
+      await replaceAsset(entry.path, bytes);
+      rejected(check(), `invalid ${letter}: image identity`);
+    },
+  );
+
+  it.each(["A", "B"])(
+    "rejects incorrect public %s system area even with both hashes updated",
+    async (letter) => {
+      const entry = manifest.publicDrives.drives[letter];
+      const bytes = await readFile(join(directory, entry.path));
+      bytes[0] ^= 1;
+      entry.sha256 = sha256(bytes);
+      await replaceAsset(entry.path, bytes);
+      rejected(check(), `${letter}: system area differs from its role`);
+    },
+  );
 
   it("rejects missing large-disk metadata in a new deployment", async () => {
     delete manifest.diskProfiles;
@@ -554,6 +638,9 @@ describe("browser deployment verification CLI", () => {
   });
 
   it.each([
+    "public-distribution.js",
+    "drive-a-system.img",
+    "drive-b-games.img",
     "working-disk-store.js",
     "working-disk-revisions.js",
     "disk-workspace.js",
