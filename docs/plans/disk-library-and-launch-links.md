@@ -2,7 +2,8 @@
 
 Date: 2026-09-12
 
-Status: priority WASM roadmap; implementation and public release pending.
+Status: priority WASM roadmap; live-swap foundation implemented and tested
+locally. Library storage, launch UI and public release remain pending.
 
 This restores the disk-manager proposal discussed in Caverns on 8 September,
 approximately 23:15–23:45 Melbourne time, and incorporates the 12 September
@@ -129,11 +130,18 @@ an explicit writable copy. Merely mounting a saves disk in B or D cannot
 redirect application writes. Qualify the actual Caverns and Hyperdrive releases
 against this rule before advertising their protected launch recipes.
 
-## First implementation task
+## Current implementation and next task
 
-Trace the current controller and CP/M media-change paths, then write a failing
-host acceptance fixture for a running two-disk program. Specify the minimum
-safe swap operation and recipe/storage invariants before adding UI controls.
-Retain legacy machines, backups and raw recovery exports throughout. Completion
-requires the public-site workflow; local host proofs do not establish ESP32
-hardware behaviour.
+The controller guard, prepared WASM media ticket and ATOM cooperative two-disk
+fixture pass local tests, including a negative control without the BDOS drive
+reset. The [foundation report](../reports/disk-library-foundation.md) separates
+this evidence from the remaining release requirements. The selected
+[library contract](../specifications/disk-library-v1.md) defines disk ownership,
+publication order and adoption of historical storage.
+
+Next, implement the disk-box authority and its independent recovery reader,
+alongside the immutable catalogue and protected library mounts. Preserve legacy
+machines, backups and raw recovery exports throughout. A-system restoration,
+launch-instance reuse and browser controls follow those storage boundaries.
+Completion requires the public-site workflow; local host proofs do not establish
+ESP32 hardware behaviour.

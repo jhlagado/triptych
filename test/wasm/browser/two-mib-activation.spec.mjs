@@ -53,17 +53,53 @@ async function metadata(page) {
   });
 }
 
-test("public configuration runs sparse P, saves files and restores removed media from an archive", async ({
+async function gamesFiles(page) {
+  return page.evaluate(async () => {
+    const { openSavedMachineStore } = await import("/saved-machine-store.js");
+    const { CpmDisk } = await import("/triptych_host_wasm.js");
+    const store = await openSavedMachineStore();
+    try {
+      const { snapshot } = await store.load();
+      const image = snapshot.slots ? snapshot.slots[1] : snapshot.drives.B;
+      const disk = new CpmDisk(image.bytes);
+      try {
+        const entries = [];
+        for (const name of disk.file_names().sort()) {
+          const digest = await crypto.subtle.digest(
+            "SHA-256",
+            disk.read_file(name),
+          );
+          entries.push([name, Array.from(new Uint8Array(digest))]);
+        }
+        return entries;
+      } finally {
+        disk.free();
+      }
+    } finally {
+      store.close();
+    }
+  });
+}
+
+test("public configuration preserves games, runs sparse P and restores removed media from an archive", async ({
   page,
 }, info) => {
   page.on("dialog", (dialog) => dialog.accept());
   await boot(page);
+  const originalGames = await gamesFiles(page);
+  expect(originalGames.map(([name]) => name)).toEqual([
+    "CAVERNS.COM",
+    "HYPERDRV.COM",
+    "README.TXT",
+  ]);
   await manage(page);
   await configure(page, 4);
   await apply(page);
   const four = await metadata(page);
   expect(four.count).toBe(4);
-  expect(four.slots.slice(1)).toEqual([null, null, null]);
+  expect(four.slots[1].name).toBe("drive-b-games.img");
+  expect(four.slots.slice(2)).toEqual([null, null]);
+  expect(await gamesFiles(page)).toEqual(originalGames);
   await manage(page);
   await configure(page, 16);
   await page.locator("#file-drive").selectOption("P");
@@ -86,7 +122,9 @@ test("public configuration runs sparse P, saves files and restores removed media
   );
   await expect(page.locator("#machine-summary")).toContainText("56576 bytes");
   expect(sixteen.slots[0].instanceId).toBe(four.slots[0].instanceId);
-  expect(sixteen.slots.slice(1, 15)).toEqual(Array(14).fill(null));
+  expect(sixteen.slots[1]).toEqual(four.slots[1]);
+  expect(sixteen.slots.slice(2, 15)).toEqual(Array(13).fill(null));
+  expect(await gamesFiles(page)).toEqual(originalGames);
   await page.locator("#close-files").click();
   await page.locator("#terminal").focus();
   await page.keyboard.type("TYPE P:NOTE.TXT");
@@ -177,6 +215,12 @@ test("all sixteen independent images survive checkpoint, archive and rejected re
   for (let index = 1; index < 16; index++) {
     const letter = String.fromCharCode(65 + index);
     await page.locator("#file-drive").selectOption(letter);
+    if (index === 1) {
+      await page.locator("#eject-drive").click();
+      await expect(page.locator("#files-status")).toContainText(
+        "B ejection staged",
+      );
+    }
     await page.locator("#blank-drive").click();
     await expect(page.locator("#files-status")).toContainText(
       `Blank ${letter} staged`,
@@ -340,6 +384,10 @@ test("ejection retains the configured count, capacity and complete restorable me
   await manage(page);
   await configure(page, 2);
   await page.locator("#file-drive").selectOption("B");
+  await page.locator("#eject-drive").click();
+  await expect(page.locator("#files-status")).toContainText(
+    "B ejection staged",
+  );
   await page.locator("#blank-drive").click();
   await page.locator("#file-import").setInputFiles({
     name: "KEEP.TXT",

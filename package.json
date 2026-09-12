@@ -75,6 +75,7 @@
     "check:saved-machine-codecs": "node --test test/wasm/drive-set.node.mjs test/wasm/drive-set-v4.node.mjs test/wasm/saved-machine.node.mjs",
     "check:two-mib-system": "node tools/check-two-mib-system.mjs",
     "check:wasm-two-mib-files": "node tools/check-wasm-two-mib-files.mjs",
+    "check:live-media": "npm run build:wasm-host && node --test test/wasm/media-change-wasm.node.mjs && node tools/prove-live-media-change.mjs",
     "check:rust": "cargo fmt --all -- --check && cargo clippy --workspace --all-targets --all-features -- -D warnings && cargo test --workspace --all-features && cargo build -p triptych-host-wasm --target wasm32-unknown-unknown --release",
     "proof:cpm22": "npm run build && node tools/prove-cpm22.mjs",
     "proof:cpm22-native": "cargo build -p triptych-host-native && node tools/prove-cpm22-native.mjs",
@@ -87,7 +88,7 @@
     "run:wasm-browser": "npm run build:wasm-browser && node tools/serve-wasm-browser.mjs",
     "proof:cpm-headless": "npm run build:wasm-host && node tools/prove-wasm-host.mjs --cpm-headless-only",
     "proof:wasm-host": "npm run build:wasm-host:conformance && node tools/prove-wasm-host.mjs",
-    "check": "npm run build && npm run typecheck && npm run lint && npm run format:check && npm run check:ccp-readiness && npm test && npm run check:cpu-fixtures && npm run check:bdos-baseline && npm run check:ccp-matrix && npm run check:ccp-failures && npm run check:ccp-parser && npm run check:ccp-stack && npm run check:cpm22-text && npm run check:cpm-headless && npm run check:cpm-distribution && npm run check:saved-machine-codecs && npm run check:two-mib-system && npm run check:wasm-two-mib-files && npm run check:wasm-browser-ui && npm run test:wasm-browser && npm run proof:native-terminal && npm run check:cpm-host-parity && npm run check:native-saved-machine && npm run check:cpm-large && npm run check:cpm-two-mib-lifetimes && npm run check:nucleus-adventure && npm run check:rust"
+    "check": "npm run build && npm run typecheck && npm run lint && npm run format:check && npm run check:ccp-readiness && npm test && npm run check:cpu-fixtures && npm run check:bdos-baseline && npm run check:ccp-matrix && npm run check:ccp-failures && npm run check:ccp-parser && npm run check:ccp-stack && npm run check:cpm22-text && npm run check:cpm-headless && npm run check:cpm-distribution && npm run check:saved-machine-codecs && npm run check:two-mib-system && npm run check:wasm-two-mib-files && npm run check:wasm-browser-ui && npm run check:live-media && npm run test:wasm-browser && npm run proof:native-terminal && npm run check:cpm-host-parity && npm run check:native-saved-machine && npm run check:cpm-large && npm run check:cpm-two-mib-lifetimes && npm run check:nucleus-adventure && npm run check:rust"
   },
   "devDependencies": {
     "@jhlagado/debug80-runtime": "^0.2.0",

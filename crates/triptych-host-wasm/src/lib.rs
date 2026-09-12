@@ -15,7 +15,9 @@ use wasm_bindgen::prelude::*;
 const RUN_HALTED: u8 = 0;
 const RUN_STEP_LIMIT: u8 = 1;
 const RUN_TSTATE_LIMIT: u8 = 2;
+const RUN_MEDIA_FROZEN: u8 = 3;
 const MAX_SERIAL_INPUT_BYTES: usize = 16 * 1024;
+const MEDIA_SLOTS: u8 = 16;
 
 #[wasm_bindgen]
 pub struct TriptychCpu {
@@ -30,6 +32,14 @@ pub struct TriptychCpu {
     last_tstates: u64,
     last_halted: bool,
     last_interrupt_accepted: bool,
+    pending_media: Option<PreparedMediaChange>,
+    last_media_ticket: u32,
+}
+
+struct PreparedMediaChange {
+    ticket: u32,
+    drive: u8,
+    replacement: Option<WasmDrive>,
 }
 
 #[wasm_bindgen]
@@ -54,6 +64,8 @@ impl TriptychCpu {
             last_tstates: 0,
             last_halted: false,
             last_interrupt_accepted: false,
+            pending_media: None,
+            last_media_ticket: 0,
         })
     }
 
@@ -64,12 +76,90 @@ impl TriptychCpu {
         image: &[u8],
         writable: bool,
     ) -> Result<(), JsError> {
+        self.require_media_unfrozen()?;
         if self.has_run {
             return Err(JsError::new(
                 "drive media cannot change after execution; construct a fresh machine",
             ));
         }
         self.sectors.install(drive, image, writable)
+    }
+
+    /// Own incoming media and freeze the machine before durable host publication.
+    /// Returns a per-instance monotonically increasing nonzero ticket, or zero for invalid
+    /// media/slot, allocation failure, exhausted tickets, pending input, unflushed
+    /// storage or an existing ticket. This API admits slots A-P only; historical
+    /// pre-execution install_drive retains its wider controller address domain.
+    ///
+    /// Readiness does NOT prove filesystem consistency. The caller must arrange
+    /// guest file closure/flush, and BDOS drive reset/reopen after the swap.
+    /// Persist the outgoing checkpoint and intended binding before commit.
+    pub fn prepare_drive_change(&mut self, drive: u8, image: &[u8], writable: bool) -> u32 {
+        if drive >= MEDIA_SLOTS || !self.disk_management_ready() {
+            return 0;
+        }
+        let Some(ticket) = self.last_media_ticket.checked_add(1) else {
+            return 0;
+        };
+        let Some(replacement) = WasmDrive::prepare(image, writable) else {
+            return 0;
+        };
+        self.freeze_media(ticket, drive, Some(replacement))
+    }
+
+    /// Prepare ejection without discarding the outgoing backing or checkpoint.
+    /// Zero rejects unavailable slots or any readiness/ticket failure.
+    pub fn prepare_drive_eject(&mut self, drive: u8) -> u32 {
+        if drive >= MEDIA_SLOTS
+            || !self.disk_management_ready()
+            || self.sectors.drive(drive).is_none()
+        {
+            return 0;
+        }
+        let Some(ticket) = self.last_media_ticket.checked_add(1) else {
+            return 0;
+        };
+        self.freeze_media(ticket, drive, None)
+    }
+
+    pub fn media_change_pending(&self) -> bool {
+        self.pending_media.is_some()
+    }
+
+    /// Publish the already allocated backing without resetting CPU or RAM.
+    /// A wrong/stale ticket leaves the machine frozen. On an unexpected failure
+    /// after durable publication, keep it paused and reload committed host state;
+    /// never cancel back to obsolete media. This method performs no allocation.
+    pub fn commit_media_change(&mut self, ticket: u32) -> bool {
+        if !self
+            .pending_media
+            .as_ref()
+            .is_some_and(|pending| pending.ticket == ticket)
+        {
+            return false;
+        }
+        if !self.machine.prepare_media_change() {
+            return false;
+        }
+        if let Some(pending) = self.pending_media.take() {
+            self.sectors.drives[usize::from(pending.drive)] = pending.replacement;
+            return true;
+        }
+        false
+    }
+
+    /// Cancel only before host publication: retain old media, controller and CPU.
+    /// Wrong/stale tickets do not unfreeze the machine.
+    pub fn cancel_media_change(&mut self, ticket: u32) -> bool {
+        if !self
+            .pending_media
+            .as_ref()
+            .is_some_and(|pending| pending.ticket == ticket)
+        {
+            return false;
+        }
+        self.pending_media = None;
+        true
     }
 
     /// Export live backing sectors, which can include writes after the last flush.
@@ -85,10 +175,17 @@ impl TriptychCpu {
     /// Export an independent copy of the initial image or the exact image at the
     /// last successful guest flush. Later writes cannot change this checkpoint.
     /// A guest flush does not imply that browser storage has saved these bytes.
+    /// Protected disks export their immutable backing directly into an owned copy.
     pub fn export_drive_checkpoint(&self, drive: u8) -> Result<Vec<u8>, JsError> {
         self.sectors
             .drive(drive)
-            .map(|drive| drive.checkpoint.clone())
+            .map(|drive| {
+                if drive.writable {
+                    drive.checkpoint.clone()
+                } else {
+                    drive.bytes.clone()
+                }
+            })
             .ok_or_else(|| JsError::new("drive is not installed"))
     }
 
@@ -99,7 +196,8 @@ impl TriptychCpu {
     /// or finished a logical multi-command filesystem update. Obtain explicit
     /// save-and-exit confirmation before replacing the CPU. No state is changed.
     pub fn disk_management_ready(&self) -> bool {
-        controller_allows_disk_management(self.machine.disk_state())
+        !self.media_change_pending()
+            && controller_allows_disk_management(self.machine.disk_state())
             && self.console.input.is_empty()
             && !self.machine.console_input_pending()
             && self
@@ -121,7 +219,11 @@ impl TriptychCpu {
             .ok_or_else(|| JsError::new("drive is not installed"))
     }
 
+    /// While a media ticket is pending, reset is a no-op, including counters.
     pub fn reset(&mut self) {
+        if self.media_change_pending() {
+            return;
+        }
         let mut devices = Devices::new(&mut self.console, &mut self.sectors);
         self.machine.reset(&mut devices);
         self.observer.operations.clear();
@@ -134,13 +236,21 @@ impl TriptychCpu {
     /// Enable or disable retention of the ordered I/O trace. Tracing is off by
     /// default so a long-lived host cannot accumulate an unbounded diagnostic
     /// buffer when it has no trace consumer.
+    /// Frozen calls are no-ops and preserve the retained trace.
     pub fn set_io_trace_enabled(&mut self, enabled: bool) {
+        if self.media_change_pending() {
+            return;
+        }
         self.observer.set_enabled(enabled);
     }
 
     /// Execute one complete instruction, then optionally present the proven
     /// `$FF` maskable interrupt at that instruction boundary.
+    /// While frozen, returns zero without changing execution or last-run counters.
     pub fn step(&mut self, maskable_interrupt_ff: bool) -> u32 {
+        if self.media_change_pending() {
+            return 0;
+        }
         self.has_run = true;
         let interrupt = if maskable_interrupt_ff {
             InterruptRequest::MaskableFf
@@ -161,8 +271,12 @@ impl TriptychCpu {
     }
 
     /// Run a bounded slice. The return value is `0` for HALT, `1` for the step
-    /// limit, or `2` for the T-state limit.
+    /// limit, `2` for the T-state limit, or `3` for a pending media ticket.
+    /// Frozen calls leave all state and last-run counters unchanged.
     pub fn run_slice(&mut self, max_steps: u32, max_tstates: u32) -> Result<u8, JsError> {
+        if self.media_change_pending() {
+            return Ok(RUN_MEDIA_FROZEN);
+        }
         let budget = RunBudget::from_values(u64::from(max_steps), u64::from(max_tstates))
             .ok_or_else(|| JsError::new("run budgets must both be non-zero"))?;
         self.has_run = true;
@@ -186,6 +300,9 @@ impl TriptychCpu {
     /// Enqueue one complete host input batch, or reject it without accepting a
     /// prefix when the bounded console queue has insufficient room.
     pub fn enqueue_serial_input(&mut self, bytes: &[u8]) -> bool {
+        if self.media_change_pending() {
+            return false;
+        }
         let Some(length) = self.console.input.len().checked_add(bytes.len()) else {
             return false;
         };
@@ -200,7 +317,11 @@ impl TriptychCpu {
         self.console.output.clone()
     }
 
+    /// While frozen, return empty without draining the retained output.
     pub fn take_serial_output(&mut self) -> Vec<u8> {
+        if self.media_change_pending() {
+            return Vec::new();
+        }
         std::mem::take(&mut self.console.output)
     }
 
@@ -209,7 +330,9 @@ impl TriptychCpu {
         Ok(self.ram[range].to_vec())
     }
 
+    /// Reject writes while a media ticket freezes the machine.
     pub fn write_ram(&mut self, address: u32, bytes: &[u8]) -> Result<(), JsError> {
+        self.require_media_unfrozen()?;
         let length =
             u32::try_from(bytes.len()).map_err(|_| JsError::new("RAM write is too large"))?;
         let range = checked_range(address, length)?;
@@ -232,6 +355,7 @@ impl TriptychCpu {
     /// Test-only architectural state patch applied immediately before reset.
     #[cfg(feature = "conformance")]
     pub fn set_conformance_cpu_field(&mut self, field: &str, value: u32) -> Result<(), JsError> {
+        self.require_media_unfrozen()?;
         let mut state = self.machine.cpu_state();
         set_cpu_field(&mut state, field, value)?;
         self.machine.install_conformance_cpu_state(state);
@@ -257,11 +381,46 @@ impl TriptychCpu {
     /// Return and clear packed retained I/O operations. Bits 0..7 are the byte,
     /// bits 8..23 are the full port, and bit 24 is one for writes and zero for
     /// reads. Returns an empty vector while tracing is disabled.
+    /// While frozen, returns empty without draining retained operations.
     pub fn take_io_trace(&mut self) -> Vec<u32> {
+        if self.media_change_pending() {
+            return Vec::new();
+        }
         std::mem::take(&mut self.observer.operations)
             .into_iter()
             .map(pack_io)
             .collect()
+    }
+}
+
+impl TriptychCpu {
+    fn require_media_unfrozen(&self) -> Result<(), JsError> {
+        if self.media_change_pending() {
+            return Err(JsError::new("machine is frozen for a pending media change"));
+        }
+        Ok(())
+    }
+
+    fn freeze_media(&mut self, ticket: u32, drive: u8, replacement: Option<WasmDrive>) -> u32 {
+        let length = usize::from(drive) + 1;
+        if self.sectors.drives.len() < length {
+            if self
+                .sectors
+                .drives
+                .try_reserve_exact(length - self.sectors.drives.len())
+                .is_err()
+            {
+                return 0;
+            }
+            self.sectors.drives.resize_with(length, || None);
+        }
+        self.pending_media = Some(PreparedMediaChange {
+            ticket,
+            drive,
+            replacement,
+        });
+        self.last_media_ticket = ticket;
+        ticket
     }
 }
 
@@ -300,6 +459,8 @@ impl Console for WasmConsole {
 
 struct WasmDrive {
     bytes: Vec<u8>,
+    // Protected media has only the immutable backing allocation. The checkpoint
+    // and dirty tracking vectors below stay empty with zero capacity.
     checkpoint: Vec<u8>,
     writable: bool,
     flush_count: u32,
@@ -311,6 +472,44 @@ struct WasmDrive {
     dirty_sectors: Vec<u32>,
     #[cfg(test)]
     checkpoint_copied_bytes: u64,
+}
+
+impl WasmDrive {
+    // Fallible preparation owns every buffer before the caller publishes durable
+    // bindings. Neither commit nor later writes/flushes need to reserve capacity.
+    fn prepare(image: &[u8], writable: bool) -> Option<Self> {
+        if image.is_empty() || image.len() % SECTOR_BYTES != 0 {
+            return None;
+        }
+        let sectors = image.len() / SECTOR_BYTES;
+        u32::try_from(sectors).ok()?.checked_mul(4)?;
+        let mut bytes = Vec::new();
+        bytes.try_reserve_exact(image.len()).ok()?;
+        bytes.extend_from_slice(image);
+        let mut checkpoint = Vec::new();
+        let mut dirty_sector_bits = Vec::new();
+        let mut dirty_sectors = Vec::new();
+        if writable {
+            checkpoint.try_reserve_exact(image.len()).ok()?;
+            checkpoint.extend_from_slice(image);
+            dirty_sector_bits
+                .try_reserve_exact(sectors.div_ceil(8))
+                .ok()?;
+            dirty_sector_bits.resize(sectors.div_ceil(8), 0);
+            dirty_sectors.try_reserve_exact(sectors).ok()?;
+        }
+        Some(Self {
+            bytes,
+            checkpoint,
+            writable,
+            flush_count: 0,
+            writes_since_flush: false,
+            dirty_sector_bits,
+            dirty_sectors,
+            #[cfg(test)]
+            checkpoint_copied_bytes: 0,
+        })
+    }
 }
 
 #[derive(Default)]
@@ -330,21 +529,13 @@ impl WasmSectorStore {
         if sectors.checked_mul(4).is_none() {
             return Err(JsError::new("drive exceeds the 32-bit guest record space"));
         }
+        let prepared = WasmDrive::prepare(image, writable)
+            .ok_or_else(|| JsError::new("drive allocation failed"))?;
         let index = usize::from(drive);
         if self.drives.len() <= index {
             self.drives.resize_with(index + 1, || None);
         }
-        self.drives[index] = Some(WasmDrive {
-            bytes: image.to_vec(),
-            checkpoint: image.to_vec(),
-            writable,
-            flush_count: 0,
-            writes_since_flush: false,
-            dirty_sector_bits: vec![0; (image.len() / SECTOR_BYTES).div_ceil(8)],
-            dirty_sectors: Vec::with_capacity(image.len() / SECTOR_BYTES),
-            #[cfg(test)]
-            checkpoint_copied_bytes: 0,
-        });
+        self.drives[index] = Some(prepared);
         Ok(())
     }
 
@@ -464,6 +655,167 @@ mod checkpoint_benchmark;
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn readonly_media_owns_only_backing_and_exports_independent_checkpoints() {
+        let mut cpu = TriptychCpu::new(&[0; BOOT_ROM_BYTES]).unwrap();
+        let mut source = [7; SECTOR_BYTES * 9];
+        cpu.install_drive(0, &source, false).unwrap();
+        let ticket = cpu.prepare_drive_change(1, &source, false);
+        assert_ne!(ticket, 0);
+        assert!(cpu.commit_media_change(ticket));
+        source.fill(9);
+        for index in [0, 1] {
+            let drive = cpu.sectors.drive(index).unwrap();
+            assert_eq!(
+                drive.checkpoint.capacity(),
+                0,
+                "readonly has no checkpoint allocation"
+            );
+            assert_eq!(
+                drive.dirty_sector_bits.capacity(),
+                0,
+                "readonly has no dirty bitmap allocation"
+            );
+            assert_eq!(
+                drive.dirty_sectors.capacity(),
+                0,
+                "readonly has no dirty queue allocation"
+            );
+            assert_eq!(drive.bytes, [7; SECTOR_BYTES * 9]);
+            let mut exported = cpu.export_drive_checkpoint(index).unwrap();
+            exported.fill(1);
+            assert_eq!(
+                cpu.export_drive_checkpoint(index).unwrap(),
+                [7; SECTOR_BYTES * 9]
+            );
+            assert!(cpu
+                .sectors
+                .write_sector(index, 0, &[2; SECTOR_BYTES])
+                .is_err());
+            assert!(cpu
+                .sectors
+                .write_sector(index, 8, &[2; SECTOR_BYTES])
+                .is_err());
+            cpu.sectors.flush(index).unwrap();
+            cpu.sectors.flush(index).unwrap();
+            assert_eq!(cpu.drive_flush_count(index).unwrap(), 2);
+            assert_eq!(cpu.export_drive(index).unwrap(), [7; SECTOR_BYTES * 9]);
+            let drive = cpu.sectors.drive(index).unwrap();
+            assert!(!drive.writes_since_flush);
+            assert_eq!(drive.checkpoint_copied_bytes, 0);
+            assert_eq!(drive.checkpoint.capacity(), 0);
+            assert_eq!(drive.dirty_sector_bits.capacity(), 0);
+            assert_eq!(drive.dirty_sectors.capacity(), 0);
+        }
+    }
+
+    #[test]
+    fn media_ticket_freezes_execution_and_cancel_retains_machine() {
+        let mut cpu = TriptychCpu::new(&[0; BOOT_ROM_BYTES]).unwrap();
+        cpu.install_drive(0, &[1; SECTOR_BYTES], true).unwrap();
+        cpu.write_ram(400, &[9, 8, 7]).unwrap();
+        cpu.step(false);
+        let state = cpu.machine.cpu_state();
+        let disk = cpu.machine.disk_state();
+        let counters = (cpu.last_steps(), cpu.last_tstates());
+        let ram = cpu.ram_image();
+        cpu.console.output.push(42);
+        cpu.observer.set_enabled(true);
+        cpu.observer.observe(operation(7));
+        let ticket = cpu.prepare_drive_change(0, &[2; SECTOR_BYTES], false);
+        assert_ne!(ticket, 0);
+        assert!(cpu.media_change_pending());
+        assert!(!cpu.disk_management_ready());
+        assert_eq!(cpu.step(true), 0);
+        assert_eq!(cpu.run_slice(10, 100).unwrap(), 3);
+        cpu.reset();
+        cpu.set_io_trace_enabled(false);
+        assert!(cpu.take_io_trace().is_empty());
+        assert!(cpu.take_serial_output().is_empty());
+        assert_eq!(cpu.serial_output(), [42]);
+        assert_eq!(cpu.observer.operations, [operation(7)]);
+        assert!(cpu.observer.enabled);
+        assert!(!cpu.enqueue_serial_input(&[65]));
+        assert_eq!(cpu.machine.cpu_state(), state);
+        assert_eq!(cpu.machine.disk_state(), disk);
+        assert_eq!((cpu.last_steps(), cpu.last_tstates()), counters);
+        assert_eq!(cpu.ram_image(), ram);
+        assert_eq!(cpu.export_drive(0).unwrap(), [1; SECTOR_BYTES]);
+        assert_eq!(cpu.prepare_drive_eject(0), 0);
+        assert!(!cpu.commit_media_change(ticket + 1));
+        assert!(!cpu.cancel_media_change(ticket + 1));
+        assert!(cpu.media_change_pending());
+        assert!(cpu.cancel_media_change(ticket));
+        assert!(!cpu.media_change_pending());
+        assert_eq!(cpu.export_drive(0).unwrap(), [1; SECTOR_BYTES]);
+        assert_eq!(cpu.machine.cpu_state(), state);
+        assert_eq!(cpu.machine.disk_state(), disk);
+        assert!(cpu.step(false) > 0);
+    }
+
+    #[test]
+    fn media_ticket_commits_owned_protected_media_without_reallocation_or_reset() {
+        let mut cpu = TriptychCpu::new(&[0; BOOT_ROM_BYTES]).unwrap();
+        cpu.install_drive(0, &[1; SECTOR_BYTES], true).unwrap();
+        cpu.step(false);
+        let state = cpu.machine.cpu_state();
+        let mut image = [2; SECTOR_BYTES];
+        let ticket = cpu.prepare_drive_change(15, &image, false);
+        assert_ne!(ticket, 0);
+        image.fill(9);
+        let prepared = cpu
+            .pending_media
+            .as_ref()
+            .unwrap()
+            .replacement
+            .as_ref()
+            .unwrap();
+        let backing = prepared.bytes.as_ptr();
+        let checkpoint = prepared.checkpoint.as_ptr();
+        let slots = cpu.sectors.drives.as_ptr();
+        assert!(cpu.commit_media_change(ticket));
+        assert_eq!(cpu.sectors.drives.as_ptr(), slots);
+        let installed = cpu.sectors.drive(15).unwrap();
+        assert_eq!(installed.bytes.as_ptr(), backing);
+        assert_eq!(installed.checkpoint.as_ptr(), checkpoint);
+        assert_eq!(cpu.export_drive(15).unwrap(), [2; SECTOR_BYTES]);
+        assert!(cpu.sectors.write_sector(15, 0, &[3; SECTOR_BYTES]).is_err());
+        assert_eq!(cpu.machine.cpu_state(), state);
+        assert!(!cpu.commit_media_change(ticket));
+        let eject = cpu.prepare_drive_eject(15);
+        assert!(eject > ticket);
+        assert!(!cpu.cancel_media_change(ticket));
+        assert!(cpu.commit_media_change(eject));
+        assert!(cpu.sectors.drive_info(15).is_none());
+        assert_eq!(cpu.machine.cpu_state(), state);
+    }
+
+    #[test]
+    fn media_ticket_rejects_unflushed_input_invalid_media_and_exhaustion() {
+        let mut cpu = TriptychCpu::new(&[0; BOOT_ROM_BYTES]).unwrap();
+        cpu.install_drive(0, &[1; SECTOR_BYTES], true).unwrap();
+        for drive in [16, 255] {
+            assert_eq!(cpu.prepare_drive_change(drive, &[2; SECTOR_BYTES], true), 0);
+            assert_eq!(cpu.prepare_drive_eject(drive), 0);
+        }
+        for image in [&[][..], &[0; 511][..]] {
+            assert_eq!(cpu.prepare_drive_change(0, image, true), 0);
+        }
+        cpu.sectors.write_sector(0, 0, &[3; SECTOR_BYTES]).unwrap();
+        assert_eq!(cpu.prepare_drive_eject(0), 0);
+        cpu.sectors.flush(0).unwrap();
+        assert!(cpu.enqueue_serial_input(&[65]));
+        assert_eq!(cpu.prepare_drive_eject(0), 0);
+        cpu.reset();
+        let ticket = cpu.prepare_drive_eject(0);
+        assert_ne!(ticket, 0);
+        assert!(cpu.cancel_media_change(ticket));
+        cpu.last_media_ticket = u32::MAX;
+        assert_eq!(cpu.prepare_drive_eject(0), 0);
+        assert!(!cpu.media_change_pending());
+        assert_eq!(cpu.export_drive_checkpoint(0).unwrap(), [3; SECTOR_BYTES]);
+    }
 
     fn operation(value: u8) -> IoOperation {
         IoOperation {

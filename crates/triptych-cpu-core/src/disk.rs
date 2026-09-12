@@ -83,6 +83,14 @@ impl Default for Controller {
 }
 
 impl Controller {
+    pub(crate) fn prepare_media_change(&mut self) -> bool {
+        if self.transfer_kind.is_some() || self.cache_dirty {
+            return false;
+        }
+        self.cache_valid = false;
+        true
+    }
+
     pub(crate) fn reset(&mut self) {
         self.selected_drive = 0;
         self.selected_record = 0;
@@ -497,5 +505,80 @@ mod tests {
         controller.write_port(RECORD_1, (record >> 8) as u8, store);
         controller.write_port(RECORD_2, (record >> 16) as u8, store);
         controller.write_port(RECORD_3, (record >> 24) as u8, store);
+    }
+
+    #[test]
+    fn media_change_invalidates_clean_cache_at_the_same_drive_and_sector() {
+        let mut store = Store::default();
+        store.bytes.fill(0x11);
+        let mut controller = Controller::default();
+        controller.write_port(COMMAND_STATUS, COMMAND_READ, &mut store);
+        for _ in 0..RECORD_BYTES {
+            assert_eq!(controller.read_port(DATA, &mut store), 0x11);
+        }
+        let before = controller.state();
+        assert!(controller.prepare_media_change());
+        assert_eq!(
+            controller.state(),
+            DiskState {
+                cache_drive: None,
+                cache_sector: None,
+                ..before
+            }
+        );
+        store.bytes.fill(0x22);
+        controller.write_port(COMMAND_STATUS, COMMAND_READ, &mut store);
+        for _ in 0..RECORD_BYTES {
+            assert_eq!(controller.read_port(DATA, &mut store), 0x22);
+        }
+    }
+
+    #[test]
+    fn media_change_rejects_partial_transfers_without_losing_their_progress() {
+        for command in [COMMAND_READ, COMMAND_WRITE] {
+            let mut store = Store::default();
+            store.bytes.fill(0x11);
+            let mut controller = Controller::default();
+            controller.write_port(COMMAND_STATUS, command, &mut store);
+            if command == COMMAND_READ {
+                assert_eq!(controller.read_port(DATA, &mut store), 0x11);
+            } else {
+                controller.write_port(DATA, 0x22, &mut store);
+            }
+            let before = controller.state();
+            assert!(!controller.prepare_media_change());
+            assert_eq!(controller.state(), before);
+            assert_eq!(store.bytes, [0x11; SECTOR_BYTES * 2]);
+            for _ in 1..RECORD_BYTES {
+                if command == COMMAND_READ {
+                    assert_eq!(controller.read_port(DATA, &mut store), 0x11);
+                } else {
+                    controller.write_port(DATA, 0x22, &mut store);
+                }
+            }
+            assert_eq!(controller.state().transfer_position, None);
+            controller.write_port(COMMAND_STATUS, COMMAND_FLUSH, &mut store);
+            assert_eq!(
+                &store.bytes[..RECORD_BYTES],
+                &[if command == COMMAND_READ { 0x11 } else { 0x22 }; RECORD_BYTES]
+            );
+        }
+    }
+
+    #[test]
+    fn media_change_rejects_dirty_cache_without_losing_completed_writes() {
+        let mut store = Store::default();
+        let mut controller = Controller::default();
+        controller.write_port(COMMAND_STATUS, COMMAND_WRITE, &mut store);
+        for _ in 0..RECORD_BYTES {
+            controller.write_port(DATA, 0x33, &mut store);
+        }
+        let before = controller.state();
+        assert!(!controller.prepare_media_change());
+        assert_eq!(controller.state(), before);
+        assert_eq!(store.bytes, [0; SECTOR_BYTES * 2]);
+        controller.write_port(COMMAND_STATUS, COMMAND_FLUSH, &mut store);
+        assert_eq!(&store.bytes[..RECORD_BYTES], &[0x33; RECORD_BYTES]);
+        assert!(controller.prepare_media_change());
     }
 }

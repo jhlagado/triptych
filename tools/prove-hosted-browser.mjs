@@ -1546,6 +1546,12 @@ try {
   for (const letter of letters) {
     await twoMib.locator("#file-drive").selectOption(letter);
     if (letter !== "A") {
+      if (letter === "B") {
+        await twoMib.locator("#eject-drive").click();
+        await expect(twoMib.locator("#files-status")).toContainText(
+          "B ejection staged",
+        );
+      }
       await twoMib.locator("#blank-drive").click();
       await expect(twoMib.locator("#files-status")).toContainText(
         `Blank ${letter} staged`,

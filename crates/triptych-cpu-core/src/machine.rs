@@ -116,6 +116,23 @@ impl Machine {
         self.disk.state()
     }
 
+    /// Prepare a synchronous host media replacement without resetting the CPU.
+    ///
+    /// Returns false without changing any state when a disk transfer is active
+    /// or the controller cache is dirty. Success invalidates the clean cache,
+    /// preventing a replacement at the same drive/sector from reading old bytes.
+    /// Selection, error, CPU, RAM, boot overlay and console state are preserved.
+    ///
+    /// The host must suspend execution, call this immediately before replacing
+    /// the backing media, and finish replacement before resuming execution.
+    /// This allocation-free guard neither flushes provider storage nor proves
+    /// guest filesystem readiness, closed files, or durable host checkpoints.
+    /// Hosts must establish those conditions and reset guest disk login state
+    /// through the guest's supported protocol separately.
+    pub fn prepare_media_change(&mut self) -> bool {
+        self.disk.prepare_media_change()
+    }
+
     /// Whether serial input has been prefetched into the controller but has not
     /// been consumed by a guest data read. Does not poll or consume host input;
     /// hosts must inspect their own input queue separately.
@@ -235,6 +252,34 @@ mod tests {
         fn reset(&mut self) {
             self.0 = None;
         }
+    }
+
+    #[test]
+    #[cfg(feature = "conformance")]
+    fn media_change_preserves_live_cpu_memory_overlay_and_pending_input() {
+        let mut machine = Machine::new();
+        let state = CpuState {
+            a: 0x42,
+            pc: 0x1234,
+            sp: 0xabcd,
+            ix: 0x9876,
+            iff1: true,
+            ..CpuState::default()
+        };
+        machine.install_conformance_cpu_state(state);
+        machine.boot_rom_enabled = false;
+        let mut ram = [0x5a; crate::RAM_BYTES];
+        let boot = [0; crate::BOOT_ROM_BYTES];
+        let memory = MachineMemory::new(&mut ram, &boot);
+        let mut console = Input(Some(65));
+        assert_eq!(machine.serial.read_status(&mut console), 3);
+        let before = machine.cpu_state();
+        assert!(machine.prepare_media_change());
+        assert_eq!(machine.cpu_state(), before);
+        assert!(!machine.boot_rom_enabled());
+        assert!(memory.ram().iter().all(|byte| *byte == 0x5a));
+        assert!(machine.console_input_pending());
+        assert_eq!(machine.serial.read_data(&mut console), 65);
     }
 
     #[test]
