@@ -1,3 +1,4 @@
+import { openDownloads } from "./downloads-fixture.mjs";
 import {
   expect,
   test,
@@ -224,6 +225,7 @@ test("A/B migration, B tool workflows, complete export and removal/restore prese
   await expect(page.locator("#files-dialog")).not.toBeVisible();
 
   const pending = page.waitForEvent("download");
+  await openDownloads(page);
   await page.locator("#download-set").click();
   const archivePath = info.outputPath("both-drives.tds");
   await (await pending).saveAs(archivePath);
@@ -297,6 +299,7 @@ test("A/B migration, B tool workflows, complete export and removal/restore prese
   await expect(page.locator("#status")).toHaveAttribute("data-state", "error");
   await expect(page.locator("#download-set")).toBeEnabled();
   const recoveryDownload = page.waitForEvent("download");
+  await openDownloads(page);
   await page.locator("#download-set").click();
   const recoveryPath = info.outputPath("wasm-unavailable.tds");
   await (await recoveryDownload).saveAs(recoveryPath);

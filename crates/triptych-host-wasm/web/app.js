@@ -126,6 +126,7 @@ let catalog;
 let deployment;
 let libraryRegistry;
 let requestedRecipe;
+let recipePreviewGeneration = 0;
 async function registry() {
   libraryRegistry ??= loadDiskLibraryRegistry({ baseUrl: document.baseURI });
   try {
@@ -139,6 +140,46 @@ async function libraryRecipe(id) {
   if (requestedRecipe?.reference.id === id) return requestedRecipe;
   return resolveDiskLibraryRecipe(await registry(), { default: id });
 }
+async function previewRequestedRecipe(reference) {
+  const generation = ++recipePreviewGeneration;
+  let recipe;
+  try {
+    recipe = await resolveDiskLibraryRecipe(await registry(), reference);
+  } catch (error) {
+    if (generation !== recipePreviewGeneration) return;
+    throw error;
+  }
+  if (generation !== recipePreviewGeneration) return;
+  requestedRecipe = recipe;
+  document.querySelector("#requested-recipe-preview").hidden = false;
+  document.querySelector("#requested-recipe-description").textContent =
+    `Requested public setup: ${recipe.descriptor.name} (${recipe.reference.id}, revision ${recipe.reference.revision}). Preview only: opening this preview does not replace an existing selected configuration. Activate requested setup to select its existing local instance or create it once. All other configurations and personal disks are retained.`;
+  document.querySelector("#disk-library").open = true;
+  libraryStatus.textContent =
+    "Launch recipe preview: use Activate requested setup to select this exact public recipe. Other setup buttons select their separately labelled recipes.";
+}
+
+// A preview must not unload a running machine or interrupt queued disk saves.
+// Keep ordinary hrefs for sharing and native modified/new-tab clicks. Only the
+// explicit activation action pauses, checkpoints and restarts this machine.
+for (const id of ["share-starter", "share-library", "share-colossal-cave"])
+  document.querySelector("#" + id).addEventListener("click", (event) => {
+    if (
+      event.defaultPrevented ||
+      event.button !== 0 ||
+      event.ctrlKey ||
+      event.metaKey ||
+      event.shiftKey ||
+      event.altKey
+    )
+      return;
+    event.preventDefault();
+    const target = new URL(event.currentTarget.href);
+    void previewRequestedRecipe({
+      id: target.searchParams.get("recipe"),
+      revision: target.searchParams.get("revision"),
+    }).catch(libraryError);
+  });
 async function runtimeDeployment(manifest) {
   const configuration = manifest.configurations.find(
     (item) => item.id === manifest.selectedConfigurationId,
@@ -328,12 +369,12 @@ function saveFailed(error) {
 async function saveCheckpoint() {
   if (!workspace?.canRun || !writer?.owned) return;
   const request = ++saveRequest;
-  setSaveStatus("Saving the working disk in this browser…", "saving");
+  setSaveStatus("Saving…", "saving");
   try {
     const result = await workspace.saveCheckpoint(captureCheckpoint());
     if (result.kind === "superseded" || request !== saveRequest) return;
     retrySave.hidden = true;
-    setSaveStatus("Working disk saved in this browser.", "saved");
+    setSaveStatus("Saved in this browser", "saved");
   } catch (error) {
     if (request === saveRequest) saveFailed(error);
   } finally {
@@ -1703,7 +1744,7 @@ commitButton.addEventListener("click", async () => {
     discardStaging();
     filesStatus.textContent =
       "Disk committed with a recovery backup. CP/M restarted.";
-    setSaveStatus("Working disk saved in this browser.", "saved");
+    setSaveStatus("Saved in this browser", "saved");
   } catch (error) {
     panelError(error);
   } finally {
@@ -2541,13 +2582,10 @@ try {
   // deployment/tool/catalogue metadata is loaded only after activation below.
   await init();
   if (route.has("recipe")) {
-    requestedRecipe = await resolveDiskLibraryRecipe(await registry(), {
+    await previewRequestedRecipe({
       id: route.get("recipe"),
       revision: route.get("revision"),
     });
-    document.querySelector("#requested-recipe-preview").hidden = false;
-    document.querySelector("#requested-recipe-description").textContent =
-      `Requested public setup: ${requestedRecipe.descriptor.name} (${requestedRecipe.reference.id}, revision ${requestedRecipe.reference.revision}). Preview only: your selected configuration has not been replaced. Activate requested setup to select its existing local instance or create it once. All other configurations and personal disks are retained.`;
   }
   if (stored.kind === "unadopted") {
     if (!writer.owned)
@@ -2611,7 +2649,7 @@ try {
   resumeMachine();
   setSaveStatus(
     writer.owned
-      ? "Working disk saved in this browser."
+      ? "Saved in this browser"
       : "Read-only tab: disk writes are disabled. Close the owning tab and reload for write access.",
     writer.owned ? "saved" : "idle",
   );
@@ -2661,7 +2699,7 @@ try {
       "error",
     );
     setSaveStatus(
-      "Machine could not start. Use Files and recovery to download available saved data.",
+      "Machine could not start. Open Downloads and recovery to download available saved data.",
       "error",
     );
     await rawRecovery().catch((cause) =>

@@ -1,3 +1,4 @@
+import { openDownloads } from "./downloads-fixture.mjs";
 import { test, expect } from "@playwright/test";
 import { adoptHistoricalMachine, inspectDiskBox } from "./legacy-fixture.mjs";
 import { readFile, writeFile } from "node:fs/promises";
@@ -187,6 +188,7 @@ test("adopted historical A/B configuration preserves games, runs sparse P and re
   await expect(page.locator("#configured-count")).toHaveValue("16");
   await expect(page.locator("#machine-summary")).toContainText("56576 bytes");
   const downloaded = page.waitForEvent("download");
+  await openDownloads(page);
   await page.locator("#download-set").click();
   const download = await downloaded;
   const path = info.outputPath("sixteen.tds");
@@ -241,6 +243,7 @@ test("saved two-MiB media reopen without fresh system fetches and remain downloa
   expect(await metadata(page)).toEqual(before);
   expect(freshRequests).toBe(0);
   const downloaded = page.waitForEvent("download");
+  await openDownloads(page);
   await page.locator("#download-set").click();
   const download = await downloaded;
   const path = info.outputPath("unavailable-profile.tds");
@@ -318,6 +321,7 @@ test("all sixteen independent images survive checkpoint, archive and rejected re
   await expect(page.locator("#files-dialog")).toBeHidden();
   const pending = page.waitForEvent("download");
   const archiveStarted = Date.now();
+  await openDownloads(page);
   await page.locator("#download-set").click();
   const path = info.outputPath("all-sixteen.tds");
   await (await pending).saveAs(path);

@@ -217,6 +217,12 @@ try {
       /revision=[a-f0-9]{64}$/,
     );
   }
+  async function downloadsAndRecovery(page) {
+    const panel = page.locator("#downloads-recovery");
+    if (!(await panel.evaluate((element) => element.open)))
+      await panel.locator(":scope > summary").click();
+    await expect(panel).toHaveJSProperty("open", true);
+  }
   async function command(page, text, suffix = "?") {
     const terminal = page.locator("#terminal"),
       before = await terminal.textContent();
@@ -593,6 +599,7 @@ try {
     await page.locator("#files").click();
     await page.locator("#file-drive").selectOption("C");
     await page.locator("#close-files").click();
+    await downloadsAndRecovery(page);
     const downloading = page.waitForEvent("download");
     await page.locator("#download").click();
     return readFile(await (await downloading).path());

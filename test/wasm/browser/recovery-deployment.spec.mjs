@@ -1,3 +1,4 @@
+import { openDownloads } from "./downloads-fixture.mjs";
 import {
   expect,
   test,
@@ -351,6 +352,7 @@ async function checkCompleteArchive(bytes, expected) {
 async function completeRecoveryDownloads(page, info, phase, expected) {
   if (await page.locator("#files-dialog").isVisible())
     await page.locator("#close-files").click();
+  await openDownloads(page);
   const save = async (locator, label, snapshot) => {
     const pending = page.waitForEvent("download");
     await locator.click();

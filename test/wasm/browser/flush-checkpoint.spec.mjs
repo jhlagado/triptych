@@ -1,3 +1,4 @@
+import { openDownloads } from "./downloads-fixture.mjs";
 import { expect, test, adoptHistoricalMachine } from "./legacy-fixture.mjs";
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
@@ -118,6 +119,7 @@ test("autosave and recovery download exclude writes after the last guest flush",
   });
 
   const pendingDownload = page.waitForEvent("download");
+  await openDownloads(page);
   await page.locator("#download").click();
   const download = await pendingDownload;
   const path = testInfo.outputPath("exact-checkpoint.img");

@@ -1,3 +1,4 @@
+import { openDownloads } from "./downloads-fixture.mjs";
 import {
   expect,
   test,
@@ -232,7 +233,7 @@ test("a second tab is read-only and cannot enter disk management", async ({
   await page.close();
   await other.reload();
   await expect(other.locator("#save-status")).toHaveText(
-    "Working disk saved in this browser.",
+    "Saved in this browser",
   );
 });
 
@@ -374,6 +375,7 @@ test("corrupt legacy data enters recovery without seeding over the original reco
   });
   await page.goto("/");
   await expect(page.locator("#status")).toContainText("Recovery required");
+  await openDownloads(page);
   await expect(page.locator("#legacy-recovery")).toBeVisible();
   const original = await page.evaluate(async () => {
     const { openDiskBoxAppStore } = await import("/disk-box-app-store.js");
@@ -505,6 +507,7 @@ test("adopted historical work in disk-box authority boots without downloading a 
   expect(bootstrapRequests).toBe(0);
   await expect(page.locator("#download")).toBeEnabled();
   const pending = page.waitForEvent("download");
+  await openDownloads(page);
   await page.locator("#download").click();
   const download = await pending;
   const path = info.outputPath("retained-bootstrap.img");
@@ -530,6 +533,7 @@ test("failed WASM download retains exact saved-disk recovery access", async ({
   expect(failedRequests).toBeGreaterThan(0);
   await expect(page.locator("#download")).toBeEnabled();
   const pending = page.waitForEvent("download");
+  await openDownloads(page);
   await page.locator("#download").click();
   const path = info.outputPath("recover-after-wasm-failure.img");
   await (await pending).saveAs(path);

@@ -1,3 +1,4 @@
+import { openDownloads } from "./downloads-fixture.mjs";
 import { expect, test, adoptHistoricalMachine } from "./legacy-fixture.mjs";
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
@@ -162,6 +163,7 @@ for (const selected of [0, 1]) {
     await page.locator("#close-files").click();
 
     const pending = page.waitForEvent("download");
+    await openDownloads(page);
     await page.locator("#download-checkpoint-set").click();
     const path = info.outputPath(`flush-${drive}.tds`);
     await (await pending).saveAs(path);

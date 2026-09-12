@@ -1,3 +1,4 @@
+import { openDownloads } from "./downloads-fixture.mjs";
 import {
   expect,
   test,
@@ -81,7 +82,7 @@ async function runScrollingCommand(page, command) {
 
 async function waitForSavedDisk(page) {
   await expect(page.locator("#save-status")).toHaveText(
-    "Working disk saved in this browser.",
+    "Saved in this browser",
   );
 }
 
@@ -167,6 +168,7 @@ test("a downloaded working disk can be imported into a fresh browser session", a
   await waitForSavedDisk(page);
 
   const downloadPromise = page.waitForEvent("download");
+  await openDownloads(page);
   await page.locator("#download").click();
   const download = await downloadPromise;
   const diskPath = testInfo.outputPath("recovered-working-disk.img");
@@ -222,6 +224,7 @@ test("a flushed disk remains downloadable after a controlled WASM fault", async 
   await expect(page.locator("#download")).toBeEnabled();
 
   const downloadPromise = page.waitForEvent("download");
+  await openDownloads(page);
   await page.locator("#download").click();
   const download = await downloadPromise;
   const diskPath = testInfo.outputPath("fault-recovery.img");

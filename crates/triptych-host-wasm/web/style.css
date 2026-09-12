@@ -9,15 +9,24 @@
   color: #dce8de;
 }
 
-#disk-library {
-  margin: 1rem 0;
-  padding: 1rem;
+main > details {
+  margin: 0.4rem 0;
+  padding: 0.4rem 0.65rem;
   border: 1px solid #415d48;
   border-radius: 0.5rem;
 }
-#disk-library summary {
+main > details > summary,
+#colossal-cave-guide > summary {
   cursor: pointer;
-  font-weight: 650;
+  font-weight: 550;
+  min-height: 1.75rem;
+  align-content: center;
+}
+main > details[open] > summary {
+  margin-bottom: 0.6rem;
+}
+#downloads-recovery .controls {
+  margin: 0.5rem 0 0;
 }
 .library-controls {
   display: flex;
@@ -58,15 +67,15 @@ body {
 main {
   width: min(100% - 2rem, 72rem);
   margin: 0 auto;
-  padding: 2rem 0;
+  padding: 0.65rem 0;
 }
 
 header {
   display: flex;
-  align-items: end;
-  justify-content: space-between;
-  gap: 2rem;
-  margin-bottom: 1.25rem;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.45rem 0.75rem;
+  margin-bottom: 0.5rem;
 }
 
 .eyebrow {
@@ -80,12 +89,25 @@ header {
 
 h1 {
   margin: 0;
-  font-size: clamp(1.6rem, 4vw, 2.5rem);
+  font-size: 1.15rem;
   font-weight: 650;
 }
 
 .status-group {
-  max-width: 34rem;
+  flex: 1;
+  min-width: 9rem;
+  font-size: 0.8rem;
+}
+.controls.primary-controls {
+  margin: 0;
+  gap: 0.35rem;
+}
+.primary-controls button {
+  padding: 0 0.65rem;
+  min-height: 2.5rem;
+}
+#status[data-state="running"] {
+  display: none;
 }
 
 #status,
@@ -96,7 +118,7 @@ h1 {
 }
 
 #save-status {
-  margin-top: 0.35rem;
+  margin-top: 0;
   font-size: 0.8rem;
 }
 
@@ -332,13 +354,13 @@ dialog li button {
   }
 
   header {
-    display: block;
+    gap: 0.35rem 0.65rem;
   }
 
   #status,
   #save-status {
-    margin-top: 0.75rem;
-    text-align: left;
+    margin-top: 0;
+    text-align: right;
   }
 
   #terminal {

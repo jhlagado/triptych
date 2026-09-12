@@ -1,3 +1,4 @@
+import { openDownloads } from "./downloads-fixture.mjs";
 import {
   expect,
   test,
@@ -121,6 +122,7 @@ test("upgrade preserves files, exports exactly, reloads, updates tools and resto
   await expect(page.locator("#migrate-large-disk")).toBeDisabled();
   await page.locator("#close-files").click();
   const downloaded = page.waitForEvent("download");
+  await openDownloads(page);
   await page.locator("#download").click();
   const path = info.outputPath("large.img");
   await (await downloaded).saveAs(path);
@@ -321,6 +323,7 @@ test("large adaptation selects its verified BIOS and preserves the reserved tail
   await apply(page);
   await page.locator("#close-files").click();
   const pending = page.waitForEvent("download");
+  await openDownloads(page);
   await page.locator("#download").click();
   const download = await pending;
   const bytes = await readFile(await download.path());

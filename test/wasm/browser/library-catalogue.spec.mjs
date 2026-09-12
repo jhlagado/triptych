@@ -1,3 +1,4 @@
+import { openDownloads } from "./downloads-fixture.mjs";
 import { expect, test } from "@playwright/test";
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
@@ -101,6 +102,7 @@ test("a retained image outside all recipes is visible and mounts protected witho
   await page.locator("#file-drive").selectOption("B");
   await page.locator("#close-files").click();
   const downloaded = page.waitForEvent("download");
+  await openDownloads(page);
   await page.locator("#download").click();
   const savedBytes = await readFile(await (await downloaded).path());
   expect(createHash("sha256").update(savedBytes).digest("hex")).toBe(sha256);

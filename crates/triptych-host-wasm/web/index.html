@@ -15,10 +15,15 @@
   <body>
     <main>
       <header>
-        <div>
-          <p class="eyebrow">WebAssembly</p>
-          <h1>Triptych Terminal</h1>
-        </div>
+        <h1>Triptych</h1>
+        <section
+          class="controls primary-controls"
+          aria-label="Machine controls"
+        >
+          <button id="files" type="button">Files</button>
+          <button id="reset" type="button" disabled>Reset</button>
+          <button id="retry-save" type="button" hidden>Retry saving</button>
+        </section>
         <div class="status-group">
           <p id="status" role="status" aria-live="polite">
             Loading WebAssembly…
@@ -29,27 +34,27 @@
         </div>
       </header>
 
-      <section class="controls" aria-label="Machine controls">
-        <button id="files" type="button">Files and recovery</button>
-        <button id="reset" type="button" disabled>Reset machine</button>
-        <button id="download" type="button" disabled>
-          Download saved disk
-        </button>
-        <button id="download-recovery" type="button" disabled>
-          Download latest checkpoint
-        </button>
-        <button id="download-set" type="button" disabled>
-          Download saved drive set
-        </button>
-        <button id="download-checkpoint-set" type="button" disabled>
-          Download latest checkpoint set
-        </button>
-        <button id="retry-save" type="button" hidden>Retry saving</button>
-        <button id="legacy-recovery" type="button" hidden>
-          Download legacy recovery data
-        </button>
-      </section>
-      <div id="raw-recovery" class="controls"></div>
+      <details id="downloads-recovery">
+        <summary>Downloads and recovery</summary>
+        <section class="controls" aria-label="Downloads">
+          <button id="download" type="button" disabled>
+            Download saved disk
+          </button>
+          <button id="download-recovery" type="button" disabled>
+            Download latest checkpoint
+          </button>
+          <button id="download-set" type="button" disabled>
+            Download saved drive set
+          </button>
+          <button id="download-checkpoint-set" type="button" disabled>
+            Download latest checkpoint set
+          </button>
+          <button id="legacy-recovery" type="button" hidden>
+            Download legacy recovery data
+          </button>
+        </section>
+        <div id="raw-recovery" class="controls"></div>
+      </details>
       <button id="adopt-disks" type="button" hidden>
         Adopt my saved machine into the disk box
       </button>
@@ -156,10 +161,10 @@
             <code>B:SAVED</code>.
           </p>
           <p>
-            Before closing or reloading the page, open Files and recovery,
-            acknowledge that the guest program has exited, and choose Enter disk
-            management. Wait for CPU paused, then close Files. Download your
-            disk or a complete backup to keep saves outside this browser.
+            Before closing or reloading the page, open Files, acknowledge that
+            the guest program has exited, and choose Enter disk management. Wait
+            for CPU paused, then close Files. Download your disk or a complete
+            backup to keep saves outside this browser.
           </p>
           <p>
             If you explicitly make a writable copy and insert it in C instead,

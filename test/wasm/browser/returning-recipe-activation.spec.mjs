@@ -48,20 +48,28 @@ test("a returning user explicitly activates the exact requested recipe, retains 
   await expect(page.locator("#terminal")).toContainText("A>");
   const fresh = await state(page),
     original = selected(fresh);
+  // Delay one real disk hash, not its bytes/result or any IndexedDB operation.
+  // This makes the pending-save preview boundary deterministic without sleeps.
+  await page.evaluate(() => {
+    const digest = crypto.subtle.digest.bind(crypto.subtle);
+    let held = false;
+    crypto.subtle.digest = async (...args) => {
+      const result = digest(...args);
+      if (!held && args[1].byteLength === 2097152) {
+        held = true;
+        await new Promise((resolve) => {
+          window.releasePreviewDiskHash = resolve;
+        });
+      }
+      return result;
+    };
+  });
   await command(page, "SAVE 1 B:KEEP.COM");
+  await command(page, "DIR B:*.*");
+  await expect(page.locator("#terminal")).toContainText(/KEEP\s+COM/);
   await expect
-    .poll(
-      async () =>
-        (await state(page)).manifest.personalDisks.find(
-          (row) => row.id === original.slots[1].diskId,
-        ).content.sha256,
-    )
-    .not.toBe(
-      fresh.manifest.personalDisks.find(
-        (row) => row.id === original.slots[1].diskId,
-      ).content.sha256,
-    );
-  const before = await state(page);
+    .poll(() => page.evaluate(() => typeof window.releasePreviewDiskHash))
+    .toBe("function");
   const registry = await (
     await request.get("/disk-library-registry.json")
   ).json();
@@ -73,7 +81,7 @@ test("a returning user explicitly activates the exact requested recipe, retains 
     (row) => row.id === reference.id && row.revision === reference.revision,
   );
   const url = `/?recipe=${reference.id}&revision=${reference.revision}`;
-  await page.locator("#disk-library summary").first().click();
+  await page.locator("#disk-library > summary").click();
   await expect(page.locator("#colossal-cave-guide")).toBeVisible();
   await page.locator("#colossal-cave-guide summary").click();
   await expect(page.locator("#colossal-cave-guide")).toContainText(
@@ -87,11 +95,30 @@ test("a returning user explicitly activates the exact requested recipe, retains 
     url.slice(1),
   );
   await page.locator("#share-colossal-cave").click();
-  await expect(page.locator("#terminal")).toContainText("A>");
   await expect(page.locator("#requested-recipe-description")).toContainText(
     reference.revision,
   );
-  expect(await state(page)).toEqual(before);
+  expect(new URL(page.url()).search).toBe("");
+  await expect(page.locator("#terminal")).toContainText(/KEEP\s+COM/);
+  expect(await state(page)).toEqual(fresh);
+  await page.evaluate(() => window.releasePreviewDiskHash());
+  await expect(page.locator("#save-status")).toHaveAttribute(
+    "data-state",
+    "saved",
+  );
+  await expect
+    .poll(
+      async () =>
+        (await state(page)).manifest.personalDisks.find(
+          (row) => row.id === original.slots[1].diskId,
+        ).content.sha256,
+    )
+    .not.toBe(
+      fresh.manifest.personalDisks.find(
+        (row) => row.id === original.slots[1].diskId,
+      ).content.sha256,
+    );
+  const before = await state(page);
   await page.locator("#library-ready").check();
   page.once("dialog", async (dialog) => {
     expect(dialog.message()).toContain(recipe.name);
@@ -135,6 +162,6 @@ test("a returning user explicitly activates the exact requested recipe, retains 
     .poll(async () => (await state(page)).manifest.selectedConfigurationId)
     .toBe(original.id);
   await expect(page.locator("#library-ready")).not.toBeChecked();
-  await command(page, "DIR B:");
-  await expect(page.locator("#terminal")).toContainText("KEEP");
+  await command(page, "DIR B:*.*");
+  await expect(page.locator("#terminal")).toContainText(/KEEP\s+COM/);
 });

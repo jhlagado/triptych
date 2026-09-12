@@ -1,3 +1,4 @@
+import { openDownloads } from "./downloads-fixture.mjs";
 import {
   expect,
   test,
@@ -215,7 +216,7 @@ test("adventure edit/build/update/reload/download/reopen preserves its separate 
     );
   await page.locator("#close-files").click();
   await expect(page.locator("#save-status")).toHaveText(
-    "Working disk saved in this browser.",
+    "Saved in this browser",
   );
   const saved = await savedBytes(page);
   await page.reload();
@@ -226,6 +227,7 @@ test("adventure edit/build/update/reload/download/reopen preserves its separate 
   await page.keyboard.type("Q");
   await expect(page.locator("#terminal")).toContainText("Bye.");
   const pending = page.waitForEvent("download");
+  await openDownloads(page);
   await page.locator("#download").click();
   const downloaded = await pending;
   const path = info.outputPath("adventure.img");
@@ -312,7 +314,7 @@ test("a failed project compile maps to its maintained source and preserves the r
   await page.locator("#close-files").click();
   await runCommand(page, "NUC GAME.NU");
   await expect(page.locator("#save-status")).toHaveText(
-    "Working disk saved in this browser.",
+    "Saved in this browser",
   );
   const previous = readCpm22File(
     Buffer.from(await savedBytes(page)),

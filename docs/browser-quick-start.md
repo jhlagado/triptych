@@ -123,7 +123,7 @@ SAVE 224 B:SAVED.COM
 This writes the suspended game to your personal B disk. Reusing `SAVED.COM`
 replaces that save; use another CP/M filename to keep an earlier position.
 Before reloading or
-closing the page, open **Files and recovery**, acknowledge that the guest
+closing the page, open **Files**, acknowledge that the guest
 program has exited, and choose **Enter disk management**. Once **CPU paused.**
 appears, close Files to resume; that management step checkpoints the writable
 disks. Download B or a complete backup to keep the save outside this browser.
@@ -193,7 +193,7 @@ single transaction.
 
 ## Files and verified tool updates
 
-Save and exit the guest program, open **Files and recovery**, acknowledge that
+Save and exit the guest program, open **Files**, acknowledge that
 the program has exited, and click **Enter disk management**. Use **Drive to
 view or edit** to select a configured drive for file imports, tool updates,
 source projects and diagnostic mapping. This selector does not change CP/M's
@@ -301,6 +301,10 @@ and A/B resident profile remain unchanged.
 
 ## Backup and restore
 
+Expand **Downloads and recovery** for saved-disk, drive-set and checkpoint
+downloads. These controls are collapsed to leave room for the terminal.
+Complete disk-box recovery remains in **Disk box and published library**.
+
 **Download complete disk-box recovery** exports a `.tdbr` file containing raw
 disk-box records, personal disk bytes, historical storage and backups, including
 ejected disks. Keep it outside the browser for recovery. It is a raw recovery
@@ -344,7 +348,7 @@ If the guest is stuck or cannot boot, **Recover from saved disk** permits
 replacement after explicit consent to discard unsaved state on apply. The
 [recovery guide](browser-recovery.md) covers this path, raw downloads and
 website redeployment. Do not clear site data, delete IndexedDB or downgrade
-storage to recover work. **Reset machine** is a machine reset, not a backup
+storage to recover work. **Reset** is a machine reset, not a backup
 operation.
 
 ### Multi-source adventure

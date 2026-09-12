@@ -1,3 +1,4 @@
+import { openDownloads } from "./downloads-fixture.mjs";
 import { expect, test } from "@playwright/test";
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
@@ -144,6 +145,7 @@ async function downloadC(page) {
   await page.locator("#file-drive").selectOption("C");
   await page.locator("#close-files").click();
   const pending = page.waitForEvent("download");
+  await openDownloads(page);
   await page.locator("#download").click();
   return readFile(await (await pending).path());
 }
