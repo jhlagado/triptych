@@ -247,6 +247,37 @@
         "spdx": "GPL-3.0-only",
         "provenance": "third_party/hyperdrive/README.md"
       }
+    },
+    {
+      "id": "hyperdrive2",
+      "role": "application",
+      "source": {
+        "kind": "git",
+        "repository": "https://github.com/jhlagado/hyperdrive2.git",
+        "revision": "33c10ed036184a23892596d8b8cfe18162ad2f93",
+        "path": "cpm/src/main.asm"
+      },
+      "recipe": "verified-release",
+      "artifact": {
+        "path": "third_party/hyperdrive2/HYPERD2.COM",
+        "bytes": 13543,
+        "sha256": "98133cf273534bed3966a0ed40f76e8efc3932efe954c83234fc86dd2add403d",
+        "manifest": "third_party/hyperdrive2/manifest.json",
+        "provenance": "third_party/hyperdrive2/release.provenance.json"
+      },
+      "target": {
+        "origin": 256,
+        "capacity": 58112
+      },
+      "install": {
+        "kind": "file",
+        "name": "HYPERD2.COM",
+        "padByte": 26
+      },
+      "licence": {
+        "spdx": "GPL-3.0-only",
+        "provenance": "third_party/hyperdrive2/README.md"
+      }
     }
   ]
 }

@@ -1,0 +1,12 @@
+{
+  "schema": "triptych-release-provenance-v1",
+  "repository": "https://github.com/jhlagado/hyperdrive2.git",
+  "revision": "33c10ed036184a23892596d8b8cfe18162ad2f93",
+  "bytes": 13543,
+  "sha256": "98133cf273534bed3966a0ed40f76e8efc3932efe954c83234fc86dd2add403d",
+  "manifestSha256": "bdd4368e66dd27a4cf1a2c89e69f1ee5a9213582f389ecd2ff0570d35ff9e4c7",
+  "origin": {
+    "kind": "ci-artifact",
+    "url": "https://github.com/jhlagado/hyperdrive2/actions/runs/34696562428/artifacts/10299251083"
+  }
+}

@@ -166,6 +166,7 @@ test("A/B migration, B tool workflows, complete export and removal/restore prese
     "EDIT.COM",
     "CAVERNS.COM",
     "HYPERDRV.COM",
+    "HYPERD2.COM",
   ]) {
     await page
       .locator("#tool-list li")

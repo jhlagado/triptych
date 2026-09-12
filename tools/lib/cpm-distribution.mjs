@@ -51,6 +51,7 @@ export async function buildCpmDistribution(
       "edit",
       "caverns80",
       "hyperdrive",
+      "hyperdrive2",
     ],
   );
   const packageBytes = await readFile(join(repositoryRoot, "package.json"));

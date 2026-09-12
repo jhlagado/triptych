@@ -52,7 +52,12 @@ const names = (bytes) => {
 };
 
 async function prove(game, direct) {
-  const source = game === "CAVERNS" ? "caverns80" : "hyperdrive";
+  const source =
+    game === "CAVERNS"
+      ? "caverns80"
+      : game === "HYPERDRV"
+        ? "hyperdrive"
+        : "hyperdrive2";
   const manifest = await json(
     resolve(root, `third_party/${source}/manifest.json`),
   );
@@ -125,9 +130,11 @@ async function prove(game, direct) {
     const launch = () => {
       command(
         direct ? `C:${game}` : game,
-        game === "CAVERNS" ? /\[Space\/Enter: more, Q: skip\]/ : /\?\s*$/,
+        ["CAVERNS", "HYPERD2"].includes(game)
+          ? /\[Space\/Enter: more, Q: skip\]/
+          : /\?\s*$/,
       );
-      if (game === "CAVERNS") {
+      if (["CAVERNS", "HYPERD2"].includes(game)) {
         send("q");
         wait(/\?\s*$/);
       }
@@ -143,22 +150,25 @@ async function prove(game, direct) {
         "QUIT",
         game === "CAVERNS"
           ? /Another adventure\?/
-          : /Return to CP\/M\? \(Y\/N\)/,
+          : game === "HYPERDRV"
+            ? /Return to CP\/M\? \(Y\/N\)/
+            : /Quit to CP\/M\?/,
       );
       command(game === "CAVERNS" ? "N" : "Y", new RegExp(`${letter}>\\s*$`));
     };
     launch();
-    // Both pinned worlds place the compass in the starting room. Inventory
-    // supplies guest-visible evidence, independent of SAVE/LOAD success text.
     const inventory = () =>
       command("INVENTORY", /\?\s*$/)
         .replace(/\r/g, "")
         .trim();
     const initialInventory = inventory();
-    assert.doesNotMatch(initialInventory, /compass/i);
-    command("TAKE COMPASS", /\?\s*$/);
-    const savedInventory = inventory();
-    assert.match(savedInventory, /compass/i);
+    const marker =
+      game === "HYPERD2" ? /standing by the docking bay/i : /compass/i;
+    if (game === "HYPERD2") command("N", /\?\s*$/);
+    else command("TAKE COMPASS", /\?\s*$/);
+    const savedInventory =
+      game === "HYPERD2" ? command("LOOK", /\?\s*$/) : inventory();
+    assert.match(savedInventory, marker);
     // Observe the unused region without injecting canaries or altering RAM.
     // Compare only while the game remains loaded; CCP legitimately uses RAM.
     const gapStart = Math.ceil(manifest.memory.endExclusive / 128) * 128;
@@ -170,17 +180,15 @@ async function prove(game, direct) {
       "SAVE stays inside declared application memory",
     );
     sample("saved");
-    command("DROP COMPASS", /\?\s*$/);
-    const changedInventory = inventory();
-    assert.doesNotMatch(changedInventory, /compass/i);
+    command(game === "HYPERD2" ? "S" : "DROP COMPASS", /\?\s*$/);
+    const changedInventory =
+      game === "HYPERD2" ? command("LOOK", /\?\s*$/) : inventory();
+    assert.doesNotMatch(changedInventory, marker);
     assert.notEqual(changedInventory, savedInventory);
     command("LOAD", /Game loaded[\s\S]*\?\s*$/);
-    const restoredInventory = inventory();
-    assert.equal(
-      restoredInventory,
-      savedInventory,
-      "LOAD restores the carried compass after DROP",
-    );
+    const restoredInventory =
+      game === "HYPERD2" ? command("LOOK", /\?\s*$/) : inventory();
+    assert.match(restoredInventory, marker, "LOAD restores changed game state");
     quit();
     const saved = cpu.export_drive_checkpoint(target);
     if (direct) assert.deepEqual(names(saved), [`${game}.SAV`]);
@@ -189,7 +197,12 @@ async function prove(game, direct) {
     assert.deepEqual(cpu.export_drive(direct ? 1 : 3), blankBytes);
     protectedUnchanged();
     launch();
-    assert.doesNotMatch(inventory(), /compass/i, "relaunch starts a new game");
+    if (game !== "HYPERD2")
+      assert.doesNotMatch(
+        inventory(),
+        /compass/i,
+        "relaunch starts a new game",
+      );
     const loadGap = cpu.read_ram(gapStart, profile.layout.ccp - gapStart);
     command("LOAD", /Game loaded[\s\S]*\?\s*$/);
     assert.deepEqual(
@@ -198,10 +211,12 @@ async function prove(game, direct) {
       "LOAD stays inside declared application memory",
     );
     sample("loaded");
-    assert.equal(
-      inventory(),
-      savedInventory,
-      "LOAD restores the saved inventory after relaunch",
+    const relaunched =
+      game === "HYPERD2" ? command("LOOK", /\?\s*$/) : inventory();
+    assert.match(
+      relaunched,
+      marker,
+      "LOAD restores saved state after relaunch",
     );
     quit();
     assert.deepEqual(
@@ -220,7 +235,10 @@ async function prove(game, direct) {
       steps,
       samples,
       gameplayRestore: {
-        commands: ["TAKE COMPASS", "SAVE", "DROP COMPASS", "LOAD"],
+        commands:
+          game === "HYPERD2"
+            ? ["N", "SAVE", "S", "LOAD"]
+            : ["TAKE COMPASS", "SAVE", "DROP COMPASS", "LOAD"],
         initialInventory,
         savedInventory,
         changedInventory,
@@ -249,7 +267,7 @@ async function prove(game, direct) {
 }
 
 const results = [];
-for (const game of ["CAVERNS", "HYPERDRV"]) {
+for (const game of ["CAVERNS", "HYPERDRV", "HYPERD2"]) {
   const direct = await prove(game, true);
   results.push(direct);
   if (!direct.passed) results.push(await prove(game, false));

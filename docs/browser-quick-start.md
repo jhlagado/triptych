@@ -15,7 +15,7 @@ tools-and-games configuration has four two-MiB drives:
 
 - **A: protected system and tools** — CP/M, ATOM, NUC, EDIT and source samples.
 - **B: personal work** — an initially empty writable disk.
-- **C: protected games** — `CAVERNS.COM`, `HYPERDRV.COM` and `README.TXT`.
+- **C: protected games** — `CAVERNS.COM`, `HYPERDRV.COM`, `HYPERD2.COM` and `README.TXT`.
 - **D: personal saves** — an initially empty writable disk.
 
 Published images are fetched by hash and are not copied into the personal
@@ -95,6 +95,21 @@ Back up your disk first. Installing the program does not require deleting your
 saved games. The [upstream player guide](https://github.com/jhlagado/caverns80/blob/cpm-caverns/docs/player-guide.md)
 is safe to read before playing; development audits and walkthrough tests contain
 spoilers.
+
+## Play Hyperdrive II
+
+Hyperdrive II is John Hardy's later Microbee adventure and is separate from
+Ken Stone's original Hyperdrive. At `D>`, enter `C:HYPERD2`. Space or Enter
+advances its introductory pages and Q skips the remainder. The game accepts
+short compass commands, LIST, INVENT, INVENTORY and I, plus SAVE, LOAD, HELP,
+SCORE, RESTART and QUIT.
+
+Use `SAVE CAMP` and `LOAD CAMP` for a named position. Since D remains the
+current drive, its `C:HYPERD2` launch writes the save to the private D disk.
+QUIT, then Y, returns to CP/M. The
+[Hyperdrive II repository](https://github.com/jhlagado/hyperdrive2/tree/hyperdrive2-cpm)
+contains the recovered Microbee source, native ATOM port and spoiler-marked
+development audits.
 
 ## Play Colossal Cave
 

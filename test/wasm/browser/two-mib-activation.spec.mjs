@@ -138,6 +138,7 @@ test("adopted historical A/B configuration preserves games, runs sparse P and re
   const originalGames = await gamesFiles(page);
   expect(originalGames.map(([name]) => name)).toEqual([
     "CAVERNS.COM",
+    "HYPERD2.COM",
     "HYPERDRV.COM",
     "README.TXT",
   ]);

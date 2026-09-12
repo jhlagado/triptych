@@ -207,7 +207,8 @@ for (const reference of registry.metadata.defaults) {
       );
       assert(names.includes("ATOM.COM"));
     } else if (slot.image.id === "games-2m") {
-      assert(names.includes("CAVERNS.COM") && names.includes("HYPERDRV.COM"));
+      for (const name of ["CAVERNS.COM", "HYPERDRV.COM", "HYPERD2.COM"])
+        assert(names.includes(name));
     } else {
       assert.equal(slot.image.id, "colossal-cave-350");
       assert.equal(slot.image.sha256, COLOSSAL_CAVE_IMAGE_SHA256);

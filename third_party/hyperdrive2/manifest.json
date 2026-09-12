@@ -1,0 +1,43 @@
+{
+  "format": "hyperdrive2-build-v1",
+  "artifact": "HYPERD2.COM",
+  "version": "0.1.0",
+  "loadAddress": 256,
+  "entryAddress": 256,
+  "bytes": 13543,
+  "sha256": "98133cf273534bed3966a0ed40f76e8efc3932efe954c83234fc86dd2add403d",
+  "assembler": {
+    "name": "atom-z80",
+    "revision": "802b5c2d320bec777f427755ff2d7338e3b80a05"
+  },
+  "sourceFormat": "native-atom",
+  "memory": {
+    "start": 256,
+    "endExclusive": 13799,
+    "allocatedBytes": 13543,
+    "stackStart": 13287,
+    "stackEndExclusive": 13799,
+    "stackBytes": 512,
+    "dynamicAllocationBytes": 0
+  },
+  "sourceFiles": {
+    "src/actions.asm": "0f6f12254a2f45ea60d3323fa73262bf7c1713a3799adeb7334b6ad017cc09db",
+    "src/acttwo.asm": "3ec720d7dbf01fa6d9de90b405abcd7f0c981b43770e46a037ceaed0665e606d",
+    "src/const.asm": "f41d6000cd627ebd95f6232fd88bdc2c41fd4fbf4115b6c19fce2ad98ec7ae06",
+    "src/display.asm": "138b329b4534be05b649dac8d614cdfed20755c189153b185b1c6e303167ca6e",
+    "src/entry.asm": "284c43abf118d7346e3d218b633323d4d41403b9013f7d659d7f2105699cd808",
+    "src/input.asm": "8a5906235994ac38dfb86a11bbf7aee8f2ab873da5226c396283f6560c9cca70",
+    "src/main.asm": "6ba7efc03587b25616ed622c8344a25bc208fede0a01e26cbedfe19b479a7ea4",
+    "src/move.asm": "9886ac29921b5d1e98249a548153e024c9ad6b559ccda8793933b3c71d0b14ce",
+    "src/numbers.asm": "28260847f9fc3e2610672d8c20555a9263109ca349ad42ba1da14979178e635b",
+    "src/pager.asm": "a623712236a0e397b67256e9779a080063230a9002f903add9575ebc1582ba99",
+    "src/parser.asm": "0e9bafa8f2423d6d44bb88d0e81c0cc49aa9830086a8af97a1cc546691f41720",
+    "src/prologue.asm": "0ad8b2a22cf75331413da701db529bac8d98f95b8b8846222f558c366bd1d04a",
+    "src/savecode.asm": "6613c214b7ccac994d163cd4a720d4615f111cde9c92bfee620986c7e054fae6",
+    "src/savedisk.asm": "d2c94a6939942d0c1b962e3070549fa3a39264eacf2903d671880bb7a65734de",
+    "src/strings.asm": "1806b07aac9363f9db828fd789da8f0d9df0913789763e4f8f4bbaaebc02a014",
+    "src/system.asm": "24ec62aa803d68fb5bf638fe260f75b4be1b620c8189493d96516689eacd9a55",
+    "src/tables.asm": "3bce9fb0936de9a5794cb464a7c6f01b4efbd5ed156cb5aa3ece4d9192bfc84c",
+    "src/vars.asm": "2a4f71d573292946e37e5e8816fce906e00b0951db998cac22392571c2d97ee3"
+  }
+}

@@ -130,16 +130,18 @@ test("historical published A/B images adopt exactly; both games save and reload 
   );
   expect(initial.drives.A.files).not.toContain("CAVERNS.COM");
   expect(initial.drives.A.files).not.toContain("HYPERDRV.COM");
+  expect(initial.drives.A.files).not.toContain("HYPERD2.COM");
   expect(initial.drives.B.files).toEqual([
     "CAVERNS.COM",
+    "HYPERD2.COM",
     "HYPERDRV.COM",
     "README.TXT",
   ]);
   await send(page, "B:");
   await prompt(page, "B>");
-  for (const game of ["CAVERNS", "HYPERDRV"]) {
+  for (const game of ["CAVERNS", "HYPERDRV", "HYPERD2"]) {
     await send(page, game);
-    if (game === "CAVERNS") {
+    if (["CAVERNS", "HYPERD2"].includes(game)) {
       await prompt(page, "[Space/Enter: more, Q: skip]");
       await page.keyboard.type("q");
     }
@@ -150,14 +152,20 @@ test("historical published A/B images adopt exactly; both games save and reload 
     await send(page, "QUIT");
     await prompt(
       page,
-      game === "CAVERNS" ? "Another adventure?" : "Return to CP/M? (Y/N)",
+      game === "CAVERNS"
+        ? "Another adventure?"
+        : game === "HYPERDRV"
+          ? "Return to CP/M? (Y/N)"
+          : "Quit to CP/M?",
     );
     await send(page, game === "CAVERNS" ? "N" : "Y");
     await prompt(page, "B>");
   }
   await expect
     .poll(async () => (await state(page)).drives.B.files)
-    .toEqual(expect.arrayContaining(["CAVERNS.SAV", "HYPERDRV.SAV"]));
+    .toEqual(
+      expect.arrayContaining(["CAVERNS.SAV", "HYPERDRV.SAV", "HYPERD2.SAV"]),
+    );
   const saved = await state(page);
   expect(saved.drives.A).toEqual(initial.drives.A);
   // A returning machine does not fetch/reseed newer defaults.
@@ -168,9 +176,9 @@ test("historical published A/B images adopt exactly; both games save and reload 
   expect(await state(page)).toEqual(saved);
   await send(page, "B:");
   await prompt(page, "B>");
-  for (const game of ["CAVERNS", "HYPERDRV"]) {
+  for (const game of ["CAVERNS", "HYPERDRV", "HYPERD2"]) {
     await send(page, game);
-    if (game === "CAVERNS") {
+    if (["CAVERNS", "HYPERD2"].includes(game)) {
       await prompt(page, "[Space/Enter: more, Q: skip]");
       await page.keyboard.type("q");
     }
@@ -181,7 +189,11 @@ test("historical published A/B images adopt exactly; both games save and reload 
     await send(page, "QUIT");
     await prompt(
       page,
-      game === "CAVERNS" ? "Another adventure?" : "Return to CP/M? (Y/N)",
+      game === "CAVERNS"
+        ? "Another adventure?"
+        : game === "HYPERDRV"
+          ? "Return to CP/M? (Y/N)"
+          : "Quit to CP/M?",
     );
     await send(page, game === "CAVERNS" ? "N" : "Y");
     await prompt(page, "B>");
@@ -298,6 +310,7 @@ test("fresh public default uses protected A/C and private B/D without published 
   );
   expect(initial.drives.C.files).toEqual([
     "CAVERNS.COM",
+    "HYPERD2.COM",
     "HYPERDRV.COM",
     "README.TXT",
   ]);

@@ -24,6 +24,7 @@ function fixture() {
     ["edit", "EDIT.COM", 128],
     ["caverns80", "CAVERNS.COM", 22526],
     ["hyperdrive", "HYPERDRV.COM", 15153],
+    ["hyperdrive2", "HYPERD2.COM", 13543],
   ].map(([id, name, count], index) => {
     const bytes = new Uint8Array(count).fill(index + 41);
     disk = installCpm22File(disk, { name, bytes });
@@ -64,13 +65,13 @@ function fixture() {
   return { disk, manifest, catalog, assets, calls, options };
 }
 
-test("catalog extracts five exact padded applications, including multiple extents", () => {
+test("catalog extracts six exact padded applications, including multiple extents", () => {
   const { catalog, assets, disk } = fixture();
   assert.deepEqual(
     catalog.tools.map((tool) => tool.id),
-    ["atom", "nucleus", "edit", "caverns80", "hyperdrive"],
+    ["atom", "nucleus", "edit", "caverns80", "hyperdrive", "hyperdrive2"],
   );
-  assert.equal(assets.size, 5);
+  assert.equal(assets.size, 6);
   for (const tool of catalog.tools) {
     assert.deepEqual(assets.get(tool.asset), readCpm22File(disk, tool.name));
     assert.equal(hash(assets.get(tool.asset)), tool.padded.sha256);
@@ -78,7 +79,7 @@ test("catalog extracts five exact padded applications, including multiple extent
   }
   assert.deepEqual(
     catalog.tools.map((tool) => tool.padded.bytes),
-    [256, 16512, 128, 22528, 15232],
+    [256, 16512, 128, 22528, 15232, 13568],
   );
   const before = disk.slice();
   assets.values().next().value.fill(0);
@@ -286,7 +287,14 @@ test("identification uses full records; unknown is distinct from missing and err
   );
   assert.deepEqual(
     result.map(({ status }) => status),
-    ["different-unknown", "missing", "matching", "matching", "matching"],
+    [
+      "different-unknown",
+      "missing",
+      "matching",
+      "matching",
+      "matching",
+      "matching",
+    ],
   );
   await assert.rejects(
     identifyInstalledTools(

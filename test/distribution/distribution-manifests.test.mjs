@@ -14,6 +14,7 @@ const manifests = Object.fromEntries(
       ["edit", "edit/manifest.json"],
       ["caverns80", "caverns80/manifest.json"],
       ["hyperdrive", "hyperdrive/manifest.json"],
+      ["hyperdrive2", "hyperdrive2/manifest.json"],
     ].map(async ([id, path]) => [
       id,
       JSON.parse(await readFile(resolve(root, "third_party", path), "utf8")),
@@ -41,9 +42,11 @@ function fixture(id) {
           ? "asm/vertical-slice/cpm22-native-compiler.asm"
           : id === "hyperdrive"
             ? "cpm/main.asm"
-            : id === "caverns80"
-              ? "src/main.asm"
-              : "src/editor.asm",
+            : id === "hyperdrive2"
+              ? "cpm/src/main.asm"
+              : id === "caverns80"
+                ? "src/main.asm"
+                : "src/editor.asm",
     },
     artifact: { bytes: entry.bytes, sha256: entry.sha256 },
     target: resident
@@ -65,9 +68,11 @@ function fixture(id) {
               ? "NUC.COM"
               : id === "hyperdrive"
                 ? "HYPERDRV.COM"
-                : id === "caverns80"
-                  ? "CAVERNS.COM"
-                  : "EDIT.COM",
+                : id === "hyperdrive2"
+                  ? "HYPERD2.COM"
+                  : id === "caverns80"
+                    ? "CAVERNS.COM"
+                    : "EDIT.COM",
           padByte: 26,
         },
   };
@@ -152,63 +157,73 @@ describe("distribution manifest target checks", () => {
     ).toEqual(f.manifest);
   });
 
-  it.each(["ccp", "bdos", "nucleus", "edit", "caverns80", "hyperdrive"])(
-    "accepts published %s metadata without mutation",
-    (id) => {
-      const f = fixture(id);
-      const before = structuredClone(f);
-      expect(
-        validateDistributionManifest(f.component, f.manifest, atomRevision),
-      ).toEqual(f.manifest);
-      expect(f).toEqual(before);
-    },
-  );
+  it.each([
+    "ccp",
+    "bdos",
+    "nucleus",
+    "edit",
+    "caverns80",
+    "hyperdrive",
+    "hyperdrive2",
+  ])("accepts published %s metadata without mutation", (id) => {
+    const f = fixture(id);
+    const before = structuredClone(f);
+    expect(
+      validateDistributionManifest(f.component, f.manifest, atomRevision),
+    ).toEqual(f.manifest);
+    expect(f).toEqual(before);
+  });
 
-  it.each(["ccp", "bdos", "nucleus", "edit", "caverns80", "hyperdrive"])(
-    "rejects tampered %s lock identity and placement",
-    (id) => {
-      for (const mutate of [
-        (c) => {
-          c.recipe = "atom-binary";
-        },
-        (c) => {
-          c.source.kind = "triptych";
-        },
-        (c) => {
-          c.source.repository = "https://example.com/other.git";
-        },
-        (c) => {
-          c.source.path = "other.asm";
-        },
-        (c) => {
-          c.target.origin++;
-        },
-        (c) => {
-          c.target.capacity = 0xe301;
-        },
-        (c) => {
-          c.install.kind = "other";
-        },
-        (c) => {
-          c.artifact.bytes++;
-        },
-        (c) => {
-          c.artifact.sha256 = "0".repeat(64);
-        },
-        (c) => {
-          c.role = "other";
-        },
-      ]) {
-        const f = fixture(id);
-        mutate(f.component);
-        const before = structuredClone(f);
-        expect(() =>
-          validateDistributionManifest(f.component, f.manifest, atomRevision),
-        ).toThrow();
-        expect(f).toEqual(before);
-      }
-    },
-  );
+  it.each([
+    "ccp",
+    "bdos",
+    "nucleus",
+    "edit",
+    "caverns80",
+    "hyperdrive",
+    "hyperdrive2",
+  ])("rejects tampered %s lock identity and placement", (id) => {
+    for (const mutate of [
+      (c) => {
+        c.recipe = "atom-binary";
+      },
+      (c) => {
+        c.source.kind = "triptych";
+      },
+      (c) => {
+        c.source.repository = "https://example.com/other.git";
+      },
+      (c) => {
+        c.source.path = "other.asm";
+      },
+      (c) => {
+        c.target.origin++;
+      },
+      (c) => {
+        c.target.capacity = 0xe301;
+      },
+      (c) => {
+        c.install.kind = "other";
+      },
+      (c) => {
+        c.artifact.bytes++;
+      },
+      (c) => {
+        c.artifact.sha256 = "0".repeat(64);
+      },
+      (c) => {
+        c.role = "other";
+      },
+    ]) {
+      const f = fixture(id);
+      mutate(f.component);
+      const before = structuredClone(f);
+      expect(() =>
+        validateDistributionManifest(f.component, f.manifest, atomRevision),
+      ).toThrow();
+      expect(f).toEqual(before);
+    }
+  });
 
   it.each(["ccp", "bdos"])("rejects wrong %s manifest semantics", (id) => {
     for (const mutate of [
@@ -270,7 +285,7 @@ describe("distribution manifest target checks", () => {
     }
   });
 
-  it.each(["nucleus", "edit", "caverns80", "hyperdrive"])(
+  it.each(["nucleus", "edit", "caverns80", "hyperdrive", "hyperdrive2"])(
     "rejects wrong %s application metadata",
     (id) => {
       for (const mutate of [
@@ -317,7 +332,7 @@ describe("distribution manifest target checks", () => {
     },
   );
 
-  it.each(["caverns80", "hyperdrive"])(
+  it.each(["caverns80", "hyperdrive", "hyperdrive2"])(
     "requires %s native source and complete bounded static memory",
     (id) => {
       const mutations = [
@@ -378,7 +393,7 @@ describe("distribution manifest target checks", () => {
     },
   );
 
-  it.each(["caverns80", "hyperdrive"])(
+  it.each(["caverns80", "hyperdrive", "hyperdrive2"])(
     "admits %s on A/B only with an allocation inside that resident ceiling",
     (id) => {
       const f = fixture(id);
@@ -401,7 +416,7 @@ describe("distribution manifest target checks", () => {
           atomRevision,
           "triptych-cpu-v0.1-8m-ab",
         ),
-      ).toThrow(/(?:Caverns|Hyperdrive) stack/);
+      ).toThrow(/(?:Caverns|Hyperdrive(?: II)?) stack/);
     },
   );
 

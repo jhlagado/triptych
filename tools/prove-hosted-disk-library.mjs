@@ -312,9 +312,11 @@ try {
     await command(
       page,
       `C:${game}`,
-      game === "CAVERNS" ? "[Space/Enter: more, Q: skip]" : "?",
+      ["CAVERNS", "HYPERD2"].includes(game)
+        ? "[Space/Enter: more, Q: skip]"
+        : "?",
     );
-    if (game === "CAVERNS") {
+    if (["CAVERNS", "HYPERD2"].includes(game)) {
       await page.keyboard.type("q");
       await prompt(page, "?");
     }
@@ -327,7 +329,11 @@ try {
     await command(
       page,
       "QUIT",
-      game === "CAVERNS" ? "Another adventure?" : "Return to CP/M? (Y/N)",
+      game === "CAVERNS"
+        ? "Another adventure?"
+        : game === "HYPERDRV"
+          ? "Return to CP/M? (Y/N)"
+          : "Quit to CP/M?",
     );
     await command(page, game === "CAVERNS" ? "N" : "Y", "D>");
   }
@@ -345,6 +351,13 @@ try {
     assert.equal(await inventory(desktop), savedInventories[game]);
     await quit(desktop, game);
   }
+  await gameStart(desktop, "HYPERD2");
+  await command(desktop, "N");
+  await command(desktop, "SAVE");
+  await command(desktop, "S");
+  await command(desktop, "LOAD");
+  assert.match(await command(desktop, "LOOK"), /standing by the docking bay/i);
+  await quit(desktop, "HYPERD2");
   // The management barrier acknowledges the complete writable checkpoint.
   await desktop.locator("#library-ready").check();
   await desktop.locator("#library-name").fill("Hosted acceptance ejected disk");
@@ -372,8 +385,12 @@ try {
     assert.equal(await inventory(desktop), savedInventories[game]);
     await quit(desktop, game);
   }
+  await gameStart(desktop, "HYPERD2");
+  await command(desktop, "LOAD");
+  assert.match(await command(desktop, "LOOK"), /standing by the docking bay/i);
+  await quit(desktop, "HYPERD2");
   console.log(
-    "Both games SAVE/LOAD changed inventory across reload on private D.",
+    "All three games SAVE/LOAD changed state across reload on private D.",
   );
 
   await library(desktop);

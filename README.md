@@ -10,7 +10,8 @@ retention and publication. These instructions do not assert hosted deployment
 or completion of the full release gate.
 
 The [browser quick start](docs/browser-quick-start.md) covers a complete
-ATOM/Edit/NUC session, Caverns and Hyperdrive adventures, browser saving, backup and restore.
+ATOM/Edit/NUC session, Caverns, Hyperdrive and Hyperdrive II, browser saving,
+backup and restore.
 
 Triptych is the working name for a modular 8-bit computer built from three
 cooperating ESP32-family modules:
@@ -105,7 +106,8 @@ npm run run:cpm22-native
 ```
 
 The default launcher builds a fresh disk from pinned CCP, BDOS, ATOM, NUC and
-Edit, Caverns and Hyperdrive inputs plus the local BIOS and bootstrap. It prints the disk digest and
+Edit, Caverns, Hyperdrive and Hyperdrive II inputs plus the local BIOS and
+bootstrap. It prints the disk digest and
 development manifest. Disk writes last for the session and are discarded on
 Ctrl-C. Set `TRIPTYCH_CPM22_IMAGE` only to select an explicit disposable source
 copy; that source is not modified. The shorter alias starts the same default:
@@ -251,8 +253,8 @@ npm run run:wasm-browser
 Open `http://127.0.0.1:8080/`, click the terminal, and type at the `A>` prompt.
 In a fresh disk box, A/C are protected. Use Files to import sources and stage
 ATOM, NUC and Edit onto writable B, then enter `B:` for development. To play
-the published games with private saves, enter `D:` followed by `C:CAVERNS` or
-`C:HYPERDRV`. The [quick start](docs/browser-quick-start.md) has the complete
+the published games with private saves, enter `D:` followed by `C:CAVERNS`,
+`C:HYPERDRV` or `C:HYPERD2`. The [quick start](docs/browser-quick-start.md) has the complete
 file-transfer, edit and build sequence.
 
 After a successful guest flush, personal disk checkpoints are saved in browser

@@ -24,6 +24,11 @@ const APPLICATIONS = {
     file: "HYPERDRV.COM",
     source: "cpm/main.asm",
   },
+  hyperdrive2: {
+    format: "hyperdrive2-build-v1",
+    file: "HYPERD2.COM",
+    source: "cpm/src/main.asm",
+  },
   caverns80: {
     format: "caverns-build-v1",
     file: "CAVERNS.COM",
@@ -220,8 +225,13 @@ export function validateDistributionManifest(
       atomRevision,
       "application assembler revision",
     );
-    if (["caverns80", "hyperdrive"].includes(component.id)) {
-      const game = component.id === "hyperdrive" ? "Hyperdrive" : "Caverns";
+    if (["caverns80", "hyperdrive", "hyperdrive2"].includes(component.id)) {
+      const game =
+        component.id === "caverns80"
+          ? "Caverns"
+          : component.id === "hyperdrive"
+            ? "Hyperdrive"
+            : "Hyperdrive II";
       assert.equal(
         manifest.sourceFormat,
         "native-atom",

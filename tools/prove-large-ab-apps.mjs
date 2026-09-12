@@ -21,7 +21,11 @@ const TOOL_FLOORS = {
   "NUC.COM": 0xd500,
   "EDIT.COM": 0xd800,
 };
-const PRIVATE_STACK_GAMES = new Set(["CAVERNS.COM", "HYPERDRV.COM"]);
+const PRIVATE_STACK_GAMES = new Set([
+  "CAVERNS.COM",
+  "HYPERDRV.COM",
+  "HYPERD2.COM",
+]);
 const prompt = (drive) => `\r\n${drive ? "B" : "A"}>`;
 const endSuffix = `AB-PROOF-END${prompt(1)}`;
 const editorCursor = "\x1b[2;21H";
@@ -93,6 +97,26 @@ function scenarios() {
           staysOpen: true,
         },
         { id: "hyperdrive-return", input: "y\r", suffix: prompt(1) },
+        command("hyperdrive2-start", "HYPERD2", "H Y P E R D R I V E  II", {
+          launch: "HYPERD2.COM",
+          suffix: "[Space/Enter: more, Q: skip] ",
+          staysOpen: true,
+        }),
+        { id: "hyperdrive2-skip", input: "q", suffix: "? ", staysOpen: true },
+        {
+          id: "hyperdrive2-inventory",
+          input: "inventory\r",
+          suffix: "? ",
+          required: "You are carrying:",
+          staysOpen: true,
+        },
+        {
+          id: "hyperdrive2-quit",
+          input: "quit\r",
+          suffix: "Quit to CP/M?",
+          staysOpen: true,
+        },
+        { id: "hyperdrive2-return", input: "y\r", suffix: prompt(1) },
         command("exact-load-limit", "FIT", undefined, { launch: "FIT.COM" }),
         command("reject-over-limit", "OVER", "OVER?", { rejectLaunch: true }),
         command("atom-success", "ATOM HELLO.ASM", "HELLO.COM written", {
@@ -177,7 +201,7 @@ function scenarios() {
 /** Qualify caller-supplied, provenance-checked E300/EB00/F900 artifacts.
  * This function never locates source checkouts, selects releases, rebuilds hosts,
  * or installs component pins. The caller owns those boundaries.
- * components: [{name: "ATOM.COM" | "NUC.COM" | "EDIT.COM" | "CAVERNS.COM" | "HYPERDRV.COM", bytes, sha256}].
+ * components include ATOM.COM, NUC.COM, EDIT.COM and the three game COM files.
  * resident: {ccpBytes, ccpWritableStart, ccpStackGuardStart, ccpStackGuardEnd,
  * bdosBytes, bdosWritableStart, bdosStackBase, bdosStackTop,
  * biosImmutableRanges: [{start, end, bytes}]} (addresses are absolute).

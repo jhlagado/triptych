@@ -15,7 +15,7 @@ import { installCpm22File, readCpm22File } from "./cpm22-disk.mjs";
 
 const root = resolve(import.meta.dirname, "../..");
 const hash = (bytes) => createHash("sha256").update(bytes).digest("hex");
-const games = ["CAVERNS.COM", "HYPERDRV.COM"];
+const games = ["CAVERNS.COM", "HYPERDRV.COM", "HYPERD2.COM"];
 
 describe("published two-MiB library from qualified source fixtures", () => {
   let distribution, twoMibSystem, componentLockBytes, CpmDisk;
@@ -108,7 +108,7 @@ describe("published two-MiB library from qualified source fixtures", () => {
       output.provenance.system.residentProfile,
       output.bootstrap.profile,
     );
-    for (const game of ["caverns80", "hyperdrive"])
+    for (const game of ["caverns80", "hyperdrive", "hyperdrive2"])
       assert.equal(
         output.provenance.components.find((component) => component.id === game)
           .licence.spdx,
@@ -209,7 +209,7 @@ describe("fresh public system and games drives", () => {
         assert(a.file_names().includes(name));
       const readme = Buffer.from(b.read_file("README.TXT")).toString("ascii");
       assert.match(readme, /\r\nB:\r\n/);
-      assert.match(readme, /\r\nCAVERNS\r\nHYPERDRV\r\n/);
+      assert.match(readme, /\r\nCAVERNS\r\nHYPERDRV\r\nHYPERD2\r\n/);
       assert(readme.includes("Return to drive A"));
       assert.equal(a.geometry_id(), "triptych-cpm-8m-v1");
       assert.equal(b.geometry_id(), "triptych-cpm-8m-v1");

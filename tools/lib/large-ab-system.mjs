@@ -73,7 +73,14 @@ export async function buildLargeAbSystem(repositoryRoot, distribution) {
   bytes.set(bios.bytes, 5632);
   const components = manifest.components
     .filter(({ id }) =>
-      ["atom", "nucleus", "edit", "caverns80", "hyperdrive"].includes(id),
+      [
+        "atom",
+        "nucleus",
+        "edit",
+        "caverns80",
+        "hyperdrive",
+        "hyperdrive2",
+      ].includes(id),
     )
     .map((component) => {
       assert.ok(
@@ -88,7 +95,14 @@ export async function buildLargeAbSystem(repositoryRoot, distribution) {
     });
   assert.deepEqual(
     components.map(({ name }) => name),
-    ["ATOM.COM", "NUC.COM", "EDIT.COM", "CAVERNS.COM", "HYPERDRV.COM"],
+    [
+      "ATOM.COM",
+      "NUC.COM",
+      "EDIT.COM",
+      "CAVERNS.COM",
+      "HYPERDRV.COM",
+      "HYPERD2.COM",
+    ],
   );
   const immutable = (start, end) => {
     assert.ok(start >= bios.base && end > start && end <= liveEnd);

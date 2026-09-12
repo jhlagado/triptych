@@ -352,10 +352,11 @@ try {
     assert.ok(supplied.drives.A.files[name], `${name}: supplied on A`);
   assert.deepEqual(Object.keys(supplied.drives.B.files).sort(), [
     "CAVERNS.COM",
+    "HYPERD2.COM",
     "HYPERDRV.COM",
     "README.TXT",
   ]);
-  for (const name of ["CAVERNS.COM", "HYPERDRV.COM"])
+  for (const name of ["CAVERNS.COM", "HYPERDRV.COM", "HYPERD2.COM"])
     assert.equal(
       supplied.drives.A.files[name],
       undefined,
@@ -381,9 +382,9 @@ try {
   }
   async function playSuppliedGames(action) {
     await command(page, "B:", "A", "B");
-    for (const game of ["CAVERNS", "HYPERDRV"]) {
+    for (const game of ["CAVERNS", "HYPERDRV", "HYPERD2"]) {
       await send(page, game, "B");
-      if (game === "CAVERNS") {
+      if (["CAVERNS", "HYPERD2"].includes(game)) {
         await gamePrompt("[Space/Enter: more, Q: skip]");
         await page.keyboard.type("q");
       }
@@ -395,7 +396,11 @@ try {
       await gamePrompt("?");
       await gameCommand("QUIT");
       await gamePrompt(
-        game === "CAVERNS" ? "Another adventure?" : "Return to CP/M? (Y/N)",
+        game === "CAVERNS"
+          ? "Another adventure?"
+          : game === "HYPERDRV"
+            ? "Return to CP/M? (Y/N)"
+            : "Quit to CP/M?",
       );
       await gameCommand(game === "CAVERNS" ? "N" : "Y");
       await prompt(page, "B");
@@ -405,7 +410,9 @@ try {
   await playSuppliedGames("SAVE");
   await expect
     .poll(async () => Object.keys((await setState(page)).drives.B.files))
-    .toEqual(expect.arrayContaining(["CAVERNS.SAV", "HYPERDRV.SAV"]));
+    .toEqual(
+      expect.arrayContaining(["CAVERNS.SAV", "HYPERDRV.SAV", "HYPERD2.SAV"]),
+    );
   const gamesSaved = await setState(page);
   assert.deepEqual(
     gamesSaved.drives.A,
@@ -1216,6 +1223,7 @@ try {
     "EDIT.COM",
     "CAVERNS.COM",
     "HYPERDRV.COM",
+    "HYPERD2.COM",
   ]) {
     await ab
       .locator("#tool-list li")
@@ -1909,7 +1917,7 @@ try {
       publicDrives,
       profiles: profiles.map(({ label }) => label),
       workflows: [
-        "actual public A tools/B games: exact assets, CAVERNS and HYPERDRV launch/save/quit/reload/load/quit, unchanged A",
+        "actual public A tools/B games: exact assets, CAVERNS, HYPERDRV and HYPERD2 launch/save/quit/reload/load/quit, unchanged A",
         "ATOM/run, Edit/NUC/run/save/reload/reopen/run",
         "Files/starter/prepare/compile/win/Edit/rebuild/selected-NUC-update/reload/download/separate-profile-reopen",
         "unmodified hosted app: v1 migration/exact legacy retention/backed-up import/reload/read",

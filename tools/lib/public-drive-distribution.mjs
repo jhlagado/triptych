@@ -12,6 +12,7 @@ const hash = (bytes) => createHash("sha256").update(bytes).digest("hex");
 const GAMES = [
   ["caverns80", "CAVERNS.COM"],
   ["hyperdrive", "HYPERDRV.COM"],
+  ["hyperdrive2", "HYPERD2.COM"],
 ];
 const README = Buffer.from(
   "TRIPTYCH GAMES\r\n\r\n" +
@@ -19,7 +20,8 @@ const README = Buffer.from(
     "B:\r\n\r\n" +
     "Then run either game:\r\n" +
     "CAVERNS\r\n" +
-    "HYPERDRV\r\n\r\n" +
+    "HYPERDRV\r\n" +
+    "HYPERD2\r\n\r\n" +
     "Return to drive A for ATOM, NUC, EDIT and source samples.\r\n",
   "ascii",
 );
@@ -146,8 +148,8 @@ export function buildPublicDriveDistribution({
 
 const LIBRARY_README = Buffer.from(
   "TRIPTYCH GAMES\r\n\r\n" +
-    "Run CAVERNS or HYPERDRV from the drive containing this disk.\r\n" +
-    "Both games include their story and help.\r\n\r\n" +
+    "Run CAVERNS, HYPERDRV or HYPERD2 from this disk.\r\n" +
+    "All three games include their story and help.\r\n\r\n" +
     "The published disk is read-only. To save on this drive, make a\r\n" +
     "writable copy first. Games save to the current CP/M drive.\r\n" +
     "Inserting another writable disk does not redirect game saves.\r\n",
@@ -327,7 +329,7 @@ export function buildDiskLibraryDistribution({
     },
     {
       id: "games-2m",
-      name: "Caverns and Hyperdrive",
+      name: "Caverns, Hyperdrive and Hyperdrive II",
       files: [...games, { name: "README.TXT", bytes: LIBRARY_README }],
       systemProfile: null,
     },
