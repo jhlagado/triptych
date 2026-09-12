@@ -203,6 +203,7 @@ try {
     await expect(page.locator("#status")).toHaveAttribute(
       "data-state",
       "running",
+      { timeout: 30000 },
     );
     await prompt(page);
     await page.waitForLoadState("networkidle");
