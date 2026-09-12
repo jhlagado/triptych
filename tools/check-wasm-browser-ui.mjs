@@ -51,6 +51,23 @@ assert.ok(persistenceSource.includes("createDiskWorkspace"));
 assert.ok(storeSource.includes('const STORE = "disk-revisions"'));
 assert.ok(indexSource.includes('id="save-status"'));
 
+// Relative icon URLs work both locally and under the GitHub Pages project path.
+for (const [name, size] of [
+  ["favicon.png", 32],
+  ["apple-touch-icon.png", 180],
+]) {
+  assert.ok(indexSource.includes(`href="${name}"`));
+  const png = await readFile(resolve(webDirectory, name));
+  assert.equal(png.subarray(0, 8).toString("hex"), "89504e470d0a1a0a");
+  assert.equal(png.readUInt32BE(16), size);
+  assert.equal(png.readUInt32BE(20), size);
+}
+assert.ok(indexSource.includes('href="favicon.svg"'));
+assert.match(
+  await readFile(resolve(webDirectory, "favicon.svg"), "utf8"),
+  /viewBox="0 0 64 64"/,
+);
+
 {
   const terminal = new TerminalBuffer();
   const snapshot = terminal.snapshot();
