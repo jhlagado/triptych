@@ -206,9 +206,13 @@ describe("exact current-build browser recovery archive", () => {
     );
     expect(retained.twoMibProfiles).toEqual(manifest.twoMibProfiles);
     expect(retained.diskProfiles).toEqual(oldProfiles);
+    // Native Buffer comparison keeps whole-image equality checks bounded; the
+    // generic matcher exhausts the worker heap on the eight-MiB starter disks.
     for (const asset of manifest.assets)
-      expect(await readFile(join(archive, "site", asset.path))).toEqual(
+      assert.deepEqual(
+        await readFile(join(archive, "site", asset.path)),
         await readFile(join(source, asset.path)),
+        `retained asset ${asset.path}`,
       );
     expect(await verifyBrowserRecoveryArchive(options())).toEqual(receipt);
   });
