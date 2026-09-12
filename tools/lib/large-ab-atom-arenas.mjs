@@ -149,7 +149,7 @@ export function createSuite(kind, { workLetter = "B" } = {}) {
       // Slower development hosts need more than five minutes to reach the same
       // instruction boundary, so time remains secondary to the fixed cap.
       ...(kind === "atom-chain" && name === "C000.ASM"
-        ? { maxInstructions: 750_000_000, maxMs: 600_000 }
+        ? { maxInstructions: 750_000_000, maxMs: 900_000 }
         : {}),
       check(disk) {
         const actual = Buffer.from(disk.read_file("KEEP.COM"));
