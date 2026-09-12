@@ -27,6 +27,20 @@
       ],
       "envelope": "library-admission-de5ae94823bb0968f778603c1f32c36d6ff7137b33e6d6e443401e2544715608.json",
       "id": "de5ae94823bb0968f778603c1f32c36d6ff7137b33e6d6e443401e2544715608"
+    },
+    {
+      "bindings": [
+        {
+          "asset": "library-retained-61dd21e3f89be888e3530ec3b414691c343f7ad2c29aa15fac4ff2510c3a5a3e.bin",
+          "path": "system-triptych-cpm-2m-n04-v1.bin"
+        },
+        {
+          "asset": "library-retained-54c6bfd356b4b42f8c51f3b85777a9d2be7aa680945335783c4dd7a6dae8921e.bin",
+          "path": "bootstrap-triptych-cpm-2m-n04-v1.bin"
+        }
+      ],
+      "envelope": "library-admission-14c3536d518b11bf7a97b01f4d54900c9d8e052bd1e3ce9428578eab03d3ccc7.json",
+      "id": "14c3536d518b11bf7a97b01f4d54900c9d8e052bd1e3ce9428578eab03d3ccc7"
     }
   ],
   "assets": [
@@ -89,20 +103,40 @@
       "bytes": 2097152,
       "path": "library-colossal-cave-350-5dc331b1be3609cb72bb728d3f64b811d9aea95b8357c9cb3224d150596bad33.img",
       "sha256": "5dc331b1be3609cb72bb728d3f64b811d9aea95b8357c9cb3224d150596bad33"
+    },
+    {
+      "bytes": 2240,
+      "path": "library-catalogue-418f94bca07f146a341c1205702e4fdb670a2316a9ee4436dc6da6f2f928dd8b.json",
+      "sha256": "418f94bca07f146a341c1205702e4fdb670a2316a9ee4436dc6da6f2f928dd8b"
+    },
+    {
+      "bytes": 34751,
+      "path": "library-provenance-7dcb70054935be3ee500e1be9e8ace7ecc22e468b05db6a04f755dc58f838e84.json",
+      "sha256": "7dcb70054935be3ee500e1be9e8ace7ecc22e468b05db6a04f755dc58f838e84"
+    },
+    {
+      "bytes": 4163,
+      "path": "library-admission-14c3536d518b11bf7a97b01f4d54900c9d8e052bd1e3ce9428578eab03d3ccc7.json",
+      "sha256": "14c3536d518b11bf7a97b01f4d54900c9d8e052bd1e3ce9428578eab03d3ccc7"
+    },
+    {
+      "bytes": 2097152,
+      "path": "library-games-2m-25618a8351f639e2b00b856a5b64220da75231ddfc396dad15f8ea9b4f13607c.img",
+      "sha256": "25618a8351f639e2b00b856a5b64220da75231ddfc396dad15f8ea9b4f13607c"
     }
   ],
   "defaults": [
     {
       "id": "starter",
-      "revision": "8ff6fab7fce980f6a021795984aa1fcf5d8adf0830e9df6216efd1ed98814f9e"
+      "revision": "2c82bc882be4b7973fd330e7ff376175445f2c4dee69c0b0691eb3e1760fdbee"
     },
     {
       "id": "library",
-      "revision": "c4d7d31d3f280f5f55ac6dea930e33333fe69b265431452d5e039b21d9b69ab3"
+      "revision": "cd326d57582152c583c58f79e13000a7ec45ef3a779579b34bb7ac6db81cd463"
     },
     {
       "id": "colossal-cave-350",
-      "revision": "f86835071bcf7891d756e845ddaec171916710c713bf06fd91989ecb35556e05"
+      "revision": "517cdcb9a33888a56e01a95a93700d0a8852f2b0d6a60905b7e03f2653a6c6e7"
     }
   ],
   "images": [
@@ -140,6 +174,18 @@
       "revision": "5dc331b1be3609cb72bb728d3f64b811d9aea95b8357c9cb3224d150596bad33",
       "sha256": "5dc331b1be3609cb72bb728d3f64b811d9aea95b8357c9cb3224d150596bad33",
       "source": "https://www.ifarchive.org/if-archive/games/cpm/Advent_CPM.zip",
+      "systemProfile": null
+    },
+    {
+      "asset": "library-games-2m-25618a8351f639e2b00b856a5b64220da75231ddfc396dad15f8ea9b4f13607c.img",
+      "byteLength": 2097152,
+      "geometry": "triptych-cpm-2m-v1",
+      "id": "games-2m",
+      "license": "Mixed GPL-3.0-only and GPL-3.0-or-later components; see disk-library-provenance.json.",
+      "name": "Caverns, Hyperdrive and Hyperdrive II",
+      "revision": "25618a8351f639e2b00b856a5b64220da75231ddfc396dad15f8ea9b4f13607c",
+      "sha256": "25618a8351f639e2b00b856a5b64220da75231ddfc396dad15f8ea9b4f13607c",
+      "source": "https://github.com/jhlagado/triptych/tree/8b31218c864e5fb7e68b39e14418f93570dac187",
       "systemProfile": null
     }
   ],
@@ -296,6 +342,114 @@
       "name": "Colossal Cave with personal save disk",
       "provenance": "library-provenance-64c30a0592aaaba7a9fd80b3675ae8eda4c66a2a1846c569de626475b6a0bbc9.json",
       "revision": "f86835071bcf7891d756e845ddaec171916710c713bf06fd91989ecb35556e05",
+      "slots": [
+        {
+          "image": {
+            "id": "system-2m-n04",
+            "revision": "20f331a4b984a4a580dd191cec5f8aca78071067e8495741e54edc4b70933f92"
+          },
+          "kind": "published"
+        },
+        {
+          "geometry": "triptych-cpm-2m-v1",
+          "kind": "writable-role",
+          "name": "Work",
+          "role": "work",
+          "seed": {
+            "asset": "library-seed-f6dd864da86d9f7fe5e6576598e42c6f06e20ad46ca17674685a446fa368a1ce.img",
+            "systemProfile": null
+          }
+        },
+        {
+          "image": {
+            "id": "colossal-cave-350",
+            "revision": "5dc331b1be3609cb72bb728d3f64b811d9aea95b8357c9cb3224d150596bad33"
+          },
+          "kind": "published"
+        },
+        null
+      ]
+    },
+    {
+      "admission": "14c3536d518b11bf7a97b01f4d54900c9d8e052bd1e3ce9428578eab03d3ccc7",
+      "bootstrap": "library-retained-54c6bfd356b4b42f8c51f3b85777a9d2be7aa680945335783c4dd7a6dae8921e.bin",
+      "configuredCount": 4,
+      "id": "starter",
+      "name": "Tools, games and personal disks",
+      "provenance": "library-provenance-7dcb70054935be3ee500e1be9e8ace7ecc22e468b05db6a04f755dc58f838e84.json",
+      "revision": "2c82bc882be4b7973fd330e7ff376175445f2c4dee69c0b0691eb3e1760fdbee",
+      "slots": [
+        {
+          "image": {
+            "id": "system-2m-n04",
+            "revision": "20f331a4b984a4a580dd191cec5f8aca78071067e8495741e54edc4b70933f92"
+          },
+          "kind": "published"
+        },
+        {
+          "geometry": "triptych-cpm-2m-v1",
+          "kind": "writable-role",
+          "name": "Work",
+          "role": "work",
+          "seed": {
+            "asset": "library-seed-f6dd864da86d9f7fe5e6576598e42c6f06e20ad46ca17674685a446fa368a1ce.img",
+            "systemProfile": null
+          }
+        },
+        {
+          "image": {
+            "id": "games-2m",
+            "revision": "25618a8351f639e2b00b856a5b64220da75231ddfc396dad15f8ea9b4f13607c"
+          },
+          "kind": "published"
+        },
+        {
+          "geometry": "triptych-cpm-2m-v1",
+          "kind": "writable-role",
+          "name": "Saves",
+          "role": "saves",
+          "seed": {
+            "asset": "library-seed-f6dd864da86d9f7fe5e6576598e42c6f06e20ad46ca17674685a446fa368a1ce.img",
+            "systemProfile": null
+          }
+        }
+      ]
+    },
+    {
+      "admission": "14c3536d518b11bf7a97b01f4d54900c9d8e052bd1e3ce9428578eab03d3ccc7",
+      "bootstrap": "library-retained-54c6bfd356b4b42f8c51f3b85777a9d2be7aa680945335783c4dd7a6dae8921e.bin",
+      "configuredCount": 4,
+      "id": "library",
+      "name": "Protected library only",
+      "provenance": "library-provenance-7dcb70054935be3ee500e1be9e8ace7ecc22e468b05db6a04f755dc58f838e84.json",
+      "revision": "cd326d57582152c583c58f79e13000a7ec45ef3a779579b34bb7ac6db81cd463",
+      "slots": [
+        {
+          "image": {
+            "id": "system-2m-n04",
+            "revision": "20f331a4b984a4a580dd191cec5f8aca78071067e8495741e54edc4b70933f92"
+          },
+          "kind": "published"
+        },
+        null,
+        {
+          "image": {
+            "id": "games-2m",
+            "revision": "25618a8351f639e2b00b856a5b64220da75231ddfc396dad15f8ea9b4f13607c"
+          },
+          "kind": "published"
+        },
+        null
+      ]
+    },
+    {
+      "admission": "14c3536d518b11bf7a97b01f4d54900c9d8e052bd1e3ce9428578eab03d3ccc7",
+      "bootstrap": "library-retained-54c6bfd356b4b42f8c51f3b85777a9d2be7aa680945335783c4dd7a6dae8921e.bin",
+      "configuredCount": 4,
+      "id": "colossal-cave-350",
+      "name": "Colossal Cave with personal save disk",
+      "provenance": "library-provenance-7dcb70054935be3ee500e1be9e8ace7ecc22e468b05db6a04f755dc58f838e84.json",
+      "revision": "517cdcb9a33888a56e01a95a93700d0a8852f2b0d6a60905b7e03f2653a6c6e7",
       "slots": [
         {
           "image": {

@@ -1,0 +1,41 @@
+{
+  "schema": "triptych-disk-catalogue-v1",
+  "images": [
+    {
+      "id": "system-2m-n04",
+      "revision": "20f331a4b984a4a580dd191cec5f8aca78071067e8495741e54edc4b70933f92",
+      "name": "Triptych tools and system (four drives)",
+      "geometry": "triptych-cpm-2m-v1",
+      "byteLength": 2097152,
+      "sha256": "20f331a4b984a4a580dd191cec5f8aca78071067e8495741e54edc4b70933f92",
+      "source": "https://github.com/jhlagado/triptych/tree/9d3284692b51744d743330b65bf253278ac7263f",
+      "license": "Mixed GPL-3.0-only and GPL-3.0-or-later components; see disk-library-provenance.json.",
+      "systemProfile": "triptych-cpu-v0.1-2m-n04",
+      "asset": "library-system-2m-n04-20f331a4b984a4a580dd191cec5f8aca78071067e8495741e54edc4b70933f92.img"
+    },
+    {
+      "id": "games-2m",
+      "revision": "25618a8351f639e2b00b856a5b64220da75231ddfc396dad15f8ea9b4f13607c",
+      "name": "Caverns, Hyperdrive and Hyperdrive II",
+      "geometry": "triptych-cpm-2m-v1",
+      "byteLength": 2097152,
+      "sha256": "25618a8351f639e2b00b856a5b64220da75231ddfc396dad15f8ea9b4f13607c",
+      "source": "https://github.com/jhlagado/triptych/tree/8b31218c864e5fb7e68b39e14418f93570dac187",
+      "license": "Mixed GPL-3.0-only and GPL-3.0-or-later components; see disk-library-provenance.json.",
+      "systemProfile": null,
+      "asset": "library-games-2m-25618a8351f639e2b00b856a5b64220da75231ddfc396dad15f8ea9b4f13607c.img"
+    },
+    {
+      "id": "colossal-cave-350",
+      "revision": "5dc331b1be3609cb72bb728d3f64b811d9aea95b8357c9cb3224d150596bad33",
+      "name": "Colossal Cave Adventure (350 points; four-drive profile)",
+      "geometry": "triptych-cpm-2m-v1",
+      "byteLength": 2097152,
+      "sha256": "5dc331b1be3609cb72bb728d3f64b811d9aea95b8357c9cb3224d150596bad33",
+      "source": "https://www.ifarchive.org/if-archive/games/cpm/Advent_CPM.zip",
+      "license": "Copyright 1977 Small System Services, Inc.; all rights reserved. No licence supplied. Distribution proceeds by project-owner decision; see retained provenance for the unresolved rights investigation.",
+      "systemProfile": null,
+      "asset": "library-colossal-cave-350-5dc331b1be3609cb72bb728d3f64b811d9aea95b8357c9cb3224d150596bad33.img"
+    }
+  ]
+}
