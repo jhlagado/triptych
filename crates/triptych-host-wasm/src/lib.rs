@@ -16,6 +16,12 @@ const RUN_HALTED: u8 = 0;
 const RUN_STEP_LIMIT: u8 = 1;
 const RUN_TSTATE_LIMIT: u8 = 2;
 const RUN_MEDIA_FROZEN: u8 = 3;
+const RUN_SYSTEM_RECOVERY: u8 = 4;
+const SYSTEM_RESIDENT_BYTES: usize = 52 * 128;
+const SYSTEM_BIOS_OFFSET: usize = 44 * 128;
+const RECOVERY_NONE: u8 = 0;
+const RECOVERY_WARM_BOOT: u8 = 1;
+const RECOVERY_COLD_RESET: u8 = 2;
 const MAX_SERIAL_INPUT_BYTES: usize = 16 * 1024;
 const MEDIA_SLOTS: u8 = 16;
 
@@ -34,6 +40,15 @@ pub struct TriptychCpu {
     last_interrupt_accepted: bool,
     pending_media: Option<PreparedMediaChange>,
     last_media_ticket: u32,
+    system_guard: Option<SystemGuard>,
+    system_recovery: u8,
+}
+
+struct SystemGuard {
+    resident: Vec<u8>,
+    image_bytes: usize,
+    bios_base: u16,
+    warm_entry: u16,
 }
 
 struct PreparedMediaChange {
@@ -66,7 +81,118 @@ impl TriptychCpu {
             last_interrupt_accepted: false,
             pending_media: None,
             last_media_ticket: 0,
+            system_guard: None,
+            system_recovery: RECOVERY_NONE,
         })
+    }
+
+    /// Opt into the known Triptych CP/M boot-entry guard, once before execution.
+    /// The caller must first authenticate the exact bootstrap/system tuple. This
+    /// method validates structure, not release provenance: exactly 52 resident
+    /// records, a page-aligned BIOS, 17 in-range JP entries and DI/LD SP prologues.
+    /// Installed A must match, and its exact image size becomes part of the guard.
+    /// No guest ports are added; unknown boot formats must not opt into this API.
+    pub fn configure_system_guard(&mut self, resident: &[u8], bios_base: u32) -> bool {
+        if self.has_run
+            || self.media_change_pending()
+            || self.system_guard.is_some()
+            || resident.len() != SYSTEM_RESIDENT_BYTES
+            || bios_base % 256 != 0
+            || bios_base < SYSTEM_BIOS_OFFSET as u32 + 256
+            || bios_base
+                .checked_add(1024)
+                .is_none_or(|end| end > RAM_BYTES as u32)
+        {
+            return false;
+        }
+        let Some(drive) = self.sectors.drive(0) else {
+            return false;
+        };
+        if drive.bytes.get(..SYSTEM_RESIDENT_BYTES) != Some(resident) {
+            return false;
+        }
+        let entry = |index: usize| -> Option<u16> {
+            let offset = SYSTEM_BIOS_OFFSET + index * 3;
+            if resident[offset] != 0xc3 {
+                return None;
+            }
+            let target = u16::from_le_bytes([resident[offset + 1], resident[offset + 2]]);
+            (u32::from(target) >= bios_base + 51 && u32::from(target) < bios_base + 768)
+                .then_some(target)
+        };
+        if (0..17).any(|index| entry(index).is_none()) {
+            return false;
+        }
+        let cold = entry(0).unwrap();
+        let warm = entry(1).unwrap();
+        if warm <= cold {
+            return false;
+        }
+        for target in [cold, warm] {
+            let offset = SYSTEM_BIOS_OFFSET + usize::from(target) - bios_base as usize;
+            if resident.get(offset..offset + 2) != Some(&[0xf3, 0x31]) {
+                return false;
+            }
+        }
+        let mut owned = Vec::new();
+        if owned.try_reserve_exact(resident.len()).is_err() {
+            return false;
+        }
+        owned.extend_from_slice(resident);
+        self.system_guard = Some(SystemGuard {
+            resident: owned,
+            image_bytes: drive.bytes.len(),
+            bios_base: bios_base as u16,
+            warm_entry: warm,
+        });
+        true
+    }
+
+    /// Zero means no recovery request, 1 a paused warm boot, 2 a deferred reset.
+    /// The latch is independent of media tickets and survives backing replacement.
+    pub fn system_recovery_pending(&self) -> u8 {
+        self.system_recovery
+    }
+
+    /// Compare current A with the admitted resident prefix and exact image size.
+    /// A dirty cached system sector is conservatively incompatible until flushed.
+    /// This is false when no system guard has been configured.
+    pub fn system_disk_matches(&self) -> bool {
+        let Some(guard) = self.system_guard.as_ref() else {
+            return false;
+        };
+        let state = self.machine.disk_state();
+        if state.cache_dirty
+            && state.cache_drive == Some(0)
+            && state
+                .cache_sector
+                .is_some_and(|sector| sector < (SYSTEM_RESIDENT_BYTES / SECTOR_BYTES) as u32)
+        {
+            return false;
+        }
+        self.sectors.drive(0).is_some_and(|drive| {
+            drive.bytes.len() == guard.image_bytes
+                && drive.bytes.get(..SYSTEM_RESIDENT_BYTES) == Some(guard.resident.as_slice())
+        })
+    }
+
+    /// Complete an explicit, durably published restoration of the retained system
+    /// binding. Replacement alone never unpauses execution. No allocation occurs.
+    /// Warm boot keeps its exact PC/CPU/RAM; a requested reset is replayed only here.
+    /// Dirty/partial/unflushed storage or queued input leaves recovery intact.
+    pub fn complete_system_disk_restore(&mut self) -> bool {
+        if self.system_recovery == RECOVERY_NONE
+            || !self.system_disk_matches()
+            || !self.disk_management_ready()
+        {
+            return false;
+        }
+        let reset = self.system_recovery == RECOVERY_COLD_RESET;
+        self.system_recovery = RECOVERY_NONE;
+        if reset {
+            self.reset();
+        }
+        true
     }
 
     /// Install or replace one drive before the first instruction executes.
@@ -224,6 +350,12 @@ impl TriptychCpu {
         if self.media_change_pending() {
             return;
         }
+        if self.system_guard.is_some()
+            && (self.system_recovery != RECOVERY_NONE || !self.system_disk_matches())
+        {
+            self.system_recovery = RECOVERY_COLD_RESET;
+            return;
+        }
         let mut devices = Devices::new(&mut self.console, &mut self.sectors);
         self.machine.reset(&mut devices);
         self.observer.operations.clear();
@@ -238,7 +370,7 @@ impl TriptychCpu {
     /// buffer when it has no trace consumer.
     /// Frozen calls are no-ops and preserve the retained trace.
     pub fn set_io_trace_enabled(&mut self, enabled: bool) {
-        if self.media_change_pending() {
+        if self.execution_frozen() {
             return;
         }
         self.observer.set_enabled(enabled);
@@ -248,7 +380,7 @@ impl TriptychCpu {
     /// `$FF` maskable interrupt at that instruction boundary.
     /// While frozen, returns zero without changing execution or last-run counters.
     pub fn step(&mut self, maskable_interrupt_ff: bool) -> u32 {
-        if self.media_change_pending() {
+        if self.media_change_pending() || self.guard_system_execution() {
             return 0;
         }
         self.has_run = true;
@@ -271,15 +403,22 @@ impl TriptychCpu {
     }
 
     /// Run a bounded slice. The return value is `0` for HALT, `1` for the step
-    /// limit, `2` for the T-state limit, or `3` for a pending media ticket.
+    /// limit, `2` for the T-state limit, `3` for a pending media ticket, or `4`
+    /// for system-disk recovery. Guarded execution checks every instruction.
     /// Frozen calls leave all state and last-run counters unchanged.
     pub fn run_slice(&mut self, max_steps: u32, max_tstates: u32) -> Result<u8, JsError> {
         if self.media_change_pending() {
             return Ok(RUN_MEDIA_FROZEN);
         }
+        if self.guard_system_execution() {
+            return Ok(RUN_SYSTEM_RECOVERY);
+        }
         let budget = RunBudget::from_values(u64::from(max_steps), u64::from(max_tstates))
             .ok_or_else(|| JsError::new("run budgets must both be non-zero"))?;
         self.has_run = true;
+        if self.system_guard.is_some() {
+            return Ok(self.run_guarded_slice(max_steps, max_tstates));
+        }
         let exit = {
             let mut memory = MachineMemory::new(&mut self.ram, &self.boot_rom);
             let mut devices = Devices::new(&mut self.console, &mut self.sectors)
@@ -300,7 +439,7 @@ impl TriptychCpu {
     /// Enqueue one complete host input batch, or reject it without accepting a
     /// prefix when the bounded console queue has insufficient room.
     pub fn enqueue_serial_input(&mut self, bytes: &[u8]) -> bool {
-        if self.media_change_pending() {
+        if self.execution_frozen() {
             return false;
         }
         let Some(length) = self.console.input.len().checked_add(bytes.len()) else {
@@ -319,7 +458,7 @@ impl TriptychCpu {
 
     /// While frozen, return empty without draining the retained output.
     pub fn take_serial_output(&mut self) -> Vec<u8> {
-        if self.media_change_pending() {
+        if self.execution_frozen() {
             return Vec::new();
         }
         std::mem::take(&mut self.console.output)
@@ -383,7 +522,7 @@ impl TriptychCpu {
     /// reads. Returns an empty vector while tracing is disabled.
     /// While frozen, returns empty without draining retained operations.
     pub fn take_io_trace(&mut self) -> Vec<u32> {
-        if self.media_change_pending() {
+        if self.execution_frozen() {
             return Vec::new();
         }
         std::mem::take(&mut self.observer.operations)
@@ -394,9 +533,68 @@ impl TriptychCpu {
 }
 
 impl TriptychCpu {
+    fn execution_frozen(&self) -> bool {
+        self.media_change_pending() || self.system_recovery != RECOVERY_NONE
+    }
+
+    fn guard_system_execution(&mut self) -> bool {
+        if self.system_recovery != RECOVERY_NONE {
+            return true;
+        }
+        let Some(guard) = self.system_guard.as_ref() else {
+            return false;
+        };
+        let rom = self.machine.boot_rom_enabled();
+        let pc = self.machine.cpu_state().pc;
+        if (rom || pc == 0 || pc == guard.bios_base + 3 || pc == guard.warm_entry)
+            && !self.system_disk_matches()
+        {
+            self.system_recovery = if rom {
+                RECOVERY_COLD_RESET
+            } else {
+                RECOVERY_WARM_BOOT
+            };
+            return true;
+        }
+        false
+    }
+
+    fn run_guarded_slice(&mut self, max_steps: u32, max_tstates: u32) -> u8 {
+        let mut steps = 0;
+        let mut tstates = 0;
+        let reason = if self.machine.cpu_state().halted {
+            RUN_HALTED
+        } else {
+            loop {
+                let elapsed = self.step(false);
+                if self.system_recovery != RECOVERY_NONE {
+                    break RUN_SYSTEM_RECOVERY;
+                }
+                steps += 1;
+                tstates += u64::from(elapsed);
+                if self.last_halted {
+                    break RUN_HALTED;
+                }
+                if steps >= u64::from(max_steps) {
+                    break RUN_STEP_LIMIT;
+                }
+                if tstates >= u64::from(max_tstates) {
+                    break RUN_TSTATE_LIMIT;
+                }
+            }
+        };
+        self.last_steps = steps;
+        self.last_tstates = tstates;
+        self.last_halted = reason == RUN_HALTED;
+        self.last_interrupt_accepted = false;
+        reason
+    }
+
     fn require_media_unfrozen(&self) -> Result<(), JsError> {
-        if self.media_change_pending() {
-            return Err(JsError::new("machine is frozen for a pending media change"));
+        if self.execution_frozen() {
+            return Err(JsError::new(
+                "machine is frozen for media change or system recovery",
+            ));
         }
         Ok(())
     }
@@ -651,6 +849,9 @@ impl IoObserver for WasmObserver {
 
 #[cfg(test)]
 mod checkpoint_benchmark;
+
+#[cfg(test)]
+mod system_guard_tests;
 
 #[cfg(test)]
 mod tests {
