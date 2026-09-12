@@ -302,9 +302,7 @@ function readBlobs(tx, store, manifest, done, guard) {
     );
 }
 function readAuthority(tx, done, guard) {
-  const request = tx.objectStore(STATE).getAll();
-  request.onsuccess = guard(() => {
-    const rows = request.result;
+  const inspectRows = (rows) => {
     const marker = rows.find((row) => row.key === "activation"),
       raw = rows.find((row) => row.key === "head");
     if (rows.length) {
@@ -345,12 +343,8 @@ function readAuthority(tx, done, guard) {
       );
       return;
     }
-    const count = tx.objectStore(BLOBS).count();
-    count.onsuccess = guard(() => {
-      requireValue(
-        count.result === 0,
-        "unactivated blob records require recovery",
-      );
+    const inspectCount = (count) => {
+      requireValue(count === 0, "unactivated blob records require recovery");
       get(
         tx,
         V3,
@@ -397,20 +391,19 @@ function readAuthority(tx, done, guard) {
         },
         guard,
       );
-    });
-  });
+    };
+    if (tx.objectStoreNames.contains(BLOBS)) {
+      const request = tx.objectStore(BLOBS).count();
+      request.onsuccess = guard(() => inspectCount(request.result));
+    } else inspectCount(0);
+  };
+  if (tx.objectStoreNames.contains(STATE)) {
+    const request = tx.objectStore(STATE).getAll();
+    request.onsuccess = guard(() => inspectRows(request.result));
+  } else inspectRows([]);
 }
 
-/** V4 durable authority, independent of runtime profile admission. Callers own
- * the writer lease, bounded save queue, paused guest and staged CPU activation. */
-export async function openSavedMachineStore({
-  indexedDB = globalThis.indexedDB,
-  name = "triptych-cpu",
-  crypto = globalThis.crypto,
-  legacyBootstrap,
-  onBlocked = () => {},
-} = {}) {
-  requireValue(indexedDB, "IndexedDB unavailable");
+function historicalBootstrap(legacyBootstrap) {
   const bootstrap =
     legacyBootstrap === undefined
       ? undefined
@@ -421,30 +414,10 @@ export async function openSavedMachineStore({
             B: null,
           },
         }).bootstrap;
-  const database = await new Promise((resolve, reject) => {
-    const request = indexedDB.open(name, 4);
-    let failure;
-    request.onblocked = () =>
-      onBlocked("Close older Triptych tabs to upgrade saved-disk storage.");
-    request.onerror = () => reject(failure ?? request.error);
-    request.onupgradeneeded = () => {
-      try {
-        for (const [store, keyPath] of [
-          [STATE, "key"],
-          [BLOBS, "sha256"],
-        ])
-          if (!request.result.objectStoreNames.contains(store))
-            request.result.createObjectStore(store, { keyPath });
-      } catch (error) {
-        failure = error;
-        request.transaction.abort();
-      }
-    };
-    request.onsuccess = () => {
-      request.result.onversionchange = () => request.result.close();
-      resolve(request.result);
-    };
-  });
+  return bootstrap;
+}
+
+function createReadAccess(database, crypto, bootstrap) {
   const stores = STORES.filter((store) =>
     database.objectStoreNames.contains(store),
   );
@@ -456,12 +429,9 @@ export async function openSavedMachineStore({
     );
   };
   async function current() {
-    const evidence = await transact(
-      database,
-      stores,
-      "readonly",
-      readAuthority,
-    );
+    const evidence = stores.length
+      ? await transact(database, stores, "readonly", readAuthority)
+      : { store: null, rows: [] };
     if (evidence.store === null)
       return { kind: "empty", token: { kind: "empty" }, evidence };
     if ([STATE, V3].includes(evidence.store)) {
@@ -543,6 +513,186 @@ export async function openSavedMachineStore({
       evidence,
     };
   }
+  async function restoreManifest(value, store, verify = true) {
+    if (verify) await verifyDigest(value, crypto);
+    const images = await transact(
+      database,
+      store,
+      "readonly",
+      (tx, done, guard) => readBlobs(tx, store, value.manifest, done, guard),
+    );
+    return restoreSavedMachine(
+      value.manifest,
+      new Map([...images].map(([key, raw]) => [key, raw.bytes])),
+      crypto,
+    );
+  }
+  const reader = {
+    async load() {
+      try {
+        const value = await current();
+        return value.kind === "empty"
+          ? { kind: "empty", token: value.token }
+          : {
+              kind: "ready",
+              token: value.token,
+              snapshot: value.snapshot,
+              ...(value.receipt ? { receipt: value.receipt } : {}),
+            };
+      } catch (error) {
+        return {
+          kind: "recovery",
+          error: message(error),
+          ...(error instanceof HistoricalBootstrapRequired
+            ? { code: "HISTORICAL_BOOTSTRAP_REQUIRED" }
+            : {}),
+        };
+      }
+    },
+    readRawRecovery: read,
+    readRawRecords(store) {
+      requireValue(STORES.includes(store), "unknown recovery store");
+      if (!stores.includes(store)) return Promise.resolve([]);
+      return transact(database, store, "readonly", (tx, done, guard) => {
+        const request = tx.objectStore(store).getAll();
+        request.onsuccess = guard(() => done(request.result));
+      });
+    },
+    async listBackups() {
+      const available = [STATE, V3, V2].filter((store) =>
+        stores.includes(store),
+      );
+      if (!available.length) return [];
+      const rows = await transact(
+        database,
+        available,
+        "readonly",
+        (tx, done, guard) => {
+          const result = [];
+          let remaining = available.length;
+          for (const store of available) {
+            const request = tx.objectStore(store).getAll();
+            request.onsuccess = guard(() => {
+              result.push(...request.result.map((raw) => ({ store, raw })));
+              if (--remaining === 0) done(result);
+            });
+          }
+        },
+      );
+      const result = [];
+      for (const { store, raw } of rows) {
+        const prefix = store === V2 ? "change:" : "backup:";
+        if (typeof raw.key !== "string" || !raw.key.startsWith(prefix))
+          continue;
+        if (store === V2 && raw.before === undefined) continue;
+        const id = `${store === STATE ? "v4" : store === V3 ? "v3" : "v2"}:${raw.key.slice(prefix.length)}`;
+        try {
+          const value =
+            store === STATE
+              ? envelope(raw, true)
+              : store === V3
+                ? oldBackup(raw)
+                : legacy(
+                    { ...raw.before, schema: "triptych-working-disk-v2" },
+                    V2,
+                  );
+          if (store === STATE) await verifyDigest(value, crypto);
+          result.push({
+            id,
+            kind: "available",
+            revision: value.revision,
+            operationId: raw.key.slice(prefix.length),
+          });
+        } catch (error) {
+          result.push({ id, kind: "recovery", error: message(error) });
+        }
+      }
+      return result.sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+    },
+    async readBackup(id) {
+      requireValue(typeof id === "string", "invalid backup identity");
+      if (id.startsWith("v4:") || id.startsWith("v3:")) {
+        const latest = id.startsWith("v4:"),
+          raw = await read(latest ? STATE : V3, `backup:${id.slice(3)}`);
+        if (raw === undefined) return undefined;
+        return restoreManifest(
+          latest ? envelope(raw, true) : oldBackup(raw),
+          latest ? BLOBS : OLD_BLOBS,
+          latest,
+        );
+      }
+      if (id.startsWith("v2:")) {
+        const raw = await read(V2, `change:${id.slice(3)}`);
+        if (raw?.before === undefined) return undefined;
+        requireValue(bootstrap, "historical bootstrap required");
+        const disk = legacy(
+          { ...raw.before, schema: "triptych-working-disk-v2" },
+          V2,
+        );
+        return copyDriveSet({
+          bootstrap,
+          drives: { A: { name: disk.name, bytes: disk.bytes }, B: null },
+        });
+      }
+      throw new Error("Saved machine store: invalid backup identity.");
+    },
+  };
+  return { stores, current, reader };
+}
+
+/** Read historical state through a caller-owned connection, without upgrading,
+ * publishing, or closing it. Only the six historical stores are accessible. */
+export function createSavedMachineReader(
+  database,
+  { crypto = globalThis.crypto, legacyBootstrap } = {},
+) {
+  return createReadAccess(
+    database,
+    crypto,
+    historicalBootstrap(legacyBootstrap),
+  ).reader;
+}
+
+/** V4 durable authority, independent of runtime profile admission. Callers own
+ * the writer lease, bounded save queue, paused guest and staged CPU activation. */
+export async function openSavedMachineStore({
+  indexedDB = globalThis.indexedDB,
+  name = "triptych-cpu",
+  crypto = globalThis.crypto,
+  legacyBootstrap,
+  onBlocked = () => {},
+} = {}) {
+  requireValue(indexedDB, "IndexedDB unavailable");
+  const bootstrap = historicalBootstrap(legacyBootstrap);
+  const database = await new Promise((resolve, reject) => {
+    const request = indexedDB.open(name, 4);
+    let failure;
+    request.onblocked = () =>
+      onBlocked("Close older Triptych tabs to upgrade saved-disk storage.");
+    request.onerror = () => reject(failure ?? request.error);
+    request.onupgradeneeded = () => {
+      try {
+        for (const [store, keyPath] of [
+          [STATE, "key"],
+          [BLOBS, "sha256"],
+        ])
+          if (!request.result.objectStoreNames.contains(store))
+            request.result.createObjectStore(store, { keyPath });
+      } catch (error) {
+        failure = error;
+        request.transaction.abort();
+      }
+    };
+    request.onsuccess = () => {
+      request.result.onversionchange = () => request.result.close();
+      resolve(request.result);
+    };
+  });
+  const { stores, current, reader } = createReadAccess(
+    database,
+    crypto,
+    bootstrap,
+  );
   async function gcPlan(rows) {
     const roots = [];
     try {
@@ -751,124 +901,12 @@ export async function openSavedMachineStore({
       );
     });
   }
-  async function restoreManifest(value, store, verify = true) {
-    if (verify) await verifyDigest(value, crypto);
-    const images = await transact(
-      database,
-      store,
-      "readonly",
-      (tx, done, guard) => readBlobs(tx, store, value.manifest, done, guard),
-    );
-    return restoreSavedMachine(
-      value.manifest,
-      new Map([...images].map(([key, raw]) => [key, raw.bytes])),
-      crypto,
-    );
-  }
   return {
-    async load() {
-      try {
-        const value = await current();
-        return value.kind === "empty"
-          ? { kind: "empty", token: value.token }
-          : {
-              kind: "ready",
-              token: value.token,
-              snapshot: value.snapshot,
-              ...(value.receipt ? { receipt: value.receipt } : {}),
-            };
-      } catch (error) {
-        return {
-          kind: "recovery",
-          error: message(error),
-          ...(error instanceof HistoricalBootstrapRequired
-            ? { code: "HISTORICAL_BOOTSTRAP_REQUIRED" }
-            : {}),
-        };
-      }
-    },
+    ...reader,
     saveCheckpoint: (expected, snapshot) =>
       publish(expected, undefined, snapshot, false),
     commitChange: (expected, operationId, snapshot) =>
       publish(expected, operationId, snapshot, true),
-    readRawRecovery: read,
-    async listBackups() {
-      const available = [STATE, V3, V2].filter((store) =>
-        stores.includes(store),
-      );
-      const rows = await transact(
-        database,
-        available,
-        "readonly",
-        (tx, done, guard) => {
-          const result = [];
-          let remaining = available.length;
-          for (const store of available) {
-            const request = tx.objectStore(store).getAll();
-            request.onsuccess = guard(() => {
-              result.push(...request.result.map((raw) => ({ store, raw })));
-              if (--remaining === 0) done(result);
-            });
-          }
-        },
-      );
-      const result = [];
-      for (const { store, raw } of rows) {
-        const prefix = store === V2 ? "change:" : "backup:";
-        if (typeof raw.key !== "string" || !raw.key.startsWith(prefix))
-          continue;
-        if (store === V2 && raw.before === undefined) continue;
-        const id = `${store === STATE ? "v4" : store === V3 ? "v3" : "v2"}:${raw.key.slice(prefix.length)}`;
-        try {
-          const value =
-            store === STATE
-              ? envelope(raw, true)
-              : store === V3
-                ? oldBackup(raw)
-                : legacy(
-                    { ...raw.before, schema: "triptych-working-disk-v2" },
-                    V2,
-                  );
-          if (store === STATE) await verifyDigest(value, crypto);
-          result.push({
-            id,
-            kind: "available",
-            revision: value.revision,
-            operationId: raw.key.slice(prefix.length),
-          });
-        } catch (error) {
-          result.push({ id, kind: "recovery", error: message(error) });
-        }
-      }
-      return result.sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
-    },
-    async readBackup(id) {
-      requireValue(typeof id === "string", "invalid backup identity");
-      if (id.startsWith("v4:") || id.startsWith("v3:")) {
-        const latest = id.startsWith("v4:"),
-          raw = await read(latest ? STATE : V3, `backup:${id.slice(3)}`);
-        if (raw === undefined) return undefined;
-        return restoreManifest(
-          latest ? envelope(raw, true) : oldBackup(raw),
-          latest ? BLOBS : OLD_BLOBS,
-          latest,
-        );
-      }
-      if (id.startsWith("v2:")) {
-        const raw = await read(V2, `change:${id.slice(3)}`);
-        if (raw?.before === undefined) return undefined;
-        requireValue(bootstrap, "historical bootstrap required");
-        const disk = legacy(
-          { ...raw.before, schema: "triptych-working-disk-v2" },
-          V2,
-        );
-        return copyDriveSet({
-          bootstrap,
-          drives: { A: { name: disk.name, bytes: disk.bytes }, B: null },
-        });
-      }
-      throw new Error("Saved machine store: invalid backup identity.");
-    },
     close() {
       database.close();
     },

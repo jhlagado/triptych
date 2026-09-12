@@ -222,6 +222,8 @@ try {
         "drive-set-store.js",
         "saved-machine.js",
         "saved-machine-store.js",
+        "disk-box.js",
+        "disk-catalogue.js",
         "saved-machine-workspace.js",
         "saved-machine-runtime.js",
         "saved-machine-configuration.js",
