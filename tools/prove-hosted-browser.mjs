@@ -400,7 +400,7 @@ try {
           ? "Another adventure?"
           : game === "HYPERDRV"
             ? "Return to CP/M? (Y/N)"
-            : "Quit to CP/M?",
+            : "any other key=cancel:",
       );
       await gameCommand(game === "CAVERNS" ? "N" : "Y");
       await prompt(page, "B");

@@ -156,7 +156,7 @@ test("historical published A/B images adopt exactly; both games save and reload 
         ? "Another adventure?"
         : game === "HYPERDRV"
           ? "Return to CP/M? (Y/N)"
-          : "Quit to CP/M?",
+          : "any other key=cancel:",
     );
     await send(page, game === "CAVERNS" ? "N" : "Y");
     await prompt(page, "B>");
@@ -193,7 +193,7 @@ test("historical published A/B images adopt exactly; both games save and reload 
         ? "Another adventure?"
         : game === "HYPERDRV"
           ? "Return to CP/M? (Y/N)"
-          : "Quit to CP/M?",
+          : "any other key=cancel:",
     );
     await send(page, game === "CAVERNS" ? "N" : "Y");
     await prompt(page, "B>");

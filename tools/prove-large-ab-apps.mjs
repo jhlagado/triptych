@@ -113,7 +113,7 @@ function scenarios() {
         {
           id: "hyperdrive2-quit",
           input: "quit\r",
-          suffix: "Quit to CP/M?",
+          suffix: "any other key=cancel:",
           staysOpen: true,
         },
         { id: "hyperdrive2-return", input: "y\r", suffix: prompt(1) },
