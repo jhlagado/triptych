@@ -12,6 +12,10 @@ import {
   resolveDiskLibraryAdmission,
 } from "../crates/triptych-host-wasm/web/disk-library-registry.js";
 import { fetchPublishedImage } from "../crates/triptych-host-wasm/web/disk-catalogue.js";
+import {
+  COLOSSAL_CAVE_FILES,
+  COLOSSAL_CAVE_IMAGE_SHA256,
+} from "./build-colossal-cave-image.mjs";
 
 const root = resolve(import.meta.dirname, "..");
 const directory = resolve(
@@ -58,12 +62,48 @@ function files(bytes) {
 
 const registry = await loadDiskLibraryRegistry({ baseUrl, fetch, crypto });
 assert.deepEqual(requests, ["disk-library-registry.json"]);
-assert.deepEqual(registry.metadata.defaults.map((row) => row.id).sort(), [
-  "library",
-  "starter",
+const expectedRecipes = new Map([
+  [
+    "starter",
+    {
+      roles: ["saves", "work"],
+      slots: ["published", "writable-role", "published", "writable-role"],
+      data: "games-2m",
+    },
+  ],
+  [
+    "library",
+    {
+      roles: [],
+      slots: ["published", null, "published", null],
+      data: "games-2m",
+    },
+  ],
+  [
+    "colossal-cave-350",
+    {
+      roles: ["work"],
+      slots: ["published", "writable-role", "published", null],
+      data: "colossal-cave-350",
+    },
+  ],
 ]);
+const defaultIds = registry.metadata.defaults.map((row) => row.id);
+for (const required of ["starter", "library"])
+  assert(defaultIds.includes(required), `required ${required} default missing`);
+for (const id of defaultIds)
+  assert(
+    expectedRecipes.has(id),
+    `new default ${id} requires explicit distribution qualification`,
+  );
+if (registry.metadata.images.some((row) => row.id === "colossal-cave-350"))
+  assert(
+    defaultIds.includes("colossal-cave-350"),
+    "Colossal image requires its qualified default recipe",
+  );
 const results = [];
 for (const reference of registry.metadata.defaults) {
+  const expected = expectedRecipes.get(reference.id);
   const portable = registry.metadata.recipes.find(
     (row) => row.id === reference.id && row.revision === reference.revision,
   );
@@ -88,12 +128,18 @@ for (const reference of registry.metadata.defaults) {
   );
   assert.equal(hash(recipe.admissionBytes), admissionRow.id);
   assert.equal(recipe.descriptor.configuredCount, 4);
+  assert.deepEqual(
+    recipe.descriptor.slots.map((slot) => slot?.kind ?? null),
+    expected.slots,
+  );
+  assert.equal(recipe.descriptor.slots[0].image.id, "system-2m-n04");
+  assert.equal(recipe.descriptor.slots[2].image.id, expected.data);
   const profile = recipe.admission.twoMibProfiles.find(
     (row) => row.configuredCount === 4,
   );
   assert.equal(profile.residentProfile, "triptych-cpu-v0.1-2m-n04");
   const systemRef = recipe.descriptor.slots[0].image;
-  const matched = await resolveDiskLibraryAdmission(registry, {
+  const admissionQuery = {
     image: {
       id: systemRef.id,
       revision: systemRef.revision,
@@ -101,18 +147,40 @@ for (const reference of registry.metadata.defaults) {
     },
     configuredCount: 4,
     bootstrapSha256: recipe.descriptor.bootstrap.sha256,
-  });
-  assert.equal(matched.admissionId, recipe.admissionId);
+  };
+  const matchingAdmissions = new Set(
+    registry.metadata.recipes
+      .filter(
+        (row) =>
+          row.configuredCount === 4 &&
+          row.slots[0]?.kind === "published" &&
+          row.slots[0].image.id === systemRef.id &&
+          row.slots[0].image.revision === systemRef.revision &&
+          registry.metadata.assets.find((asset) => asset.path === row.bootstrap)
+            ?.sha256 === recipe.descriptor.bootstrap.sha256,
+      )
+      .map((row) => row.admission),
+  );
+  assert(matchingAdmissions.has(recipe.admissionId));
+  if (matchingAdmissions.size === 1) {
+    const matched = await resolveDiskLibraryAdmission(registry, admissionQuery);
+    assert.equal(matched.admissionId, recipe.admissionId);
+  } else {
+    // Identical resident bytes may retain different release evidence. The
+    // exact recipe above selects its own admission; recovery must not guess.
+    await assert.rejects(
+      resolveDiskLibraryAdmission(registry, admissionQuery),
+      /missing or ambiguous retained admission/,
+    );
+  }
   const materialized = await recipe.materialize();
   assert.equal(materialized.bootstrapBytes.length, 256);
   assert.equal(hash(materialized.bootstrapBytes), profile.bootstrap.sha256);
   const roles = recipe.descriptor.slots.filter(
     (slot) => slot?.kind === "writable-role",
   );
-  assert.deepEqual(
-    [...materialized.seedBytes.keys()].sort(),
-    reference.id === "starter" ? ["saves", "work"] : [],
-  );
+  assert.deepEqual([...materialized.seedBytes.keys()].sort(), expected.roles);
+  assert.deepEqual(roles.map((role) => role.role).sort(), expected.roles);
   for (const role of roles) {
     const bytes = materialized.seedBytes.get(role.role);
     assert.equal(bytes.length, role.seed.byteLength);
@@ -138,8 +206,28 @@ for (const reference of registry.metadata.defaults) {
         profile.system.sha256,
       );
       assert(names.includes("ATOM.COM"));
-    } else {
+    } else if (slot.image.id === "games-2m") {
       assert(names.includes("CAVERNS.COM") && names.includes("HYPERDRV.COM"));
+    } else {
+      assert.equal(slot.image.id, "colossal-cave-350");
+      assert.equal(slot.image.sha256, COLOSSAL_CAVE_IMAGE_SHA256);
+      assert.equal(slot.image.revision, COLOSSAL_CAVE_IMAGE_SHA256);
+      assert.equal(bytes.length, 2097152);
+      assert(bytes.subarray(0, 16384).every((byte) => byte === 0));
+      assert.deepEqual(
+        names,
+        COLOSSAL_CAVE_FILES.map((file) => file.name).sort(),
+      );
+      const disk = new CpmDisk(bytes);
+      try {
+        for (const file of COLOSSAL_CAVE_FILES) {
+          const content = disk.read_file(file.name);
+          assert.equal(content.length, file.bytes);
+          assert.equal(hash(content), file.sha256);
+        }
+      } finally {
+        disk.free();
+      }
     }
     images.push({
       id: slot.image.id,

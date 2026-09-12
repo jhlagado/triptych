@@ -46,7 +46,7 @@ test("a retained image outside all recipes is visible and mounts protected witho
   });
   await page.goto("/");
   await expect(page.locator("#terminal")).toContainText("A>");
-  await page.locator("#disk-library summary").click();
+  await page.locator("#disk-library > summary").click();
   const row = page.locator(
     `[data-published-image-id="${image.id}"][data-published-image-revision="${image.revision}"]`,
   );

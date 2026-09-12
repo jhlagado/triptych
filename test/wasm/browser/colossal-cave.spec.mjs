@@ -62,7 +62,7 @@ async function command(page, text, suffix) {
 }
 async function openLibrary(page) {
   if (!(await page.locator("#disk-library").evaluate((node) => node.open)))
-    await page.locator("#disk-library summary").click();
+    await page.locator("#disk-library > summary").click();
 }
 async function mountPublished(page, request) {
   page.on("dialog", (dialog) => dialog.accept());

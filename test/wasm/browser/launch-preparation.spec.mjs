@@ -30,7 +30,7 @@ for (const rejectedAsset of ["bootstrap", "seed"]) {
     await page.goto("/");
     const terminal = page.locator("#terminal");
     await expect(terminal).toContainText("A>");
-    await page.locator("#disk-library summary").click();
+    await page.locator("#disk-library > summary").click();
     await expect(page.locator("#share-starter")).toHaveAttribute(
       "href",
       /revision=[a-f0-9]{64}$/,

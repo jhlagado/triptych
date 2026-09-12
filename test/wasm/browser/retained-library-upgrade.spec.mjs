@@ -228,7 +228,7 @@ test("old recipe and personal work survive a new games default; new setup remain
   // Leave the explicit old preview before choosing the new default setup.
   await page.goto("/");
   await expect(page.locator("#terminal")).toContainText("A>");
-  await page.locator("#disk-library summary").click();
+  await page.locator("#disk-library > summary").click();
   const nextReference = release.merged.manifest.defaults.find(
     (row) => row.id === "starter",
   );

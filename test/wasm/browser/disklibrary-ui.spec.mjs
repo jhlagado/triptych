@@ -22,7 +22,7 @@ test("raw backup preserves malformed historical records without adopting them", 
   });
   await page.goto("/");
   await expect(page.locator("#status")).toHaveAttribute("data-state", "error");
-  await page.locator("#disk-library summary").click();
+  await page.locator("#disk-library > summary").click();
   const pending = page.waitForEvent("download");
   await page.locator("#library-backup").click();
   const bytes = await readFile(await (await pending).path());
@@ -50,7 +50,7 @@ async function boot(page, route = "/") {
       (await page.locator("#terminal").textContent()).trimEnd().endsWith("A>"),
     )
     .toBe(true);
-  await page.locator("#disk-library summary").click();
+  await page.locator("#disk-library > summary").click();
   await expect(page.locator("#share-starter")).toHaveAttribute(
     "href",
     /revision=[a-f0-9]{64}$/,

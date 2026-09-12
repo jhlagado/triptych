@@ -211,7 +211,7 @@ try {
     if (
       !(await page.locator("#disk-library").evaluate((element) => element.open))
     )
-      await page.locator("#disk-library summary").click();
+      await page.locator("#disk-library > summary").click();
     await expect(page.locator("#share-starter")).toHaveAttribute(
       "href",
       /revision=[a-f0-9]{64}$/,

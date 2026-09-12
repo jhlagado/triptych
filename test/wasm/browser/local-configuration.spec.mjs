@@ -33,7 +33,7 @@ async function library(page) {
   if (
     !(await page.locator("#disk-library").evaluate((element) => element.open))
   )
-    await page.locator("#disk-library summary").click();
+    await page.locator("#disk-library > summary").click();
   await expect(page.locator("#saved-configuration option")).not.toHaveCount(0);
 }
 
