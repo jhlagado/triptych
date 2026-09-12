@@ -1,4 +1,9 @@
-import { expect, test } from "./legacy-fixture.mjs";
+import {
+  expect,
+  test,
+  seedLegacyDisk,
+  adoptHistoricalMachine,
+} from "./legacy-fixture.mjs";
 import { cp, readFile, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { decodeDriveSet } from "../../../crates/triptych-host-wasm/web/drive-set.js";
@@ -11,21 +16,12 @@ import { installCpm22File } from "../../../tools/lib/cpm22-disk.mjs";
 
 async function stored(page) {
   return page.evaluate(async () => {
-    const { openSavedMachineStore } = await import("/saved-machine-store.js");
-    let store = await openSavedMachineStore();
+    const { openDiskBoxAppStore } = await import("/disk-box-app-store.js");
+    const store = await openDiskBoxAppStore({
+      lease: { isOwner: () => false },
+    });
     try {
       let head = await store.load();
-      if (
-        head.kind === "recovery" &&
-        head.code === "HISTORICAL_BOOTSTRAP_REQUIRED"
-      ) {
-        store.close();
-        const legacyBootstrap = new Uint8Array(
-          await (await fetch("/bootstrap.bin")).arrayBuffer(),
-        );
-        store = await openSavedMachineStore({ legacyBootstrap });
-        head = await store.load();
-      }
       if (head.kind !== "ready")
         throw new Error(`Expected ready saved state: ${JSON.stringify(head)}`);
       const backups = (await store.listBackups()).sort(
@@ -81,7 +77,7 @@ test("a retained deployment reopens migrated work and backups at the same origin
     allowDevelopment: manifest.distribution.triptych.dirty,
   };
   const receipt = await archiveBrowserRecovery(options);
-  expect(receipt.intendedStorageSchema).toBe("triptych-drive-set-v4");
+  expect(receipt.intendedStorageSchema).toBe("triptych-disk-box-v1");
   expect(receipt.runtimeQualification).toBe("not-performed");
   const original = installCpm22File(
     await readFile(join(sourceDirectory, "cpm22.img")),
@@ -91,57 +87,41 @@ test("a retained deployment reopens migrated work and backups at the same origin
       padByte: 26,
     },
   );
-  await page.addInitScript((bytes) => {
-    if (sessionStorage.getItem("recovery-seeded")) {
-      window.legacySeed = Promise.resolve();
-      return;
-    }
-    sessionStorage.setItem("recovery-seeded", "yes");
-    window.legacySeed = new Promise((resolve, reject) => {
-      const request = indexedDB.open("triptych-cpu", 1);
-      request.onupgradeneeded = () =>
-        request.result.createObjectStore("working-disks", { keyPath: "key" });
-      request.onerror = () => reject(request.error);
-      request.onsuccess = () => {
-        const db = request.result,
-          tx = db.transaction("working-disks", "readwrite");
-        tx.objectStore("working-disks").put({
-          schema: "triptych-working-disk-v1",
-          key: "drive-a",
-          name: "previous.img",
-          bytes: Uint8Array.from(bytes),
-        });
-        tx.oncomplete = () => {
-          db.close();
-          resolve();
-        };
-        tx.onabort = () => reject(tx.error);
-      };
+  await seedLegacyDisk(page, { bytes: original, name: "previous.img" });
+  await adoptHistoricalMachine(page);
+  const historicalBytes = () =>
+    page.evaluate(async () => {
+      const { openDiskBoxStore } = await import("/disk-box-store.js");
+      const store = await openDiskBoxStore({ lease: { isOwner: () => false } });
+      try {
+        return Array.from(
+          (await store.readRawRecovery("working-disks", "drive-a")).bytes,
+        );
+      } finally {
+        store.close();
+      }
     });
-  }, Array.from(original));
-  await page.route("**/app.js", async (route) => {
-    const response = await route.fetch();
-    await route.fulfill({
-      response,
-      body: `await window.legacySeed;\n${await response.text()}`,
-    });
-  });
-  await page.goto("/");
+  expect(await historicalBytes()).toEqual(Array.from(original));
+  // An obsolete writer cannot reopen the newer authority at the same origin.
+  await expect(
+    page.evaluate(async () => {
+      const { openSavedMachineStore } = await import("/saved-machine-store.js");
+      const store = await openSavedMachineStore();
+      store.close();
+    }),
+  ).rejects.toThrow(/version/i);
   await expect(page.locator("#terminal")).toContainText("A>");
   expect((await stored(page)).bytes).toEqual(Array.from(original));
   await page.locator("#files").click();
   await page.locator("#saved-and-exited").check();
   await page.locator("#begin-management").click();
   await expect(page.locator("#file-import")).toBeEnabled();
-  // Entering management checkpoints the historical machine. Its first v4
-  // publication must retain the complete historical predecessor, even before
-  // the later manual file import creates its own independent undo point.
+  // Adoption preserves the historical predecessor in its original raw store.
+  // An ordinary DB5 checkpoint does not manufacture a v4 migration backup.
   const checkpointed = await stored(page);
-  expect(checkpointed.token.kind).toBe("v4");
-  expect(checkpointed.backups).toHaveLength(1);
-  expect(checkpointed.backups[0].operationId).toMatch(/^checkpoint:/);
-  expect(checkpointed.backups[0].bytes).toEqual(Array.from(original));
-  expect(checkpointed.backups[0].bootstrap).toEqual(checkpointed.bootstrap);
+  expect(checkpointed.token.kind).toBe("disk-box");
+  expect(checkpointed.backups).toHaveLength(0);
+  expect(await historicalBytes()).toEqual(Array.from(original));
   await page.locator("#file-import").setInputFiles({
     name: "AFTER.TXT",
     mimeType: "text/plain",
@@ -151,9 +131,9 @@ test("a retained deployment reopens migrated work and backups at the same origin
   await page.locator("#commit-disk").click();
   await expect(page.locator("#files-status")).toContainText("Disk committed");
   const saved = await stored(page);
-  expect(saved.token.kind).toBe("v4");
-  expect(saved.backups).toHaveLength(2);
-  expect(saved.backups[1]).toEqual(checkpointed.backups[0]);
+  expect(saved.token.kind).toBe("disk-box");
+  expect(saved.backups).toHaveLength(1);
+  expect(await historicalBytes()).toEqual(Array.from(original));
   expect(saved.backups[0].bytes).toEqual(checkpointed.bytes);
   expect(saved.backups[0].bootstrap).toEqual(checkpointed.bootstrap);
   expect(saved.backups[0].name).toBe(checkpointed.name);
@@ -193,8 +173,9 @@ test("a retained deployment reopens migrated work and backups at the same origin
   for (const name of [
     "index.html",
     "app.js",
-    "saved-machine-store.js",
-    "saved-machine-workspace.js",
+    "disk-box-store.js",
+    "disk-box-app-store.js",
+    "disk-workspace.js",
     "saved-machine-runtime.js",
     "triptych_host_wasm_bg.wasm",
   ])
@@ -222,7 +203,8 @@ test("a retained deployment reopens migrated work and backups at the same origin
   );
   await page.locator("#files").click();
   await expect(page.locator("#file-list")).toContainText("AFTER.TXT");
-  await expect(page.locator("#backup-list [data-restore]")).toHaveCount(2);
+  await expect(page.locator("#backup-list [data-restore]")).toHaveCount(1);
+  expect(await historicalBytes()).toEqual(Array.from(original));
   await verifyBrowserRecoveryArchive(options);
 });
 
@@ -234,9 +216,11 @@ async function completeRecoveryState(page, storageSchema) {
     // Select the reader declared by the exact retained deployment. Merely
     // shipping a new module does not authorize upgrading an older app's DB.
     const openStore =
-      storageSchema === "triptych-drive-set-v4"
-        ? (await import("/saved-machine-store.js")).openSavedMachineStore
-        : (await import("/drive-set-store.js")).openDriveSetStore;
+      storageSchema === "triptych-disk-box-v1"
+        ? (await import("/disk-box-app-store.js")).openDiskBoxAppStore
+        : storageSchema === "triptych-drive-set-v4"
+          ? (await import("/saved-machine-store.js")).openSavedMachineStore
+          : (await import("/drive-set-store.js")).openDriveSetStore;
     const digest = async (bytes) =>
       Array.from(
         new Uint8Array(await crypto.subtle.digest("SHA-256", bytes)),
@@ -265,7 +249,19 @@ async function completeRecoveryState(page, storageSchema) {
     };
     // Deliberately no legacy-bootstrap fallback: these are complete historical
     // A/B snapshots; the archive format stays v3 under either store authority.
-    const store = await openStore();
+    if (
+      ![
+        "triptych-disk-box-v1",
+        "triptych-drive-set-v4",
+        "triptych-drive-set-v3",
+      ].includes(storageSchema)
+    )
+      throw new Error("Unknown retained authority");
+    const store = await openStore(
+      storageSchema === "triptych-disk-box-v1"
+        ? { lease: { isOwner: () => false } }
+        : undefined,
+    );
     try {
       const head = await store.load();
       if (head.kind !== "ready")
@@ -470,9 +466,15 @@ test("a retained deployment alone reopens complete A/B work and exact complete-s
   };
   // Both phases use exact identified assets, except the initial explicit legacy
   // config fixture above. Recovery has no fallback and cannot fetch fresh media.
+  if (storageSchema === "triptych-disk-box-v1")
+    await seedLegacyDisk(page, {
+      bytes: new Uint8Array(await readFile(join(sourceDirectory, "cpm22.img"))),
+    });
   const initialRoute = siteRoute(sourceDirectory, false);
   await page.route("**/*", initialRoute);
   await page.goto("/");
+  if (storageSchema === "triptych-disk-box-v1")
+    await adoptHistoricalMachine(page, { navigate: false });
   await recoveryPrompt(page);
   await recoveryManage(page);
   await page.locator("#enable-ab").click();
@@ -521,7 +523,11 @@ test("a retained deployment alone reopens complete A/B work and exact complete-s
   await recoveryApply(page);
   const saved = await completeRecoveryState(page, storageSchema);
   expect(saved.token.kind).toBe(
-    storageSchema === "triptych-drive-set-v4" ? "v4" : "v3",
+    storageSchema === "triptych-disk-box-v1"
+      ? "disk-box"
+      : storageSchema === "triptych-drive-set-v4"
+        ? "v4"
+        : "v3",
   );
   expect(saved.snapshot.drives.A).toEqual(beforeSecondChange.snapshot.drives.A);
   expect(saved.snapshot.bootstrap).toEqual(
@@ -549,13 +555,20 @@ test("a retained deployment alone reopens complete A/B work and exact complete-s
   for (const name of [
     "index.html",
     "app.js",
-    ...(storageSchema === "triptych-drive-set-v4"
+    ...(storageSchema === "triptych-disk-box-v1"
       ? [
-          "saved-machine-store.js",
-          "saved-machine-workspace.js",
+          "disk-box-store.js",
+          "disk-box-app-store.js",
+          "disk-workspace.js",
           "saved-machine-runtime.js",
         ]
-      : ["drive-set-store.js"]),
+      : storageSchema === "triptych-drive-set-v4"
+        ? [
+            "saved-machine-store.js",
+            "saved-machine-workspace.js",
+            "saved-machine-runtime.js",
+          ]
+        : ["drive-set-store.js"]),
     "drive-set.js",
     "triptych_host_wasm_bg.wasm",
   ])

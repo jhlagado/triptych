@@ -412,3 +412,72 @@ test("bad checkpoint exports fail without substituting live backing or disposing
   assert.equal(runtime.cpu, cpu);
   runtime.dispose();
 });
+
+function guardedFixture(count = 4) {
+  const f = fixture(count),
+    profile = f.deployment.twoMibProfiles[0],
+    bytes = f.snapshot.slots[0].bytes;
+  profile.system.sha256 = sha(bytes.subarray(0, 16384));
+  profile.residents.ccp.sha256 = sha(bytes.subarray(0, 2048));
+  profile.residents.bdos.sha256 = sha(bytes.subarray(2048, 5632));
+  profile.bios.sha256 = sha(bytes.subarray(5632, 6656));
+  f.deployment.assets.find(
+    (item) => item.path === profile.system.asset,
+  ).sha256 = profile.system.sha256;
+  return f;
+}
+test("guard opt-in hashes owned A system and configures before reset", async () => {
+  const f = guardedFixture(),
+    double = cpuDouble();
+  let configured;
+  double.TriptychCpu.prototype.configure_system_guard = function (
+    prefix,
+    bios,
+  ) {
+    double.events.push("guard");
+    configured = { prefix: prefix.slice(), bios };
+    return true;
+  };
+  const pending = prepare(f, double, { guardSystemDisk: true });
+  f.snapshot.slots[0].bytes.fill(9);
+  const runtime = await pending;
+  assert.equal(runtime.systemGuardEnabled, true);
+  assert.equal(configured.prefix.length, 6656);
+  assert.equal(configured.prefix[0], 1);
+  assert.equal(configured.bios, 0xfa00);
+  assert.deepEqual(double.events.slice(-2), ["guard", "reset"]);
+  runtime.dispose();
+});
+test("guard admission rejects wrong A before CPU allocation while no-guard semantics remain", async () => {
+  const f = guardedFixture(),
+    double = cpuDouble();
+  f.snapshot.slots[0].bytes[0] ^= 1;
+  await assert.rejects(
+    prepare(f, double, { guardSystemDisk: true }),
+    (error) => error.code === "SYSTEM_DISK_RESTORE_REQUIRED",
+  );
+  assert.equal(double.instances.length, 0);
+  const unguarded = await prepare(f, double);
+  assert.equal(unguarded.systemGuardEnabled, false);
+  unguarded.dispose();
+});
+test("guard admission does not bless inconsistent resident components or rejected WASM guard", async () => {
+  const f = guardedFixture();
+  f.deployment.twoMibProfiles[0].residents.bdos.sha256 = hash;
+  await assert.rejects(
+    prepare(f, cpuDouble(), { guardSystemDisk: true }),
+    /resident/,
+  );
+  const double = cpuDouble();
+  double.TriptychCpu.prototype.configure_system_guard = () => false;
+  await assert.rejects(
+    prepare(guardedFixture(), double, { guardSystemDisk: true }),
+    /guard rejected/,
+  );
+  assert.equal(double.instances[0].freed, 1);
+  assert(!double.events.includes("reset"));
+  await assert.rejects(
+    prepare({ snapshot: legacy() }, cpuDouble(), { guardSystemDisk: true }),
+    /requires a two-MiB/,
+  );
+});

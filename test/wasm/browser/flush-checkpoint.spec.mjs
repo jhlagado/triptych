@@ -1,4 +1,4 @@
-import { expect, test } from "./legacy-fixture.mjs";
+import { expect, test, adoptHistoricalMachine } from "./legacy-fixture.mjs";
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 
@@ -15,10 +15,29 @@ test("autosave and recovery download exclude writes after the last guest flush",
   expect(program.length).toBeLessThanOrEqual(256);
   const boot = Buffer.alloc(256);
   boot.set(program);
-  await page.route("**/bootstrap.bin", (route) =>
-    route.fulfill({ contentType: "application/octet-stream", body: boot }),
+  await page.route("**/flush-seed", (route) =>
+    route.fulfill({ contentType: "text/html", body: "<!doctype html>" }),
   );
-  await page.goto("/");
+  await page.goto("/flush-seed");
+  await page.evaluate(async (boot) => {
+    const { openSavedMachineStore } = await import("/saved-machine-store.js");
+    const store = await openSavedMachineStore();
+    try {
+      const disk = new Uint8Array(
+        await (await fetch("/cpm22.img")).arrayBuffer(),
+      );
+      await store.saveCheckpoint(
+        { kind: "empty" },
+        {
+          bootstrap: { profile: "legacy-e400", bytes: Uint8Array.from(boot) },
+          drives: { A: { name: "flush.img", bytes: disk }, B: null },
+        },
+      );
+    } finally {
+      store.close();
+    }
+  }, Array.from(boot));
+  await adoptHistoricalMachine(page);
   await expect(page.locator("#status")).toHaveAttribute(
     "data-state",
     "running",
@@ -26,8 +45,10 @@ test("autosave and recovery download exclude writes after the last guest flush",
 
   const savedBytes = () =>
     page.evaluate(async () => {
-      const { openSavedMachineStore } = await import("/saved-machine-store.js");
-      const store = await openSavedMachineStore();
+      const { openDiskBoxAppStore } = await import("/disk-box-app-store.js");
+      const store = await openDiskBoxAppStore({
+        lease: { isOwner: () => false },
+      });
       try {
         const head = await store.load();
         return head.kind === "ready"
@@ -46,11 +67,9 @@ test("autosave and recovery download exclude writes after the last guest flush",
   const saved = Buffer.from(await savedBytes());
   expect(saved.subarray(0, 128)).toEqual(Buffer.alloc(128, 65));
 
-  const host = await page.evaluate(async () => {
+  const host = await page.evaluate(async (bootBytes) => {
     const { TriptychCpu } = await import("/triptych_host_wasm.js");
-    const boot = new Uint8Array(
-      await (await fetch("/bootstrap.bin")).arrayBuffer(),
-    );
+    const boot = Uint8Array.from(bootBytes);
     const machine = new TriptychCpu(boot);
     try {
       machine.install_drive(0, new Uint8Array(1024), true);
@@ -81,7 +100,7 @@ test("autosave and recovery download exclude writes after the last guest flush",
     } finally {
       machine.free();
     }
-  });
+  }, Array.from(boot));
   const expectedCheckpoint = Buffer.alloc(1024);
   expectedCheckpoint.fill(65, 0, 128);
   const expectedLive = Buffer.alloc(1024);

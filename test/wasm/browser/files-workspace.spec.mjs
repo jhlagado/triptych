@@ -1,5 +1,13 @@
-import { expect, test, useLegacyConfiguration } from "./legacy-fixture.mjs";
+import {
+  expect,
+  test,
+  seedLegacyDisk,
+  seedHistoricalRecords,
+  adoptHistoricalMachine,
+} from "./legacy-fixture.mjs";
 import { readFile } from "node:fs/promises";
+import { fileURLToPath } from "node:url";
+import { assembleAtomBinary } from "../../../tools/lib/assemble-atom.mjs";
 import {
   installCpm22File,
   readCpm22File,
@@ -7,8 +15,12 @@ import {
 
 const builtDisk = () =>
   readFile(new URL("../../../dist/wasm-browser/cpm22.img", import.meta.url));
-async function boot(page) {
-  await page.goto("/");
+async function boot(page, { existing = false, bytes, name } = {}) {
+  if (existing) await page.goto("/");
+  else {
+    await seedLegacyDisk(page, { bytes, name });
+    await adoptHistoricalMachine(page);
+  }
   await expect(page.locator("#status")).toHaveAttribute(
     "data-state",
     "running",
@@ -23,21 +35,12 @@ async function manage(page) {
 }
 async function head(page) {
   return page.evaluate(async () => {
-    const { openSavedMachineStore } = await import("/saved-machine-store.js");
-    let store = await openSavedMachineStore();
+    const { openDiskBoxAppStore } = await import("/disk-box-app-store.js");
+    const store = await openDiskBoxAppStore({
+      lease: { isOwner: () => false },
+    });
     try {
       let value = await store.load();
-      if (
-        value.kind === "recovery" &&
-        value.code === "HISTORICAL_BOOTSTRAP_REQUIRED"
-      ) {
-        store.close();
-        const legacyBootstrap = new Uint8Array(
-          await (await fetch("/bootstrap.bin")).arrayBuffer(),
-        );
-        store = await openSavedMachineStore({ legacyBootstrap });
-        value = await store.load();
-      }
       if (value.kind !== "ready")
         throw new Error(`Expected ready saved state: ${JSON.stringify(value)}`);
       return {
@@ -162,10 +165,7 @@ test("a selected unknown tool updates only after verification and retains source
       bytes: Buffer.from("saved source\r\n"),
     }),
   );
-  await page.route("**/cpm22.img", (route) =>
-    route.fulfill({ contentType: "application/octet-stream", body: disk }),
-  );
-  await boot(page);
+  await boot(page, { bytes: new Uint8Array(disk) });
   await manage(page);
   const row = page.locator("#tool-list li").filter({ hasText: "NUC.COM" });
   await expect(row).toContainText("different-unknown");
@@ -214,38 +214,7 @@ test("migration reopens exact legacy bytes without overlaying resident system sl
 }) => {
   const bytes = [...(await builtDisk())];
   bytes[2047] ^= 0x5a;
-  await page.addInitScript(async (bytes) => {
-    window.legacySeed = new Promise((resolve, reject) => {
-      const request = indexedDB.open("triptych-cpu", 1);
-      request.onupgradeneeded = () =>
-        request.result.createObjectStore("working-disks", { keyPath: "key" });
-      request.onsuccess = () => {
-        const db = request.result,
-          tx = db.transaction("working-disks", "readwrite");
-        tx.objectStore("working-disks").put({
-          schema: "triptych-working-disk-v1",
-          key: "drive-a",
-          name: "legacy.img",
-          bytes: Uint8Array.from(bytes),
-        });
-        tx.oncomplete = () => {
-          db.close();
-          resolve();
-        };
-        tx.onabort = () => reject(tx.error);
-      };
-      request.onerror = () => reject(request.error);
-    });
-  }, bytes);
-  // Seed completes before app initialization; the response waits on this promise.
-  await page.route("**/app.js", async (route) => {
-    const response = await route.fetch();
-    await route.fulfill({
-      response,
-      body: `await window.legacySeed;\n${await response.text()}`,
-    });
-  });
-  await boot(page);
+  await boot(page, { bytes: Uint8Array.from(bytes), name: "legacy.img" });
   expect((await head(page)).bytes).toEqual(bytes);
 });
 
@@ -255,8 +224,7 @@ test("a second tab is read-only and cannot enter disk management", async ({
 }) => {
   await boot(page);
   const other = await context.newPage();
-  await useLegacyConfiguration(other);
-  await boot(other);
+  await boot(other, { existing: true });
   await expect(other.locator("#save-status")).toContainText("Read-only tab");
   await other.locator("#files").click();
   await other.locator("#saved-and-exited").check();
@@ -276,7 +244,7 @@ test("aborted manual publication keeps the head and backups unchanged and retrie
     IDBObjectStore.prototype.add = function (value, ...rest) {
       if (
         globalThis.abortManual &&
-        this.name === "drive-set-state-v4" &&
+        this.name === "disk-box-state-v1" &&
         value?.key?.startsWith("backup:")
       ) {
         globalThis.abortManual = false;
@@ -333,8 +301,10 @@ test("backup restoration preserves exact bytes and backs up the displaced disk",
   expect(restored.bytes).toEqual(original.bytes);
   expect(restored.backups).toHaveLength(2);
   const displaced = await page.evaluate(async (id) => {
-    const { openSavedMachineStore } = await import("/saved-machine-store.js");
-    const store = await openSavedMachineStore();
+    const { openDiskBoxAppStore } = await import("/disk-box-app-store.js");
+    const store = await openDiskBoxAppStore({
+      lease: { isOwner: () => false },
+    });
     try {
       return Array.from((await store.readBackup(id)).drives.A.bytes);
     } finally {
@@ -383,40 +353,33 @@ test("a delayed file read from a cancelled session cannot stage into its replace
 test("corrupt legacy data enters recovery without seeding over the original record", async ({
   page,
 }) => {
-  await page.addInitScript(() => {
-    window.legacySeed = new Promise((resolve) => {
-      const request = indexedDB.open("triptych-cpu", 1);
-      request.onupgradeneeded = () =>
-        request.result.createObjectStore("working-disks", { keyPath: "key" });
-      request.onsuccess = () => {
-        const db = request.result,
-          tx = db.transaction("working-disks", "readwrite");
-        tx.objectStore("working-disks").put({
-          schema: "unknown",
-          key: "drive-a",
-          name: "precious.img",
-          bytes: new Uint8Array(512).fill(91),
-        });
-        tx.oncomplete = () => {
-          db.close();
-          resolve();
-        };
-      };
-    });
-  });
-  await page.route("**/app.js", async (route) => {
-    const response = await route.fetch();
-    await route.fulfill({
-      response,
-      body: `await window.legacySeed;\n${await response.text()}`,
-    });
+  await seedHistoricalRecords(page, {
+    version: 1,
+    stores: [
+      {
+        name: "working-disks",
+        keyPath: "key",
+        records: [
+          {
+            value: {
+              schema: "unknown",
+              key: "drive-a",
+              name: "precious.img",
+              bytes: new Uint8Array(512).fill(91),
+            },
+          },
+        ],
+      },
+    ],
   });
   await page.goto("/");
   await expect(page.locator("#status")).toContainText("Recovery required");
   await expect(page.locator("#legacy-recovery")).toBeVisible();
   const original = await page.evaluate(async () => {
-    const { openSavedMachineStore } = await import("/saved-machine-store.js");
-    const store = await openSavedMachineStore();
+    const { openDiskBoxAppStore } = await import("/disk-box-app-store.js");
+    const store = await openDiskBoxAppStore({
+      lease: { isOwner: () => false },
+    });
     try {
       const value = await store.readRawRecovery("working-disks", "drive-a");
       return { schema: value.schema, bytes: Array.from(value.bytes) };
@@ -490,16 +453,16 @@ for (const newerAction of ["disk", "file"]) {
 test("closing while management entry saves cancels the eventual session and resumes input", async ({
   page,
 }) => {
-  await page.route("**/saved-machine-store.js", async (route) => {
+  await page.route("**/disk-box-app-store.js", async (route) => {
     const response = await route.fetch();
     const source = await response.text();
-    const marker = "publish(expected, undefined, snapshot, false),";
+    const marker = "publish(token, crypto.randomUUID(), snapshot, true),";
     expect(source).toContain(marker);
     await route.fulfill({
       response,
       body: source.replace(
         marker,
-        `(async () => {if(globalThis.pauseCheckpoint) {globalThis.pauseCheckpoint=false;await new Promise(resolve=>{globalThis.finishCheckpoint=resolve;});} return publish(expected, undefined, snapshot, false);})(),`,
+        `(async () => {if(globalThis.pauseCheckpoint) {globalThis.pauseCheckpoint=false;await new Promise(resolve=>{globalThis.finishCheckpoint=resolve;});} return publish(token, crypto.randomUUID(), snapshot, true);})(),`,
       ),
     });
   });
@@ -523,7 +486,7 @@ test("closing while management entry saves cancels the eventual session and resu
   await expect(page.locator("#terminal")).toContainText("ATOM");
 });
 
-test("saved historical work in v4 authority boots without downloading a replacement bootstrap", async ({
+test("adopted historical work in disk-box authority boots without downloading a replacement bootstrap", async ({
   page,
 }, info) => {
   await boot(page);
@@ -580,16 +543,31 @@ test("a nonbooting disk can be recovered from its saved backup without guest rea
   await boot(page);
   await manage(page);
   const original = await head(page);
+  // Reuse the ATOM fixture's final nine-byte read-transfer/HALT tail (two LD A
+  // and two OUT instructions plus HALT). It uses no stack, RAM or absolute
+  // branches, so it also runs at E400. Omit the fixture's earlier writes/flush:
+  // those would overwrite this resident entry in the saved checkpoint before
+  // reload. Every boot must leave a real unfinished transfer, not merely lack
+  // a CP/M prompt.
+  const unbootable = Buffer.from(original.bytes);
+  const unsafeProgram = await assembleAtomBinary(
+    fileURLToPath(new URL("../fixtures/flush-checkpoint.asm", import.meta.url)),
+  );
+  expect(unsafeProgram.length).toBeLessThan(2048);
+  unbootable.set(unsafeProgram.subarray(-9), 0);
   await page.locator("#disk-input").setInputFiles({
     name: "unbootable.img",
     mimeType: "application/octet-stream",
-    buffer: Buffer.alloc(512),
+    buffer: unbootable,
   });
   await expect(page.locator("#commit-disk")).toBeEnabled();
   await apply(page);
   await page.locator("#close-files").click();
   await page.reload();
-  await expect(page.locator("#terminal")).toContainText("E");
+  await expect(page.locator("#status")).toHaveAttribute(
+    "data-state",
+    "running",
+  );
   await page.locator("#files").click();
   await page.locator("#saved-and-exited").check();
   await page.locator("#begin-management").click();

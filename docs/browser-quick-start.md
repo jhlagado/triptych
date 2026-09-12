@@ -1,8 +1,8 @@
 # Browser development session
 
-This guide describes the configurable two-MiB interface, its version-four saved
-machine storage, and the retained eight-MiB A/B controls. The two-MiB controls
-are in development and have not yet passed hosted release qualification. The
+This guide describes the current development checkout's disk box, published
+library and retained small-disk and eight-MiB controls. It does not establish
+that these changes have been deployed or passed the complete release gate. The
 [published releases](https://github.com/jhlagado/triptych/releases) record
 qualified revisions, hosted test results and recovery downloads for the
 [Triptych website](https://jhlagado.github.io/triptych/). A development checkout
@@ -10,50 +10,76 @@ can contain changes that have not yet been deployed. The
 [browser A/B report](reports/eight-mib-browser-ab.md) records implementation and
 pre-release acceptance evidence.
 
-In a desktop browser, wait for `A>` and click the terminal to type. A new
-machine starts with two supplied eight-MiB disk images:
+In a desktop browser, wait for `A>` and click the terminal to type. A fresh
+tools-and-games configuration has four two-MiB drives:
 
-- **A: system and tools** — CP/M, ATOM, NUC, EDIT and the source samples.
-- **B: games** — `CAVERNS.COM`, `HYPERDRV.COM` and `README.TXT`.
+- **A: protected system and tools** — CP/M, ATOM, NUC, EDIT and source samples.
+- **B: personal work** — an initially empty writable disk.
+- **C: protected games** — `CAVERNS.COM`, `HYPERDRV.COM` and `README.TXT`.
+- **D: personal saves** — an initially empty writable disk.
 
-Previously saved media reopen automatically, so their files and drive layout
-may differ. Opening a new website release does not replace their operating
-system, tools or games. For the supplied pair with its own separate saves, use
-[Open the supplied A+B machine](https://jhlagado.github.io/triptych/?machine=supplied).
-That link is also in the terminal's **Supplied disks** section. It preserves
-your usual machine; returning to the link reopens that separate machine's saved
-work. It is not a reset button. Both workspaces use this browser's storage, so
-download backups before clearing browser data or moving to another device.
+Published images are fetched by hash and are not copied into the personal
+disk store. Use B for sources and build outputs, and D for game saves. An
+existing disk box reopens its selected configuration. Earlier browser storage
+requires the explicit **Adopt my saved machine into the disk box** action;
+adoption preserves its disks and resident system instead of installing this
+starter arrangement.
 
-The same section has direct downloads of the published
+## Configurations and links
+
+**Disk box and published library** contains the saved configuration selector,
+personal disks and published images. **Activate tools and games setup** reuses
+the local disks associated with that recipe. **Create independent tools and
+games setup** creates separate personal work and save disks. **Activate
+protected library only** inserts A/C and leaves B/D empty. Each activation
+retains the preceding configuration and personal disks.
+
+The **Share tools and games setup** and **Share protected library only** links
+contain a public recipe identity and revision. A recipient gets the specified
+published disks and their own local writable roles, not your files or saves.
+Use the generated link, including its revision, rather than constructing a
+link to whichever setup is newest. Retained assets and publication procedures
+are documented in [Disk library releases](disk-library-releases.md).
+
+**Bookmark on this device only (not shareable)** uses a `configuration=` ID.
+It selects an existing configuration in this browser profile and website
+origin; it cannot recreate that configuration on another device. Keep a backup
+when moving work or clearing browser data. Selecting a **Saved configuration**
+and choosing **Activate saved configuration** is another way to reopen it.
+
+The older `?machine=supplied` route remains a separate saved workspace. Its
+label **Open the supplied A+B machine** is retained for compatibility; use it
+to reopen earlier saves, not to request the new four-drive arrangement in your
+usual workspace. The **Published starter disks and older A/B downloads** section
+also contains the historical
 [A: image](https://jhlagado.github.io/triptych/drive-a-system.img) and
 [B: image](https://jhlagado.github.io/triptych/drive-b-games.img).
-These are starter images, not backups of your saved work. The public build
-produces and verifies both images; no manual browser-database setup is needed.
+These eight-MiB starter downloads are not backups of your saved work.
 
 ## Play Hyperdrive
 
-Open the [Triptych terminal](https://jhlagado.github.io/triptych/) and type
-`B:`, then `HYPERDRV` at `B>`. This is Ken Stone's original 1982 VIC-20
-adventure, not John Hardy's later Hyperdrive II. The supplied B: image includes
-`HYPERDRV.COM`; saves made while playing on B stay on B.
+In the four-drive setup, type `D:`, then `C:HYPERDRV` at `D>`. The explicit
+program drive loads Hyperdrive from protected C while the current drive D
+receives saves. This is Ken Stone's original 1982 VIC-20 adventure, not John
+Hardy's later Hyperdrive II.
 
 Type `HELP` for the story and commands. Space or Enter advances long text;
 Q skips its remaining pages. `INVENTORY` shows your equipment. Use `SAVE CAMP`
 and `LOAD CAMP` to keep and restore a position. `QUIT`, then `Y`, returns
 to CP/M. Wait for the browser's saved-disk status before closing the page.
 
-Previously saved disks stay unchanged. Use Files to select `HYPERDRV.COM`
-from the application catalogue and apply the installation; keep the offered
-backup. This preserves your other files and saved games. The
+For an older writable A/B setup with the game on B, enter `B:` then `HYPERDRV`;
+its saves remain on B. To install a missing copy, select a writable disk in
+Files, stage `HYPERDRV.COM` from the tool catalogue and apply the change. The
 [Hyperdrive repository](https://github.com/jhlagado/hyperdrive) contains the
 source and player documentation; development walkthroughs contain spoilers.
 
 ## Play Caverns
 
-The supplied B: image includes `CAVERNS.COM`, John Hardy's revised 1982–83
-adventure. Enter `B:`, then `CAVERNS` at `B>`. The full story and current rules appear
-at startup; `HELP` repeats them. Space or Enter advances each page; Q or Escape
+Protected C includes `CAVERNS.COM`, John Hardy's revised 1982–83
+adventure. Enter `D:`, then `C:CAVERNS` at `D>` so saves go to D. The full story
+and current rules appear at startup; `HELP` repeats them. Space or Enter advances
+each page; Q or Escape
 skips the remaining explanation. `INVENTORY`, `INVENT`, `I` and `LIST` show what
 you carry.
 
@@ -61,7 +87,8 @@ Use `SAVE CAMP` to save a position and `LOAD CAMP` to return to it. `QUIT`, then
 `N`, returns to CP/M. Wait for the browser's saved-disk status before closing or
 reloading the page, and download a disk backup to keep a copy outside the browser.
 
-An existing saved disk is preserved. If it lacks the game, use Files to install
+In an older writable A/B setup, enter `B:` then `CAVERNS` to play and save on B.
+If that disk lacks the game, use Files to install
 `CAVERNS.COM` from the supplied application catalogue, then apply the change.
 Back up your disk first. Installing the program does not require deleting your
 saved games. The [upstream player guide](https://github.com/jhlagado/caverns80/blob/cpm-caverns/docs/player-guide.md)
@@ -70,10 +97,18 @@ spoilers.
 
 ## Assemble and run
 
-On drive A, enter each command followed by Enter:
+The tools on A are protected, and B starts empty. To prepare B, open **Files
+and recovery**, select A under **Drive to view or edit**, and download
+`HELLO.ASM` and `INPUT.NU` from the file listing. Save and exit any guest program,
+acknowledge this in Files, then choose **Enter disk management**. Select B,
+use **Stage file imports** for those two downloads, and click **Stage update**
+for `ATOM.COM`, `NUC.COM` and `EDIT.COM`. **Apply and restart**, then close Files.
+This copies files into B without changing protected A.
+
+On the prepared work disk, enter each command followed by Enter:
 
 ```text
-A:
+B:
 ATOM HELLO.ASM
 HELLO
 ```
@@ -82,9 +117,9 @@ ATOM reports `HELLO.COM written`; the program prints `Hello from ATOM`.
 
 ## Edit, compile and reopen
 
-This exercise changes the supplied `INPUT.NU`. Use **Download saved drive set**
-first if the disk contains your own work, and keep the `.tds` file outside the
-browser profile.
+With B selected in CP/M, this exercise changes the imported `INPUT.NU`. Use
+**Download saved drive set** first if the disk contains your own work, and keep
+the `.tds` file outside the browser profile.
 
 1. Enter `EDIT INPUT.NU`.
 2. Press Ctrl-F, type `'O'` including the quotes, and press Enter.
@@ -93,7 +128,7 @@ browser profile.
 4. Press Ctrl-S to save, then Ctrl-Q to quit.
 5. Enter `NUC INPUT.NU`, then `INPUT`. The program prints `YK`.
 6. Wait for **Working disk saved in this browser.** before reloading the page.
-7. After reload, enter `EDIT INPUT.NU`. The changed line should remain. Quit
+7. After reload, enter `B:` then `EDIT INPUT.NU`. The changed line should remain. Quit
    with Ctrl-Q and enter `INPUT` again; it should still print `YK`.
 
 Use Ctrl, including on macOS, rather than Command for the editor shortcuts. If
@@ -104,18 +139,19 @@ Ctrl-S saves into the emulated disk. The browser save-status message confirms
 the separate persistent-storage operation. After a storage error, use **Download
 latest checkpoint set** before leaving the page. It includes each drive's last
 successful guest flush, which may be newer than browser storage. It excludes
-unsaved editor text and unflushed writes. A checkpoint set can contain a newer A
-checkpoint and an older B checkpoint; guest writes across both drives are not a
+unsaved editor text and unflushed writes. A checkpoint set can contain a newer B
+checkpoint and an older D checkpoint; guest writes across both drives are not a
 single transaction.
 
 ## Files and verified tool updates
 
 Save and exit the guest program, open **Files and recovery**, acknowledge that
-the program has exited, and choose **Enter disk management**. Use **Drive to
+the program has exited, and click **Enter disk management**. Use **Drive to
 view or edit** to select a configured drive for file imports, tool updates,
 source projects and diagnostic mapping. This selector does not change CP/M's
 current drive. Enter `B:` in the terminal to run guest commands on B; enter `A:`
-to return.
+to return. Published A/C are read-only; select a personal disk for imports,
+editor output and tool updates.
 
 File imports and ATOM, NUC or Edit updates are staged privately. Select **Stage
 file imports** or a tool's **Stage update**, then **Apply and restart**.
@@ -125,7 +161,33 @@ listing shows committed files in user area 0, not the staged changes. Files use
 CP/M 8.3 names; downloads include 128-byte record padding. Empty imports and
 read-only replacements are rejected.
 
-### Configure two-MiB drives
+### Personal disks and live insertion
+
+In **Disk box and published library**, **Create blank personal disk** adds an
+empty disk to the box. Its **Insert** button mounts it in the selected drive.
+**Eject selected drive** leaves that personal disk in the list, with its files
+intact. Ejection does not reduce the configured slot count. **Make writable
+copy of inserted disk** is an explicit copy operation; ordinary published
+mounts do not create personal copies.
+
+Before a live change, save and exit ordinary guest programs to CP/M. A program
+that supports live swapping must close and flush its files, wait at a disk-change
+prompt, then reset the changed drive's login state with BDOS 37 and reopen files.
+The checkbox alone cannot make an open guest file safe to swap. Insertion and
+ejection preserve CPU/RAM rather than restarting the guest.
+
+Changing or ejecting A requires the system-disk guard. A subsequent warm boot
+pauses until **Restore system disk to A** restores that configuration's retained
+system image. It does not install this release's newer system. Historical
+machines without that guard require the Files archive/restart workflow for A
+changes. After an uncertain save, leave the paused machine intact and use the
+offered retry or recovery downloads; do not clear site data.
+
+### Historical machine layout changes
+
+The Files geometry controls below remain available for writable historical
+machines. They modify resident system bytes on A; they are not file updates to
+the protected starter A image.
 
 Download the saved drive set before changing the layout. In disk management, set
 **Target two-MiB drive slots** to a number from 1 to 16 and choose **Stage drive
@@ -141,11 +203,12 @@ migration leaves the original machine unchanged. This conversion is explicit;
 reloading a newer website does not convert saved disks.
 
 Slots and inserted disks are separate. For example, sixteen slots permit A–P
-while only A and P contain disks. Select an empty slot, choose **Stage blank
+while only A and P contain disks. Select an empty slot, click **Stage blank
 selected drive**, import files as needed, then apply. A blank data disk has no
 tools or source files. **Stage ejection of selected drive** removes its medium
 on apply while preserving it in the preceding backup. Ejection leaves the slot
-count and application RAM unchanged; boot drive A cannot be ejected.
+count and COM load capacity unchanged. This Files staging workflow keeps A
+inserted; guarded live A ejection is a separate disk-box operation.
 
 The active-machine summary lists configured slots, inserted media and the COM
 load capacity. More configured slots reserve more guest memory, regardless of
@@ -163,11 +226,11 @@ measurement limits. These desktop results do not qualify phone or ESP32 memory.
 
 ### Retained eight-MiB A/B profiles
 
-The supplied machine already has both eight-MiB drives. These operations are
-for an older saved machine or a deliberate change to its disk layout.
+These operations are for an older saved machine or a deliberate change to its
+disk layout. They do not describe the new two-MiB A/B/C/D setup.
 
 Download the saved drive set before changing the disk layout. In disk
-management, select A and choose one of these explicit changes:
+management, select drive A, then use one of these explicit changes:
 
 - **Stage upgrade of drive A to 8 MiB** migrates the files to the one-drive
   eight-MiB system. It does not enable B.
@@ -190,11 +253,18 @@ and A/B resident profile remain unchanged.
 
 ## Backup and restore
 
+**Download complete disk-box recovery** exports a `.tdbr` file containing raw
+disk-box records, personal disk bytes, historical storage and backups, including
+ejected disks. Keep it outside the browser for recovery. It is a raw recovery
+package, not a `.tds` archive accepted by **Stage complete drive-set archive**.
+
 **Download saved drive set** exports a `.tds` archive containing the exact
 bootstrap, resident-profile label and every inserted image. Two-MiB archives
 also preserve configured empty slots and each medium's identity. This is the
-complete backup for reopening the same disk arrangement. **Download saved disk
-A** or **Download saved disk B** (or the selected C–P drive) exports only that
+backup for reopening that selected disk arrangement; it does not include other
+configurations or ejected disks elsewhere in the box. With A ejected, use the
+complete disk-box recovery download. **Download saved disk A** or
+**Download saved disk B** (or the selected C–P drive) exports only that
 disk image; it does not include the bootstrap or profile. The corresponding
 checkpoint downloads use guest-flushed data rather than the last durable browser
 copy.
@@ -231,8 +301,9 @@ operation.
 
 ### Multi-source adventure
 
-Inside disk management, select the drive containing your tools. **Stage
-adventure starter** stages `IO.NU`, `MAIN.NU` and `BUILD.JSN`. **Prepare build**
+Inside disk management, select the writable drive containing your tools, such
+as B prepared above. **Stage adventure starter** stages `IO.NU`, `MAIN.NU` and
+`BUILD.JSN`. **Prepare build**
 creates the generated `GAME.NU` input and `GAME.MAP` source map. **Apply and
 restart**, close Files, select that drive in CP/M, then run `NUC GAME.NU` and
 `GAME`. The winning keys are `E`, `T`, `W`; `Q` quits.
@@ -253,8 +324,9 @@ RAM.
 
 The supported CCP commands are `DIR`, `TYPE`, `ERA`, `REN`, `SAVE` and `USER`.
 For normal development, start with `DIR`, `TYPE filename`, `ATOM source.asm`,
-`NUC source.nu`, `EDIT filename`, and a program name without `.COM`. `ERA`
-deletes files; keep backups before experimenting with disk-changing commands.
+`NUC source.nu`, `EDIT filename`, and a program name without `.COM` on the
+prepared writable drive. `ERA` deletes files; keep backups before experimenting
+with disk-changing commands.
 
 The browser terminal is 80×24. The configurable profile supports one to sixteen
 slots with two-MiB media. The retained large-disk profiles

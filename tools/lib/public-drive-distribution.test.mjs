@@ -6,6 +6,7 @@ import { before, describe, it } from "node:test";
 import { readFile } from "node:fs/promises";
 import { buildCpmDistribution } from "./cpm-distribution.mjs";
 import { buildLargeAbSystem } from "./large-ab-system.mjs";
+import { buildTwoMibSystem } from "./two-mib-system.mjs";
 import {
   buildPublicDriveDistribution,
   buildDiskLibraryDistribution,
@@ -16,29 +17,22 @@ const root = resolve(import.meta.dirname, "../..");
 const hash = (bytes) => createHash("sha256").update(bytes).digest("hex");
 const games = ["CAVERNS.COM", "HYPERDRV.COM"];
 
-describe("published two-MiB library from existing captured artifacts", () => {
+describe("published two-MiB library from qualified source fixtures", () => {
   let distribution, twoMibSystem, componentLockBytes, CpmDisk;
   before(async () => {
     ({ CpmDisk } = await import(
       pathToFileURL(resolve(root, "dist/wasm/triptych_host_wasm.js")).href
     ));
-    // Deliberately consume already built artifacts. This group performs no build
-    // and is independently runnable by the coordinator against a captured site.
-    const directory = resolve(root, "dist/wasm-browser");
-    const deployment = JSON.parse(
-      await readFile(resolve(directory, "deployment-manifest.json"), "utf8"),
-    );
-    distribution = {
-      disk: await readFile(resolve(directory, "cpm22.img")),
-      manifest: deployment.distribution,
-    };
-    const descriptor = deployment.twoMibProfiles.find(
-      (profile) => profile.configuredCount === 4,
-    );
+    // The clean gate prepares Node WASM before these tests, but the browser
+    // build comes later. Assemble pinned source fixtures in memory through the
+    // production helpers, without reading or writing browser output artifacts.
+    distribution = await buildCpmDistribution(root, { allowDirty: true });
+    const qualified = await buildTwoMibSystem(root, 4, { allowDirty: true });
+    const descriptor = qualified.descriptor;
     twoMibSystem = {
       descriptor,
-      system: await readFile(resolve(directory, descriptor.system.asset)),
-      bootstrap: await readFile(resolve(directory, descriptor.bootstrap.asset)),
+      system: qualified.system,
+      bootstrap: qualified.bootstrap,
       residentLockBytes: await readFile(
         resolve(root, descriptor.residents.lock),
       ),

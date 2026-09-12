@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { createHash, webcrypto as crypto } from "node:crypto";
-import { readFile } from "node:fs/promises";
+import { fileURLToPath } from "node:url";
 import test from "node:test";
+import { buildTwoMibSystem } from "../../tools/lib/two-mib-system.mjs";
 import {
   loadDiskLibraryRegistry as load,
   resolveDiskLibraryRecipe as resolve,
@@ -19,13 +20,18 @@ const sorted = (value) =>
             .map((key) => [key, sorted(value[key])]),
         )
       : value;
-const built = (name) =>
-  readFile(new URL(`../../dist/wasm-browser/${name}`, import.meta.url));
+// Qualify the actual pinned N4 sources once, entirely in memory through ATOM.
+// A clean check runs these tests before the browser build exists. The deployed
+// registry/Pages proof is separate; no fixture reads or writes build outputs.
+let sourceSystem;
 async function fixture() {
-  const deployment = JSON.parse(await built("deployment-manifest.json"));
-  const profile = deployment.twoMibProfiles.find(
-    (p) => p.configuredCount === 4,
+  sourceSystem ??= buildTwoMibSystem(
+    fileURLToPath(new URL("../../", import.meta.url)),
+    4,
+    { allowDirty: true },
   );
+  const qualified = await sourceSystem;
+  const profile = structuredClone(qualified.descriptor);
   const manifest = {
       schema: "triptych-disk-library-retention-v1",
       assets: [],
@@ -44,13 +50,12 @@ async function fixture() {
   };
   const json = (prefix, value) =>
     add(prefix, Buffer.from(JSON.stringify(value, null, 2) + "\n"), "json");
-  const system = new Uint8Array(await built(profile.system.asset)),
-    boot = await built(profile.bootstrap.asset);
+  const system = qualified.system.slice(),
+    boot = qualified.bootstrap.slice();
   const systemAsset = add("system", system, "bin"),
     bootstrap = add("bootstrap", boot, "bin");
   const envelope = {
     schema: "triptych-browser-deployment-v1",
-    distribution: deployment.distribution,
     twoMibProfiles: [profile],
     assets: [profile.system, profile.bootstrap].map((ref) => ({
       path: ref.asset,

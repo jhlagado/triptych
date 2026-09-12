@@ -7,7 +7,14 @@ function requireValue(condition, message) {
 
 // This scope deliberately receives no source snapshot or installation arrays.
 // WASM owns installed media; only the small bootstrap and metadata remain here.
-function runtimeHandle(initialCpu, media, bootstrap, lengths, version) {
+function runtimeHandle(
+  initialCpu,
+  media,
+  bootstrap,
+  lengths,
+  version,
+  systemGuardEnabled,
+) {
   let cpu = initialCpu;
   const active = () => {
     requireValue(cpu !== null, "runtime is disposed");
@@ -18,6 +25,7 @@ function runtimeHandle(initialCpu, media, bootstrap, lengths, version) {
       return active();
     },
     media,
+    systemGuardEnabled,
     captureCheckpoint() {
       const current = active();
       const slots = media.slots.map((slot, index) => {
@@ -75,9 +83,14 @@ export async function prepareSavedMachineRuntime({
   writable = false,
   slotWritable,
   deployment,
+  guardSystemDisk = false,
   crypto = globalThis.crypto,
 }) {
   requireValue(typeof writable === "boolean", "writable must be boolean");
+  requireValue(
+    typeof guardSystemDisk === "boolean",
+    "guardSystemDisk must be boolean",
+  );
   // Global ownership can disable writes, never override protected mount policy.
   // Capture policy before runtime admission yields to hashing or downloads.
   let access;
@@ -101,7 +114,7 @@ export async function prepareSavedMachineRuntime({
     });
   }
   requireValue(typeof TriptychCpu === "function", "CPU constructor required");
-  let owned;
+  let owned, systemDescriptor;
   if (
     snapshot !== null &&
     typeof snapshot === "object" &&
@@ -111,6 +124,21 @@ export async function prepareSavedMachineRuntime({
       snapshot.schema === "triptych-drive-set-v4",
       "unsupported snapshot schema",
     );
+    const originalSlots = Object.getOwnPropertyDescriptor(
+      snapshot,
+      "slots",
+    )?.value;
+    if (
+      guardSystemDisk &&
+      Array.isArray(originalSlots) &&
+      Object.getOwnPropertyDescriptor(originalSlots, "0")?.value === null
+    )
+      throw Object.assign(
+        new Error(
+          "Saved runtime: restore the retained system disk to A before boot.",
+        ),
+        { code: "SYSTEM_DISK_RESTORE_REQUIRED" },
+      );
     const admission = await admitTwoMibSavedMachine({
       snapshot,
       deployment,
@@ -122,9 +150,40 @@ export async function prepareSavedMachineRuntime({
       throw error;
     }
     owned = admission.snapshot;
+    systemDescriptor = admission.descriptor;
   } else {
+    requireValue(
+      !guardSystemDisk,
+      "system guard requires a two-MiB admitted profile",
+    );
     // Retain the historical validator's complete accepted recovery domain.
     owned = copySavedMachine(snapshot);
+  }
+  if (guardSystemDisk) {
+    const digest = async (bytes) =>
+      Array.from(
+        new Uint8Array(await crypto.subtle.digest("SHA-256", bytes)),
+        (byte) => byte.toString(16).padStart(2, "0"),
+      ).join("");
+    // admission owns both bytes and closed descriptor before its first await.
+    // Authenticate the preserved system; never fetch/reseed a replacement here.
+    const system = owned.slots[0].bytes.subarray(0, 16384);
+    if ((await digest(system)) !== systemDescriptor.system.sha256)
+      throw Object.assign(
+        new Error(
+          "Saved runtime: A does not contain the admitted system; explicitly restore the retained system disk.",
+        ),
+        { code: "SYSTEM_DISK_RESTORE_REQUIRED" },
+      );
+    for (const [start, end, expected] of [
+      [0, 2048, systemDescriptor.residents.ccp.sha256],
+      [2048, 5632, systemDescriptor.residents.bdos.sha256],
+      [5632, 6656, systemDescriptor.bios.sha256],
+    ])
+      requireValue(
+        (await digest(system.subarray(start, end))) === expected,
+        "system resident hash differs from descriptor",
+      );
   }
   const version = Object.hasOwn(owned, "schema") ? 4 : 3;
   const profile = owned.bootstrap.profile;
@@ -163,6 +222,15 @@ export async function prepareSavedMachineRuntime({
           slot.bytes,
           writable && (access?.[index] ?? true),
         );
+    if (guardSystemDisk)
+      requireValue(
+        typeof cpu.configure_system_guard === "function" &&
+          cpu.configure_system_guard(
+            owned.slots[0].bytes.subarray(0, 6656),
+            systemDescriptor.layout.bios,
+          ),
+        "WASM system guard rejected admitted system",
+      );
     cpu.reset();
   } catch (error) {
     try {
@@ -175,5 +243,12 @@ export async function prepareSavedMachineRuntime({
     }
     throw error;
   }
-  return runtimeHandle(cpu, media, bootstrap, lengths, version);
+  return runtimeHandle(
+    cpu,
+    media,
+    bootstrap,
+    lengths,
+    version,
+    guardSystemDisk,
+  );
 }

@@ -1,4 +1,9 @@
-import { expect, test, useLegacyConfiguration } from "./legacy-fixture.mjs";
+import {
+  expect,
+  test,
+  seedLegacyDisk,
+  adoptHistoricalMachine,
+} from "./legacy-fixture.mjs";
 import { readFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 
@@ -47,7 +52,8 @@ async function waitForPrompt(page, command) {
 }
 
 async function boot(page) {
-  await page.goto("/");
+  await seedLegacyDisk(page);
+  await adoptHistoricalMachine(page);
   await expect(page.locator("#status")).toHaveAttribute(
     "data-state",
     "running",
@@ -169,7 +175,6 @@ test("a downloaded working disk can be imported into a fresh browser session", a
   const cleanContext = await browser.newContext();
   try {
     const cleanPage = await cleanContext.newPage();
-    await useLegacyConfiguration(cleanPage);
     await boot(cleanPage);
     await importDisk(cleanPage, diskPath);
     await expect(cleanPage.locator("#status")).toContainText(
@@ -225,7 +230,6 @@ test("a flushed disk remains downloadable after a controlled WASM fault", async 
   const cleanContext = await browser.newContext();
   try {
     const cleanPage = await cleanContext.newPage();
-    await useLegacyConfiguration(cleanPage);
     await boot(cleanPage);
     await importDisk(cleanPage, diskPath);
     await waitForPrompt(cleanPage);
@@ -331,7 +335,6 @@ test("the terminal and mobile keys remain inside a reduced visual viewport", asy
   });
   try {
     const page = await context.newPage();
-    await useLegacyConfiguration(page);
     await boot(page);
     await sendCommand(page, "EDIT INPUT.NU");
     await expect(page.locator("#terminal")).toContainText(

@@ -1,7 +1,14 @@
-import { expect, test } from "./legacy-fixture.mjs";
+import {
+  expect,
+  test,
+  seedLegacyDisk,
+  adoptHistoricalMachine,
+} from "./legacy-fixture.mjs";
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { decodeDriveSet } from "../../../crates/triptych-host-wasm/web/drive-set.js";
+
+import { decodeDiskBoxRecovery } from "../../../crates/triptych-host-wasm/web/disk-box-recovery.js";
 
 const hash = (bytes) => createHash("sha256").update(bytes).digest("hex");
 
@@ -23,7 +30,8 @@ async function apply(page) {
 // the UI, without installing synthetic resident bytes or writing around CAS.
 async function setup(page) {
   page.on("dialog", (dialog) => dialog.accept());
-  await page.goto("/");
+  await seedLegacyDisk(page);
+  await adoptHistoricalMachine(page);
   await expect(page.locator("#terminal")).toContainText("A>");
   await manage(page);
   await expect(page.locator("#enable-ab")).toBeEnabled();
@@ -36,23 +44,35 @@ async function setup(page) {
 
 async function rawState(page) {
   return page.evaluate(async () => {
-    const { openSavedMachineStore } = await import("/saved-machine-store.js");
-    const store = await openSavedMachineStore();
+    const { openDiskBoxAppStore } = await import("/disk-box-app-store.js");
+    const store = await openDiskBoxAppStore({
+      lease: { isOwner: () => false },
+    });
     const hash = async (bytes) =>
       Array.from(
         new Uint8Array(await crypto.subtle.digest("SHA-256", bytes)),
         (byte) => byte.toString(16).padStart(2, "0"),
       ).join("");
     try {
-      const head = await store.readRawRecovery("drive-set-state-v4", "head");
-      const images = {};
-      for (const [name, ref] of [
-        ["bootstrap", head.manifest.bootstrap.image],
-        ["A", head.manifest.drives.A.image],
-        ["B", head.manifest.drives.B.image],
+      const head = await store.readRawRecovery("disk-box-state-v1", "head");
+      const config = head.manifest.configurations.find(
+        (c) => c.id === head.manifest.selectedConfigurationId,
+      );
+      const images = {
+        bootstrap: {
+          length: config.bootstrap.bytes.length,
+          hash: await hash(Uint8Array.from(config.bootstrap.bytes)),
+        },
+      };
+      for (const [name, slot] of [
+        ["A", config.slots[0]],
+        ["B", config.slots[1]],
       ]) {
+        const ref = head.manifest.personalDisks.find(
+          (d) => d.id === slot.diskId,
+        ).content;
         const raw = await store.readRawRecovery(
-          "drive-set-blobs-v4",
+          "disk-box-blobs-v1",
           ref.sha256,
         );
         images[name] = {
@@ -104,19 +124,19 @@ for (const corruption of ["head digest", "B payload"]) {
     expect(backup).toBeDefined();
     await page.evaluate(async (corruption) => {
       const db = await new Promise((resolve, reject) => {
-        const request = indexedDB.open("triptych-cpu", 4);
+        const request = indexedDB.open("triptych-cpu");
         request.onsuccess = () => resolve(request.result);
         request.onerror = () => reject(request.error);
       });
       try {
         await new Promise((resolve, reject) => {
           const tx = db.transaction(
-            ["drive-set-state-v4", "drive-set-blobs-v4"],
+            ["disk-box-state-v1", "disk-box-blobs-v1"],
             "readwrite",
           );
           tx.oncomplete = resolve;
           tx.onabort = () => reject(tx.error);
-          const state = tx.objectStore("drive-set-state-v4");
+          const state = tx.objectStore("disk-box-state-v1");
           const get = state.get("head");
           get.onsuccess = () => {
             const head = get.result;
@@ -127,8 +147,14 @@ for (const corruption of ["head digest", "B payload"]) {
                   : "0".repeat(64);
               state.put(head);
             } else {
-              const blobs = tx.objectStore("drive-set-blobs-v4");
-              const image = blobs.get(head.manifest.drives.B.image.sha256);
+              const blobs = tx.objectStore("disk-box-blobs-v1");
+              const config = head.manifest.configurations.find(
+                (c) => c.id === head.manifest.selectedConfigurationId,
+              );
+              const ref = head.manifest.personalDisks.find(
+                (d) => d.id === config.slots[1].diskId,
+              ).content;
+              const image = blobs.get(ref.sha256);
               image.onsuccess = () => {
                 const raw = image.result;
                 raw.bytes[raw.bytes.length - 1] ^= 0xff;
@@ -157,26 +183,45 @@ for (const corruption of ["head digest", "B payload"]) {
     await page.reload();
     await expect(page.locator("#status")).toContainText("Recovery required");
     await expect(page.locator("#download-set")).toBeDisabled();
-    for (const name of ["A", "B", "bootstrap"]) {
-      const bytes = await downloaded(
-        page,
-        info,
-        page.getByRole("button", {
-          name: `Download raw v4 ${name}`,
-          exact: true,
-        }),
-        `raw-${name}.bin`,
-      );
+    // DB5 exports one lossless raw archive rather than individual v4 blobs.
+    // Decode transport checksums without requiring the damaged source to validate.
+    await page.locator("#disk-library > summary").click();
+    const rawArchive = await decodeDiskBoxRecovery(
+      new Blob([
+        await downloaded(
+          page,
+          info,
+          page.locator("#library-backup"),
+          "raw-disk-box.tdbr",
+        ),
+      ]),
+    );
+    const rawHead = rawArchive["disk-box-state-v1"].find(
+      (row) => row.key === "head",
+    );
+    expect(rawHead).toEqual(corrupt.head);
+    const rawConfig = rawHead.manifest.configurations.find(
+      (c) => c.id === rawHead.manifest.selectedConfigurationId,
+    );
+    expect(hash(Uint8Array.from(rawConfig.bootstrap.bytes))).toBe(
+      corrupt.images.bootstrap.hash,
+    );
+    for (const [name, index] of [
+      ["A", 0],
+      ["B", 1],
+    ]) {
+      const ref = rawHead.manifest.personalDisks.find(
+        (d) => d.id === rawConfig.slots[index].diskId,
+      ).content;
+      const bytes = rawArchive["disk-box-blobs-v1"].find(
+        (row) => row.sha256 === ref.sha256,
+      ).bytes;
       expect(bytes.length).toBe(corrupt.images[name].length);
       expect(hash(bytes)).toBe(corrupt.images[name].hash);
     }
-    const manifest = await downloaded(
-      page,
-      info,
-      page.getByRole("button", { name: "Download raw v4 saved manifest" }),
-      "raw-head.json",
-    );
-    expect(JSON.parse(manifest.toString())).toEqual(corrupt.head);
+    expect(
+      rawArchive["working-disks"].some((row) => row.key === "drive-a"),
+    ).toBe(true);
     await page.locator("#files").click();
     const row = page.locator("#backup-list li").filter({ hasText: backup.id });
     const archive = await decodeDriveSet(
@@ -202,9 +247,11 @@ for (const action of ["tool", "file", "image"]) {
     await setup(page);
     const before = await rawState(page);
     const expectedB = await page.evaluate(async () => {
-      const { openSavedMachineStore } = await import("/saved-machine-store.js");
+      const { openDiskBoxAppStore } = await import("/disk-box-app-store.js");
       const { CpmDisk } = await import("/triptych_host_wasm.js");
-      const store = await openSavedMachineStore();
+      const store = await openDiskBoxAppStore({
+        lease: { isOwner: () => false },
+      });
       let disk;
       try {
         const head = await store.load();

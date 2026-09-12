@@ -55,7 +55,11 @@ async function snapshot(directory, expectedRevision, allowDevelopment) {
       ? "triptych-drive-set-v3"
       : manifest.storageSchema;
   assert.ok(
-    ["triptych-drive-set-v3", "triptych-drive-set-v4"].includes(storageSchema),
+    [
+      "triptych-drive-set-v3",
+      "triptych-drive-set-v4",
+      "triptych-disk-box-v1",
+    ].includes(storageSchema),
     "unrecognized deployment storage schema",
   );
   assert.equal(

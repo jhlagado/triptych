@@ -1,9 +1,13 @@
 # Triptych
 
-The next WASM priority is the [disk library and launch-link roadmap](docs/plans/disk-library-and-launch-links.md):
-published read-only images, a persistent personal disk box, safe disk swaps and
-shareable machine setups. Four drives are the proposed default, with up to
-sixteen supported. This work is planned, not yet deployed.
+The current WASM development checkout has a persistent disk box and a
+hash-pinned published library. The starter setup uses protected system/tools
+in A, personal work in B, protected games in C and personal saves in D, with
+four configured drives and up to sixteen supported. The
+[disk library roadmap](docs/plans/disk-library-and-launch-links.md) tracks the
+remaining work; [library releases](docs/disk-library-releases.md) describes
+retention and publication. These instructions do not assert hosted deployment
+or completion of the full release gate.
 
 The [browser quick start](docs/browser-quick-start.md) covers a complete
 ATOM/Edit/NUC session, Caverns and Hyperdrive adventures, browser saving, backup and restore.
@@ -234,22 +238,38 @@ Set `TRIPTYCH_CPM_SCENARIO=/path/to/scenario.json` to replay another CCP or
 defines readable ASCII and arbitrary byte inputs, terminal snapshots, and
 cross-session disk persistence.
 
-The same toolchain builds an interactive browser terminal from the pinned
-fresh distribution. Normal reopening preserves saved disk bytes exactly.
-Adapting an external image to the current resident system is a separate,
-explicit operation with a recovery backup:
+The same toolchain builds an interactive browser terminal with the retained
+published library. Normal reopening preserves saved personal disk bytes and
+the selected configuration. Adapting an external image to the current resident
+system is a separate, explicit operation with a recovery backup. Start the
+local browser server with:
 
 ```sh
 npm run run:wasm-browser
 ```
 
 Open `http://127.0.0.1:8080/`, click the terminal, and type at the `A>` prompt.
-Set `TRIPTYCH_CPM22_IMAGE` explicitly to override the local server's release disk; the page also retains
-its file picker. After CP/M flushes a guest write, the page copies the complete
-working disk into browser-owned IndexedDB storage and reports the transaction
-separately from machine state. A later reload restores that disk. The download
-control exports a separate recoverable image, which can be selected in a fresh
-browser session. The page implements Triptych's bounded 80-by-24 ANSI profile,
+In a fresh disk box, A/C are protected. Use Files to import sources and stage
+ATOM, NUC and Edit onto writable B, then enter `B:` for development. To play
+the published games with private saves, enter `D:` followed by `C:CAVERNS` or
+`C:HYPERDRV`. The [quick start](docs/browser-quick-start.md) has the complete
+file-transfer, edit and build sequence.
+
+After a successful guest flush, personal disk checkpoints are saved in browser
+IndexedDB storage. Published mounts retain metadata references rather than
+personal copies of the images. Ejected personal disks remain in the disk box.
+Older browser saves require explicit adoption; their system and file bytes are
+preserved. The Files image picker remains available for explicit imports; a
+different local build input does not replace existing saved media.
+
+Public recipe links reproduce a specified setup using the recipient's own local
+writable disks. The **Bookmark on this device only** link selects a saved
+configuration in the current browser profile and origin; it does not share
+personal data or recreate that configuration elsewhere. Download a `.tds` for
+the selected inserted disk arrangement, or complete `.tdbr` recovery data for
+the whole disk box, including ejected personal disks and historical records.
+
+The page implements Triptych's bounded 80-by-24 ANSI profile,
 including cursor movement, erase, bold, underline, reverse video, scrolling,
 and arrow-key input, so full-screen CP/M programs such as `EDIT.COM` work
 without displaying raw escape sequences.

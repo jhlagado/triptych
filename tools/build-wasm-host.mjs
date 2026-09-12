@@ -17,6 +17,16 @@ import { pathToFileURL } from "node:url";
 import { buildCpmDistribution } from "./lib/cpm-distribution.mjs";
 import { buildBrowserToolCatalog } from "./lib/browser-tool-catalog.mjs";
 import { buildTwoMibSystem } from "./lib/two-mib-system.mjs";
+import { captureDiskLibraryRelease } from "./lib/disk-library-release.mjs";
+import {
+  readDiskLibraryPackage,
+  retainPublishedImageMetadata,
+} from "./lib/disk-library-package.mjs";
+import { mergeDiskLibraryRetention } from "./lib/disk-library-retention.mjs";
+import {
+  diskLibraryBuildMode,
+  selectDiskLibraryBuild,
+} from "./lib/disk-library-build-guard.mjs";
 import {
   buildPublicDriveDistribution,
   buildDiskLibraryDistribution,
@@ -33,10 +43,27 @@ import {
 
 const repositoryRoot = resolve(import.meta.dirname, "..");
 const browser = process.argv.includes("--browser");
+const refreshDiskLibrary = process.argv.includes("--refresh-disk-library");
+const release = process.argv.includes("--release");
 const conformance = process.argv.includes("--conformance");
+if (refreshDiskLibrary && !browser)
+  throw new Error("disk-library refresh requires a browser candidate build");
 if (browser && conformance) {
   throw new Error("browser and conformance builds are separate outputs");
 }
+// Validate publication policy before cargo, tuple generation or output staging.
+// The same captured package is selected below; no later read can replace it.
+const previousLibrary = browser
+  ? await readDiskLibraryPackage(
+      join(repositoryRoot, "distribution", "disk-library"),
+    )
+  : undefined;
+const libraryBuildMode = diskLibraryBuildMode({
+  browser,
+  release,
+  refresh: refreshDiskLibrary,
+  previous: previousLibrary,
+});
 const outputDirectory = join(
   repositoryRoot,
   "dist",
@@ -219,6 +246,59 @@ try {
       ),
       CpmDisk,
     });
+    // Identical image bytes keep their first publication's source reference.
+    // A later machine build may have a new revision without changing that disk.
+    // Other metadata changes under the same immutable identity are errors.
+    library.catalogue.images = retainPublishedImageMetadata(
+      previousLibrary.manifest.images,
+      library.catalogue.images,
+    );
+    const libraryCatalogueBytes = Buffer.from(
+      `${JSON.stringify(library.catalogue, null, 2)}\n`,
+    );
+    const libraryProvenanceBytes = Buffer.from(
+      `${JSON.stringify(library.provenance, null, 2)}\n`,
+    );
+    const libraryAdmissionBytes = Buffer.from(
+      `${JSON.stringify(
+        {
+          schema: "triptych-browser-deployment-v1",
+          twoMibProfiles: [librarySystem.descriptor],
+          assets: [
+            librarySystem.descriptor.system,
+            librarySystem.descriptor.bootstrap,
+          ].map(({ asset, bytes, sha256 }) => ({ path: asset, bytes, sha256 })),
+        },
+        null,
+        2,
+      )}\n`,
+    );
+    const blankLibraryDisk = CpmDisk.create_two_mib();
+    let retainedLibrary;
+    try {
+      retainedLibrary = captureDiskLibraryRelease({
+        catalogueBytes: libraryCatalogueBytes,
+        provenanceBytes: libraryProvenanceBytes,
+        admissionBytes: libraryAdmissionBytes,
+        assets: new Map([
+          ...library.images.map(({ asset, bytes }) => [asset, bytes]),
+          [librarySystem.descriptor.system.asset, librarySystem.system],
+          [librarySystem.descriptor.bootstrap.asset, librarySystem.bootstrap],
+        ]),
+        blankSeed: blankLibraryDisk.export_source(),
+      });
+    } finally {
+      blankLibraryDisk.free();
+    }
+    // Pinning a release changes the repository revision. Normal builds must
+    // not turn that bookkeeping commit into another unpinned recipe revision.
+    // Only an explicit candidate refresh adds releases to a nonempty registry.
+    retainedLibrary = selectDiskLibraryBuild(
+      libraryBuildMode,
+      previousLibrary,
+      retainedLibrary,
+      mergeDiskLibraryRetention,
+    );
     const bootRom = distribution.bootstrap;
     const ccp = systemDisk.slice(0, 0x800);
     const bdos = systemDisk.slice(0x800, 0x1600);
@@ -247,7 +327,10 @@ try {
         "disk-box-media-change.js",
         "disk-launch.js",
         "disk-box-store.js",
+        "disk-box-app-store.js",
+        "disk-box-recovery.js",
         "disk-catalogue.js",
+        "disk-library-registry.js",
         "saved-machine-workspace.js",
         "saved-machine-runtime.js",
         "saved-machine-configuration.js",
@@ -286,12 +369,12 @@ try {
       ),
       writeFile(
         join(stagedOutput, "disk-catalogue.json"),
-        `${JSON.stringify(library.catalogue, null, 2)}\n`,
+        libraryCatalogueBytes,
         { flag: "wx" },
       ),
       writeFile(
         join(stagedOutput, "disk-library-provenance.json"),
-        `${JSON.stringify(library.provenance, null, 2)}\n`,
+        libraryProvenanceBytes,
         { flag: "wx" },
       ),
       ...Object.entries(publicDistribution.drives).map(([letter, drive]) =>
@@ -329,6 +412,25 @@ try {
       ),
       writeFile(join(stagedOutput, ".nojekyll"), "", "utf8"),
     ]);
+    // Image files already exist above. Compare duplicate paths instead of
+    // overwriting them; every additional retained asset is created exactly once.
+    for (const [path, bytes] of retainedLibrary.assets) {
+      try {
+        await writeFile(join(stagedOutput, path), bytes, { flag: "wx" });
+      } catch (error) {
+        if (error.code !== "EEXIST") throw error;
+        assert.deepEqual(
+          new Uint8Array(await readFile(join(stagedOutput, path))),
+          bytes,
+          `retained library asset collision: ${path}`,
+        );
+      }
+    }
+    await writeFile(
+      join(stagedOutput, "disk-library-registry.json"),
+      `${JSON.stringify(retainedLibrary.manifest, null, 2)}\n`,
+      { flag: "wx" },
+    );
     const assets = [];
     for (const path of (await readdir(stagedOutput)).sort()) {
       const bytes = await readFile(join(stagedOutput, path));
@@ -343,7 +445,7 @@ try {
       `${JSON.stringify(
         {
           schema: "triptych-browser-deployment-v1",
-          storageSchema: "triptych-drive-set-v4",
+          storageSchema: "triptych-disk-box-v1",
           distribution: distribution.manifest,
           diskProfiles: [largeSystem.profile, largeAbSystem.profile],
           twoMibProfiles,

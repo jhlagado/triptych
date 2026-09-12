@@ -1,4 +1,9 @@
-import { expect, test, useLegacyConfiguration } from "./legacy-fixture.mjs";
+import {
+  expect,
+  test,
+  seedLegacyDisk,
+  adoptHistoricalMachine,
+} from "./legacy-fixture.mjs";
 import { readFile } from "node:fs/promises";
 import { spawn } from "node:child_process";
 import { readCpm22File } from "../../../tools/lib/cpm22-disk.mjs";
@@ -10,7 +15,8 @@ async function manage(page) {
   await expect(page.locator("#file-import")).toBeEnabled();
 }
 async function boot(page) {
-  await page.goto("/");
+  await seedLegacyDisk(page);
+  await adoptHistoricalMachine(page);
   await expect(page.locator("#terminal")).toContainText("A>");
 }
 async function apply(page) {
@@ -37,8 +43,10 @@ async function runCommand(page, value) {
 }
 async function savedBytes(page) {
   return page.evaluate(async () => {
-    const { openSavedMachineStore } = await import("/saved-machine-store.js");
-    const store = await openSavedMachineStore();
+    const { openDiskBoxAppStore } = await import("/disk-box-app-store.js");
+    const store = await openDiskBoxAppStore({
+      lease: { isOwner: () => false },
+    });
     try {
       return Array.from((await store.load()).snapshot.drives.A.bytes);
     } finally {
@@ -228,7 +236,6 @@ test("adventure edit/build/update/reload/download/reopen preserves its separate 
   });
   try {
     const reopened = await other.newPage();
-    await useLegacyConfiguration(reopened);
     await boot(reopened);
     await manage(reopened);
     await reopened.locator("#disk-input").setInputFiles(path);

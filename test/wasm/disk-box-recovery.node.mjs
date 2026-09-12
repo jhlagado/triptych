@@ -156,7 +156,10 @@ test("unsupported values and accessors fail explicitly without invoking getters"
   });
   // Byte containers follow IndexedDB structured-clone semantics: auxiliary
   // JavaScript properties are excluded, never inspected or invoked.
-  assert.deepEqual(await decode(await encode(bytes, { crypto }), { crypto }), new Uint8Array(1));
+  assert.deepEqual(
+    await decode(await encode(bytes, { crypto }), { crypto }),
+    new Uint8Array(1),
+  );
   assert.equal(read, false);
 });
 
@@ -164,7 +167,8 @@ test("8 MiB structured-clone binary capture never enumerates byte indices", asyn
   const bytes = new Uint8Array(8388608).fill(173);
   bytes.extra = "not part of an IndexedDB byte container";
   const original = Reflect.ownKeys;
-  let binaryEnumerations = 0, recordEnumerations = 0;
+  let binaryEnumerations = 0,
+    recordEnumerations = 0;
   Reflect.ownKeys = (value) => {
     if (value instanceof Uint8Array || value instanceof ArrayBuffer) {
       binaryEnumerations++;
@@ -181,7 +185,9 @@ test("8 MiB structured-clone binary capture never enumerates byte indices", asyn
     assert.equal(restored.bytes.extra, undefined);
     assert.equal(binaryEnumerations, 0);
     assert(recordEnumerations > 0);
-  } finally { Reflect.ownKeys = original; }
+  } finally {
+    Reflect.ownKeys = original;
+  }
 });
 
 test("rejects oversized metadata before hashing and hostile header lengths before reading metadata", async () => {

@@ -8,12 +8,27 @@ import {
   textInputToBytes,
 } from "./terminal.js";
 import { acquireDiskWriter } from "./disk-workspace.js";
-import { openSavedMachineStore } from "./saved-machine-store.js";
-import { createSavedMachineWorkspace } from "./saved-machine-workspace.js";
+import {
+  openDiskBoxAppStore,
+  createDiskBoxArchiveWorkspace,
+  diskBoxRuntimeDeployment,
+  prepareDiskBoxRecipeLaunch,
+  copyDiskBoxView,
+  sameDiskBoxView,
+  diskBoxViewSlotWritable,
+} from "./disk-box-app-store.js";
+import {
+  loadDiskLibraryRegistry,
+  resolveDiskLibraryRecipe,
+} from "./disk-library-registry.js";
+import { publishedImageReference } from "./disk-catalogue.js";
+import { prepareSavedMachineAdoption } from "./disk-box-adoption.js";
+import { emptyDiskBox } from "./disk-box.js";
+import { prepareDiskBoxMediaChange } from "./disk-box-media-change.js";
+import { encodeDiskBoxRecovery } from "./disk-box-recovery.js";
 import { prepareSavedMachineRuntime } from "./saved-machine-runtime.js";
 import {
   copySavedMachine,
-  sameSavedMachine,
   encodeSavedMachine,
   decodeSavedMachineArchive,
 } from "./saved-machine.js";
@@ -55,6 +70,29 @@ const terminal = new TerminalBuffer();
 const suppliedMachine =
   new URL(location.href).searchParams.get("machine") === "supplied";
 const storageName = suppliedMachine ? "triptych-supplied" : "triptych-cpu";
+function localConfigurationSelection(route) {
+  if (!route.has("configuration")) return undefined;
+  if (
+    route.has("recipe") ||
+    route.has("revision") ||
+    route.getAll("configuration").length !== 1
+  )
+    throw new Error(
+      "Choose either a device-local configuration or a public recipe, not both.",
+    );
+  const id = route.get("configuration");
+  if (
+    !/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(id)
+  )
+    throw new Error("Invalid device-local configuration identifier.");
+  return id;
+}
+function localConfigurationBookmark(id) {
+  const query = new URLSearchParams();
+  if (suppliedMachine) query.set("machine", "supplied");
+  query.set("configuration", id);
+  return "?" + query.toString();
+}
 document.querySelector("#machine-choice").textContent = suppliedMachine
   ? "Supplied A+B machine — its saves are separate from your usual machine."
   : "Your working machine — existing saved disks are preserved.";
@@ -86,6 +124,34 @@ let managementAttempt = 0;
 let diagnosticAttempt = 0;
 let catalog;
 let deployment;
+let libraryRegistry;
+let requestedRecipe;
+async function registry() {
+  libraryRegistry ??= loadDiskLibraryRegistry({ baseUrl: document.baseURI });
+  try {
+    return await libraryRegistry;
+  } catch (error) {
+    libraryRegistry = undefined;
+    throw error;
+  }
+}
+async function libraryRecipe(id) {
+  if (requestedRecipe?.reference.id === id) return requestedRecipe;
+  return resolveDiskLibraryRecipe(await registry(), { default: id });
+}
+async function runtimeDeployment(manifest) {
+  const configuration = manifest.configurations.find(
+    (item) => item.id === manifest.selectedConfigurationId,
+  );
+  if (configuration.systemDisk.kind === "published")
+    return diskBoxRuntimeDeployment(manifest, { registry: await registry() });
+  if (
+    configuration.bootstrap.profile.startsWith("triptych-cpu-v0.1-2m-") &&
+    !deployment
+  )
+    await loadDeployment();
+  return deployment;
+}
 let displayedGeometry;
 let migrationPending = false;
 const filesDialog = document.querySelector("#files-dialog");
@@ -190,6 +256,15 @@ function controls() {
     !discardAcknowledgment.checked;
   const snapshot = stagedSet ?? displayedSet();
   const attached = !!imageAt(snapshot);
+  const protectedSlot =
+    store?.head?.kind === "ready" &&
+    snapshot &&
+    !diskBoxViewSlotWritable(
+      store.configuration,
+      committed?.snapshot,
+      snapshot,
+      driveIndex(),
+    );
   const isTwoMib = snapshot?.schema === "triptych-drive-set-v4";
   const count = isTwoMib ? snapshot.configuredCount : 2;
   for (const option of driveSelect.options)
@@ -201,11 +276,12 @@ function controls() {
     !managing || !isTwoMib || attached || driveIndex() >= count;
   ejectDriveButton.disabled =
     !managing || !isTwoMib || !attached || selectedDrive === "A";
-  importInput.disabled = !managing || !attached;
+  importInput.disabled = !managing || !attached || protectedSlot;
   diskInput.disabled = !managing;
   setInput.disabled = !managing;
-  prepareBuildButton.disabled = !managing || !attached;
-  starterButton.disabled = !managing || !deployment || !attached;
+  prepareBuildButton.disabled = !managing || !attached || protectedSlot;
+  starterButton.disabled =
+    !managing || !deployment || !attached || protectedSlot;
   migrateButton.disabled =
     !managing ||
     !!stagedSet ||
@@ -233,7 +309,7 @@ function controls() {
   cancelButton.disabled =
     !managementToken || !["managing", "preparing"].includes(workspace?.state);
   for (const button of toolsList.querySelectorAll("button"))
-    button.disabled = !managing;
+    button.disabled = !managing || protectedSlot;
   for (const button of backupList.querySelectorAll("[data-restore]"))
     button.disabled = !managing;
 }
@@ -376,7 +452,16 @@ function runMachine(generation) {
     const deadline = performance.now() + 6;
     let outputChanged = false;
     do {
-      machine.run_slice(25_000, 250_000);
+      const reason = machine.run_slice(25_000, 250_000);
+      if (reason === 4) {
+        const counts = runtime.flushCounts();
+        if (counts.some((count, drive) => count !== lastFlushCounts[drive])) {
+          lastFlushCounts = counts;
+          void saveCheckpoint();
+        }
+        showSystemRecovery();
+        return;
+      }
       // A Z80 instruction can emit at most one serial byte. Draining after
       // every bounded slice caps the transient WASM output batch at 25,000
       // bytes even if several slices fit in one animation frame.
@@ -520,12 +605,27 @@ async function selectedBootstrap(snapshot, choice) {
   return { profile: choice, bytes: await defaultBootstrap() };
 }
 
-function prepareMachine(snapshot) {
+async function prepareMachine(snapshot) {
+  if (snapshot.schema && snapshot.slots[0] === null)
+    throw Object.assign(
+      new Error("Restore the retained system disk to A before boot."),
+      { code: "SYSTEM_DISK_RESTORE_REQUIRED" },
+    );
+  const candidate =
+    store?.head?.kind === "ready"
+      ? committed && sameDiskBoxView(snapshot, committed.snapshot)
+        ? { manifest: store.head.manifest, slotWritable: store.slotWritable }
+        : await store.prepareView(snapshot)
+      : undefined;
   return prepareSavedMachineRuntime({
     snapshot,
     TriptychCpu,
     writable: !!writer?.owned,
-    deployment,
+    slotWritable: candidate?.slotWritable,
+    deployment: candidate
+      ? await runtimeDeployment(candidate.manifest)
+      : deployment,
+    guardSystemDisk: snapshot.schema === "triptych-drive-set-v4",
   });
 }
 
@@ -584,6 +684,9 @@ function pauseMachine() {
 
 function resumeMachine() {
   machineRunning = true;
+  // Workspace cancellation resumes synchronously before its caller clears the
+  // old management token. Do not inspect staged Files state at this boundary.
+  resetButton.disabled = filesDialog.open || !workspace?.canRun;
   setStatus(
     `Running ${activeMedia.slots.map((slot, index) => `${String.fromCharCode(65 + index)}: ${slot?.name ?? "empty"}`).join(" · ")}${writer?.owned ? "" : " (read-only tab)"}; click or tap the terminal and type at A>.`,
     "running",
@@ -687,6 +790,10 @@ syncVisualViewport();
 resetButton.addEventListener("click", () => {
   if (!machineRunning || !workspace?.canRun || filesDialog.open) return;
   machine.reset();
+  if (machine.system_recovery_pending?.()) {
+    showSystemRecovery();
+    return;
+  }
   terminal.clear();
   renderTerminal(terminalElement, terminal.snapshot());
   setStatus(
@@ -702,6 +809,10 @@ downloadButton.addEventListener("click", () => {
 });
 downloadSetButton.addEventListener("click", async () => {
   try {
+    if (committed?.snapshot.schema && committed.snapshot.slots[0] === null)
+      throw new Error(
+        "A is ejected. Download complete disk-box recovery (.tdbr); a bootable .tds archive requires A.",
+      );
     if (committed)
       download(
         await encodeSavedMachine(committed.snapshot),
@@ -800,17 +911,7 @@ for (const selector of ["#image-profile", "#adapt-image"]) {
 }
 
 async function readBackup(id) {
-  if (!id.startsWith("v2:")) return store.readBackup(id);
-  const bootstrap = await defaultBootstrap();
-  const reader = await openSavedMachineStore({
-    name: storageName,
-    legacyBootstrap: bootstrap,
-  });
-  try {
-    return await reader.readBackup(id);
-  } finally {
-    reader.close();
-  }
+  return store.readBackup(id);
 }
 
 async function renderFiles() {
@@ -1018,6 +1119,18 @@ filesDialog.addEventListener("cancel", (event) => {
 async function stageImports(imports, token) {
   const baseline = currentToken(token);
   const candidate = stagedSet ?? baseline;
+  if (
+    store?.head?.kind === "ready" &&
+    !diskBoxViewSlotWritable(
+      store.configuration,
+      committed?.snapshot,
+      candidate,
+      driveIndex(),
+    )
+  )
+    throw new Error(
+      "This disk is protected. Make a writable copy in Disk box first.",
+    );
   const image = selectedImage(candidate);
   const disk = new CpmDisk(image.bytes);
   try {
@@ -1630,6 +1743,38 @@ async function rawRecovery() {
   }
   const target = document.querySelector("#raw-recovery");
   target.replaceChildren();
+  const boxHead = await store
+    .readRawRecovery("disk-box-state-v1", "head")
+    .catch(() => undefined);
+  if (boxHead) {
+    target.append(
+      button("Download raw disk-box manifest", () =>
+        download(
+          new TextEncoder().encode(JSON.stringify(boxHead)),
+          "disk-box-head.json",
+        ),
+      ),
+    );
+    if (Array.isArray(boxHead.manifest?.personalDisks)) {
+      for (const disk of boxHead.manifest.personalDisks) {
+        if (
+          typeof disk?.id !== "string" ||
+          typeof disk?.content?.sha256 !== "string"
+        )
+          continue;
+        const raw = await store
+          .readRawRecovery("disk-box-blobs-v1", disk.content.sha256)
+          .catch(() => undefined);
+        if (!raw?.bytes) continue;
+        const entry = button(
+          `Download raw ${typeof disk.name === "string" ? disk.name : disk.id}`,
+          () => download(raw.bytes, `recovery-${disk.id}.img`),
+        );
+        entry.dataset.recoveryDiskId = disk.id;
+        target.append(entry);
+      }
+    }
+  }
   for (const [stateStore, blobStore, version] of [
     ["drive-set-state-v4", "drive-set-blobs-v4", "v4"],
     ["drive-set-state", "drive-set-blobs", "v3"],
@@ -1675,110 +1820,12 @@ async function rawRecovery() {
   }
 }
 
-try {
-  // Recovery storage does not depend on a working emulator or boot download.
-  writer = await acquireDiskWriter({ name: `${storageName}:disk-writer` });
-  const options = {
-    name: storageName,
-    onBlocked: (text) => setSaveStatus(text, "error"),
-  };
-  store = await openSavedMachineStore(options);
-  let stored = await refreshCommitted();
-  if (stored.kind === "recovery") {
-    if (stored.code === "HISTORICAL_BOOTSTRAP_REQUIRED") {
-      // v1/v2 did not store a bootstrap. Supply their historical E400 bootstrap
-      // explicitly; leave their source records untouched during this upgrade.
-      const historical = await defaultBootstrap();
-      store.close();
-      store = await openSavedMachineStore({
-        ...options,
-        legacyBootstrap: historical,
-      });
-      stored = await refreshCommitted();
-    }
-    if (stored.kind === "recovery") throw new Error(stored.error);
-  }
-  // Saved v4 needs descriptor metadata before runtime admission, but no fresh
-  // bootstrap or resident bytes. Historical sessions remain bootable when the
-  // optional release metadata or tool catalog is unavailable.
-  if (committed?.snapshot.schema === "triptych-drive-set-v4")
-    await loadDeployment();
-  await init();
-  // Corrupt saved data has already failed closed; never seed over it.
-  let initial = committed?.snapshot;
-  if (!initial) {
-    const response = await fetch("config.json", {
-      cache: "no-store",
-      redirect: "error",
-    });
-    if (!response.ok) throw new Error("Could not load config.json.");
-    const configuration = await response.json();
-    if (configuration.publicDrives === true) {
-      const published = await fetch("deployment-manifest.json", {
-        cache: "no-store",
-        redirect: "error",
-      });
-      if (!published.ok)
-        throw new Error("Could not load the supplied disk manifest.");
-      initial = await fetchPublicDriveSet({
-        deployment: await published.json(),
-        baseUrl: location.href,
-      });
-    } else {
-      if (configuration.diskUrl === null)
-        throw new Error("No saved disk or distribution disk is available.");
-      const disk = await fetch(configuration.diskUrl, {
-        cache: "no-store",
-        redirect: "error",
-      });
-      if (!disk.ok) throw new Error("Could not load the distribution disk.");
-      initial = copySavedMachine({
-        bootstrap: { profile: "legacy-e400", bytes: await defaultBootstrap() },
-        drives: {
-          A: {
-            name: configuration.diskName,
-            bytes: new Uint8Array(await disk.arrayBuffer()),
-          },
-          B: null,
-        },
-      });
-    }
-    // Validate filesystem structure before publishing either fresh image.
-    for (const snapshot of Object.values(initial.drives)) {
-      if (!snapshot) continue;
-      const candidate = new CpmDisk(snapshot.bytes);
-      candidate.free();
-    }
-    startupRuntime = await prepareMachine(initial);
-    if (writer.owned) {
-      const publication = await store.saveCheckpoint(
-        { kind: "empty" },
-        initial,
-      );
-      const published = await refreshCommitted();
-      if (
-        published.kind !== "ready" ||
-        JSON.stringify(published.token) !== JSON.stringify(publication.token) ||
-        !sameSavedMachine(published.snapshot, initial)
-      )
-        throw new Error(
-          "The initial saved machine changed before activation. Reload to recover its current authority.",
-        );
-    } else
-      committed = {
-        kind: "ready",
-        token: { kind: "empty" },
-        snapshot: initial,
-      };
-  }
-  startupRuntime ??= await prepareMachine(initial);
-  activateMachine(startupRuntime);
-  startupRuntime = undefined;
+function connectWorkspace() {
   const coordinatedStore = {
     load: () => store.load(),
     commitChange: (...args) => store.commitChange(...args),
     async saveCheckpoint(token, value) {
-      const snapshot = copySavedMachine(value);
+      const snapshot = copyDiskBoxView(value);
       const publication = await store.saveCheckpoint(token, snapshot);
       committedGeneration += 1;
       committed = {
@@ -1790,10 +1837,10 @@ try {
       return publication;
     },
   };
-  workspace = createSavedMachineWorkspace({
+  workspace = createDiskBoxArchiveWorkspace({
     store: coordinatedStore,
     writer,
-    token: committed?.token ?? { kind: "empty" },
+    token: committed.token,
     runtime: {
       pause: pauseMachine,
       resume: resumeMachine,
@@ -1804,6 +1851,731 @@ try {
       discard: (prepared) => prepared.dispose(),
     },
   });
+}
+
+let libraryBusy = false;
+let librarySession;
+const libraryStatus = document.querySelector("#library-status");
+const librarySlot = document.querySelector("#library-slot");
+const libraryReady = document.querySelector("#library-ready");
+const restoreSystemButton = document.querySelector("#restore-system-disk");
+let startupSystemRecovery = false;
+function showSystemRecovery() {
+  startupSystemRecovery = !machine;
+  pauseMachine();
+  document.querySelector("#disk-library").open = true;
+  restoreSystemButton.hidden = false;
+  libraryStatus.textContent =
+    "The guest needs its retained system disk in A. Confirm closed/flushed files, then Restore system disk. Dirty transfers or pending input remain paused for explicit recovery; no media are replaced automatically.";
+  setStatus(
+    machine
+      ? "System disk required before boot can continue. Guest CPU and RAM are paused."
+      : "Restore the retained system disk before cold boot. Saved media have not been changed.",
+    "recovery",
+  );
+}
+const libraryHash = async (bytes) =>
+  Array.from(
+    new Uint8Array(await crypto.subtle.digest("SHA-256", bytes)),
+    (byte) => byte.toString(16).padStart(2, "0"),
+  ).join("");
+function libraryError(error) {
+  libraryStatus.textContent = message(error);
+  controls();
+}
+function currentLibrarySlot() {
+  return Number(librarySlot.value);
+}
+function updateLiveView(snapshot) {
+  const previous = runtime,
+    cpu = machine,
+    boot = {
+      profile: snapshot.bootstrap.profile,
+      bytes: new Uint8Array(snapshot.bootstrap.bytes),
+    };
+  const version = snapshot.schema,
+    metadata = slots(snapshot).map((slot) =>
+      slot
+        ? {
+            name: slot.name,
+            ...(version ? { instanceId: slot.instanceId } : {}),
+          }
+        : null,
+    );
+  const count = version
+    ? snapshot.configuredCount
+    : activeMedia.configuredCount;
+  runtime = {
+    cpu,
+    systemGuardEnabled: previous.systemGuardEnabled,
+    media: {
+      profile: boot.profile,
+      configuredCount: count,
+      slots: metadata.slice(0, count),
+    },
+    captureCheckpoint() {
+      const images = metadata.map((slot, index) =>
+        slot ? { ...slot, bytes: cpu.export_drive_checkpoint(index) } : null,
+      );
+      const bootstrap = {
+        profile: boot.profile,
+        bytes: new Uint8Array(boot.bytes),
+      };
+      return version
+        ? { schema: version, configuredCount: count, bootstrap, slots: images }
+        : { bootstrap, drives: { A: images[0], B: images[1] ?? null } };
+    },
+    flushCounts: () =>
+      metadata
+        .slice(0, count)
+        .map((slot, index) => (slot ? cpu.drive_flush_count(index) : 0)),
+    dispose: () => previous.dispose(),
+  };
+  activeMedia = runtime.media;
+  lastFlushCounts = runtime.flushCounts();
+  renderActiveConfiguration();
+}
+async function libraryBarrier() {
+  if (libraryBusy || managementToken || !workspace?.canRun || !writer?.owned)
+    throw new Error(
+      "Finish the current operation before changing the disk box.",
+    );
+  if (!libraryReady.checked)
+    throw new Error(
+      "Confirm that the guest has closed files and flushed first.",
+    );
+  libraryBusy = true;
+  try {
+    const token = await workspace.beginManagement({ savedAndExited: true });
+    await refreshCommitted();
+    return token;
+  } catch (error) {
+    libraryBusy = false;
+    throw error;
+  }
+}
+async function libraryCommit(candidate, barrier, restart = false) {
+  let prepared;
+  try {
+    const snapshot = await store.snapshotFor(
+      candidate.manifest,
+      candidate.newBlobs,
+    );
+    if (restart) {
+      const config = candidate.manifest.configurations.find(
+        (item) => item.id === candidate.manifest.selectedConfigurationId,
+      );
+      prepared = await prepareSavedMachineRuntime({
+        snapshot,
+        TriptychCpu,
+        writable: !!writer.owned,
+        slotWritable: config.slots.map(
+          (slot) => slot?.kind === "personal" && slot.writable,
+        ),
+        deployment: await runtimeDeployment(candidate.manifest),
+        guardSystemDisk: snapshot.schema === "triptych-drive-set-v4",
+      });
+    }
+    const publication = await store.authority.commitChange(
+      store.head.token,
+      crypto.randomUUID(),
+      candidate.manifest,
+      candidate.newBlobs,
+    );
+    if (publication.status !== "committed")
+      throw new Error(
+        "Disk-box change was superseded; reload the durable state.",
+      );
+    await workspace.close();
+    const loaded = await refreshCommitted();
+    requireExactPublication(publication, loaded, snapshot);
+    if (prepared) {
+      activateMachine(prepared);
+      prepared = undefined;
+    } else updateLiveView(committed.snapshot);
+    connectWorkspace();
+    resumeMachine();
+    libraryBusy = false;
+    libraryReady.checked = false;
+    await renderLibrary();
+  } catch (error) {
+    prepared?.dispose();
+    libraryStatus.textContent =
+      "Disk box is paused for recovery; reload to inspect durable state. " +
+      message(error);
+    throw error;
+  }
+}
+async function insertLibraryBinding(
+  binding,
+  incomingBytes,
+  { restoreSystem = false, slot = currentLibrarySlot() } = {},
+) {
+  if (slot === 0 && !runtime?.systemGuardEnabled)
+    throw new Error(
+      "This historical runtime has no admitted system-disk guard. A changes require explicit archive restart.",
+    );
+  const barrier = await libraryBarrier();
+  let committedLive = false;
+  try {
+    librarySession = await prepareDiskBoxMediaChange({
+      manifest: store.head.manifest,
+      token: store.head.token,
+      configurationId: store.configuration.id,
+      slot,
+      binding,
+      incomingBytes,
+      cpu: machine,
+      store: store.authority,
+      lease: { isOwner: () => !!writer.owned },
+      pause: pauseMachine,
+      resume: () => {
+        if (committedLive) resumeMachine();
+        else {
+          workspace.cancel(barrier);
+          libraryBusy = false;
+        }
+      },
+      onCommitted: async (published) => {
+        await workspace.close();
+        const loaded = await refreshCommitted();
+        if (
+          loaded.kind !== "ready" ||
+          loaded.token.digest !== published.token.digest ||
+          loaded.token.revision !== published.token.revision
+        )
+          throw new Error(
+            "Disk box authority changed during media restoration; reload for recovery.",
+          );
+        updateLiveView(committed.snapshot);
+        if (
+          restoreSystem &&
+          machine.system_recovery_pending() &&
+          !machine.complete_system_disk_restore()
+        )
+          throw new Error(
+            "System restoration is durable, but the guarded CPU remains paused. Dirty storage or pending input requires explicit recovery.",
+          );
+        connectWorkspace();
+        committedLive = true;
+        libraryBusy = false;
+        libraryReady.checked = false;
+        restoreSystemButton.hidden = false;
+      },
+    });
+    await librarySession.commit();
+    librarySession = undefined;
+    await renderLibrary();
+  } catch (error) {
+    document.querySelector("#library-retry").hidden =
+      librarySession?.status !== "uncertain";
+    throw error;
+  }
+}
+async function addPersonal(bytes, name) {
+  const image = new CpmDisk(bytes);
+  let geometry;
+  try {
+    geometry = image.geometry_id();
+  } finally {
+    image.free();
+  }
+  const barrier = await libraryBarrier();
+  const manifest = structuredClone(store.head.manifest),
+    sha256 = await libraryHash(bytes);
+  manifest.personalDisks.push({
+    id: crypto.randomUUID(),
+    name,
+    geometry,
+    content: { sha256, byteLength: bytes.length },
+  });
+  await libraryCommit(
+    { manifest, newBlobs: new Map([[sha256, bytes]]) },
+    barrier,
+  );
+}
+let libraryRenderGeneration = 0;
+async function renderLibrary() {
+  const generation = ++libraryRenderGeneration;
+  const personal = document.querySelector("#personal-disk-list"),
+    published = document.querySelector("#published-disk-list");
+  personal.replaceChildren();
+  published.replaceChildren();
+  if (store?.head?.kind !== "ready") return;
+  const config = store.configuration,
+    selected = Number(librarySlot.value || 1);
+  const configurations = document.querySelector("#saved-configuration");
+  configurations.replaceChildren();
+  for (const saved of store.head.manifest.configurations) {
+    const option = document.createElement("option");
+    option.value = saved.id;
+    option.textContent = saved.name + " · " + saved.id.slice(0, 8);
+    configurations.append(option);
+  }
+  configurations.value = config.id;
+  document.querySelector("#local-configuration-bookmark").href =
+    localConfigurationBookmark(config.id);
+  restoreSystemButton.hidden =
+    !runtime?.systemGuardEnabled && !startupSystemRecovery;
+  librarySlot.replaceChildren();
+  for (let i = 0; i < config.configuredCount; i++) {
+    const option = document.createElement("option");
+    option.value = i;
+    option.textContent = String.fromCharCode(65 + i);
+    librarySlot.append(option);
+  }
+  librarySlot.value = String(Math.min(selected, config.configuredCount - 1));
+  for (const disk of store.head.manifest.personalDisks) {
+    const row = document.createElement("li");
+    row.dataset.diskId = disk.id;
+    const mounted = config.slots.flatMap((slot, index) =>
+      slot?.kind === "personal" && slot.diskId === disk.id
+        ? [String.fromCharCode(65 + index)]
+        : [],
+    );
+    row.append(
+      document.createTextNode(
+        disk.name +
+          " · " +
+          (mounted.length ? mounted.join(", ") : "ejected") +
+          " ",
+      ),
+    );
+    row.append(
+      button("Insert", async () => {
+        try {
+          await insertLibraryBinding(
+            { kind: "personal", diskId: disk.id, writable: true },
+            await store.authority.readPersonalDisk(disk.id),
+          );
+        } catch (error) {
+          libraryError(error);
+        }
+      }),
+    );
+    row.append(
+      button("Download", async () =>
+        download(
+          await store.authority.readPersonalDisk(disk.id),
+          disk.name + ".img",
+        ),
+      ),
+    );
+    row.append(
+      button("Rename", async () => {
+        try {
+          const name = prompt("Personal disk name", disk.name);
+          if (name === null) return;
+          const barrier = await libraryBarrier(),
+            manifest = structuredClone(store.head.manifest);
+          manifest.personalDisks.find((item) => item.id === disk.id).name =
+            name;
+          await libraryCommit({ manifest, newBlobs: new Map() }, barrier);
+        } catch (error) {
+          libraryError(error);
+        }
+      }),
+    );
+    personal.append(row);
+  }
+  const recipe = await libraryRecipe("starter");
+  if (generation !== libraryRenderGeneration) return;
+  document.querySelector("#share-starter").href =
+    "?recipe=starter&revision=" +
+    encodeURIComponent(recipe.descriptor.revision);
+  const protectedRecipe = await libraryRecipe("library");
+  if (generation !== libraryRenderGeneration) return;
+  document.querySelector("#share-library").href =
+    "?recipe=library&revision=" +
+    encodeURIComponent(protectedRecipe.descriptor.revision);
+  const retained = await registry();
+  if (generation !== libraryRenderGeneration) return;
+  const catalogue = {
+    schema: "triptych-disk-catalogue-v1",
+    images: retained.metadata.images,
+  };
+  for (const entry of catalogue.images) {
+    const slot = {
+      kind: "published",
+      image: publishedImageReference(
+        catalogue,
+        entry.id,
+        entry.revision,
+        retained.url,
+      ),
+    };
+    const row = document.createElement("li");
+    row.dataset.publishedImageId = entry.id;
+    row.dataset.publishedImageRevision = entry.revision;
+    row.textContent =
+      slot.image.name +
+      " · protected · " +
+      entry.id +
+      " @ " +
+      entry.revision.slice(0, 12) +
+      " ";
+    row.append(
+      button("Insert", async () => {
+        try {
+          const { fetchPublishedImage } = await import("./disk-catalogue.js");
+          await insertLibraryBinding(
+            slot,
+            await fetchPublishedImage(slot.image),
+          );
+        } catch (error) {
+          libraryError(error);
+        }
+      }),
+    );
+    published.append(row);
+  }
+  libraryStatus.textContent =
+    "Personal disks: " +
+    store.head.manifest.personalDisks.length +
+    ". Published disks stay protected; ejected disks are retained.";
+}
+document.querySelector("#library-blank").addEventListener("click", async () => {
+  let disk;
+  try {
+    disk = CpmDisk.create_two_mib();
+    await addPersonal(
+      disk.export_source(),
+      document.querySelector("#library-name").value,
+    );
+  } catch (error) {
+    libraryError(error);
+  } finally {
+    disk?.free();
+  }
+});
+document
+  .querySelector("#library-import")
+  .addEventListener("change", async (event) => {
+    try {
+      const file = event.target.files[0];
+      if (!file) return;
+      if (file.size > 8388608) throw new Error("Image is too large.");
+      await addPersonal(
+        new Uint8Array(await file.arrayBuffer()),
+        document.querySelector("#library-name").value,
+      );
+    } catch (error) {
+      libraryError(error);
+    } finally {
+      event.target.value = "";
+    }
+  });
+document.querySelector("#library-copy").addEventListener("click", async () => {
+  try {
+    const image = slots(committed?.snapshot)[currentLibrarySlot()];
+    if (!image) throw new Error("Selected drive is empty.");
+    await addPersonal(
+      new Uint8Array(image.bytes),
+      document.querySelector("#library-name").value,
+    );
+  } catch (error) {
+    libraryError(error);
+  }
+});
+document
+  .querySelector("#library-eject")
+  .addEventListener("click", () =>
+    insertLibraryBinding(null).catch(libraryError),
+  );
+document.querySelector("#library-retry").addEventListener("click", async () => {
+  try {
+    await librarySession.commit();
+    librarySession = undefined;
+    document.querySelector("#library-retry").hidden = true;
+    await renderLibrary();
+  } catch (error) {
+    libraryError(error);
+  }
+});
+document
+  .querySelector("#saved-configuration")
+  .addEventListener("change", (event) => {
+    document.querySelector("#local-configuration-bookmark").href =
+      localConfigurationBookmark(event.target.value);
+  });
+document
+  .querySelector("#activate-configuration")
+  .addEventListener("click", async () => {
+    try {
+      const id = document.querySelector("#saved-configuration").value;
+      if (!store?.head?.manifest.configurations.some((item) => item.id === id))
+        throw new Error(
+          "Device-local configuration not found. Saved data has not changed.",
+        );
+      if (id === store.head.manifest.selectedConfigurationId) return;
+      if (
+        !confirm(
+          "Activate this saved configuration and restart CP/M? Every other configuration and personal disk will be retained.",
+        )
+      )
+        return;
+      const barrier = await libraryBarrier();
+      const manifest = structuredClone(store.head.manifest);
+      manifest.selectedConfigurationId = id;
+      await libraryCommit({ manifest, newBlobs: new Map() }, barrier, true);
+    } catch (error) {
+      libraryError(error);
+    }
+  });
+for (const [id, freshInstance, libraryOnly] of [
+  ["launch-starter", false, false],
+  ["launch-fresh", true, false],
+  ["launch-library", false, true],
+])
+  document.querySelector("#" + id).addEventListener("click", async () => {
+    try {
+      const recipe = await libraryRecipe(libraryOnly ? "library" : "starter");
+      if (
+        !confirm(
+          (libraryOnly
+            ? "Activate protected A/C with empty B/D? "
+            : "Activate protected A/C and personal B/D? ") +
+            "The current configuration and every personal disk will be retained. CP/M will restart.",
+        )
+      )
+        return;
+      const barrier = await libraryBarrier();
+      let candidate;
+      try {
+        candidate = await prepareDiskBoxRecipeLaunch(
+          store.head.manifest,
+          recipe,
+          { freshInstance },
+        );
+      } catch (error) {
+        // No publication has been attempted. Release only this preparation's
+        // session; once libraryCommit begins, its fail-stopped policy applies.
+        workspace.cancel(barrier);
+        libraryBusy = false;
+        throw error;
+      }
+      await libraryCommit(candidate, barrier, true);
+    } catch (error) {
+      libraryError(error);
+    }
+  });
+document
+  .querySelector("#library-backup")
+  .addEventListener("click", async () => {
+    try {
+      const stores = await store.readRawSnapshot();
+      download(
+        await encodeDiskBoxRecovery(stores),
+        "triptych-disk-box-recovery.tdbr",
+      );
+    } catch (error) {
+      libraryError(error);
+    }
+  });
+
+restoreSystemButton.addEventListener("click", async () => {
+  let checked;
+  try {
+    if (!writer?.owned || store?.head?.kind !== "ready" || libraryBusy)
+      throw new Error(
+        "System restoration requires the owning tab and no pending disk-box operation.",
+      );
+    if (
+      !confirm(
+        "Restore this configuration's retained system disk to A? The displaced personal disk stays in your disk box. This does not install a newer system.",
+      )
+    )
+      return;
+    const manifest = structuredClone(store.head.manifest);
+    const configuration = manifest.configurations.find(
+      (item) => item.id === manifest.selectedConfigurationId,
+    );
+    configuration.slots[0] = structuredClone(configuration.systemDisk);
+    const snapshot = await store.snapshotFor(manifest);
+    // Authenticate before any live-media publication. This prepared checker
+    // executes no guest instructions and is disposed before the real swap.
+    checked = await prepareSavedMachineRuntime({
+      snapshot,
+      TriptychCpu,
+      deployment: await runtimeDeployment(manifest),
+      guardSystemDisk: true,
+    });
+    checked.dispose();
+    checked = undefined;
+    if (machine) {
+      await insertLibraryBinding(
+        configuration.slots[0],
+        snapshot.slots[0].bytes,
+        { slot: 0, restoreSystem: true },
+      );
+    } else {
+      libraryBusy = true;
+      await publishInitial({ manifest, newBlobs: new Map() }, store.head.token);
+      activateMachine(startupRuntime);
+      startupRuntime = undefined;
+      startupSystemRecovery = false;
+      connectWorkspace();
+      resumeMachine();
+      libraryBusy = false;
+      libraryReady.checked = false;
+      await renderLibrary();
+      controls();
+    }
+  } catch (error) {
+    checked?.dispose();
+    startupRuntime?.dispose();
+    startupRuntime = undefined;
+    libraryError(error);
+  }
+});
+
+async function publishInitial(candidate, token) {
+  const snapshot = await store.snapshotFor(
+    candidate.manifest,
+    candidate.newBlobs,
+  );
+  const configuration = candidate.manifest.configurations.find(
+    (item) => item.id === candidate.manifest.selectedConfigurationId,
+  );
+  startupRuntime = await prepareSavedMachineRuntime({
+    snapshot,
+    TriptychCpu,
+    writable: !!writer.owned,
+    slotWritable: configuration.slots.map(
+      (slot) => slot?.kind === "personal" && slot.writable,
+    ),
+    deployment: await runtimeDeployment(candidate.manifest),
+    guardSystemDisk: snapshot.schema === "triptych-drive-set-v4",
+  });
+  const publication = await store.authority.commitChange(
+    token,
+    crypto.randomUUID(),
+    candidate.manifest,
+    candidate.newBlobs,
+  );
+  if (publication.status !== "committed")
+    throw new Error("Initial disk-box publication was superseded.");
+  const loaded = await refreshCommitted();
+  requireExactPublication(publication, loaded, snapshot);
+}
+
+function requireExactPublication(publication, loaded, snapshot) {
+  if (
+    publication.status !== "committed" ||
+    loaded.kind !== "ready" ||
+    loaded.token.kind !== publication.token.kind ||
+    loaded.token.revision !== publication.token.revision ||
+    loaded.token.digest !== publication.token.digest ||
+    loaded.receipt?.operationId !== publication.receipt?.operationId ||
+    !sameDiskBoxView(loaded.snapshot, snapshot)
+  )
+    throw new Error(
+      "Disk-box authority changed before activation; reload for recovery.",
+    );
+}
+
+try {
+  const route = new URL(location.href).searchParams;
+  const localConfiguration = localConfigurationSelection(route);
+  writer = await acquireDiskWriter({ name: `${storageName}:disk-writer` });
+  const options = {
+    name: storageName,
+    lease: { isOwner: () => !!writer.owned },
+    onBlocked: (text) => setSaveStatus(text, "error"),
+  };
+  store = await openDiskBoxAppStore(options);
+  let stored = await refreshCommitted();
+  if (
+    localConfiguration &&
+    (stored.kind !== "ready" ||
+      !stored.manifest.configurations.some(
+        (item) => item.id === localConfiguration,
+      ))
+  )
+    throw new Error(
+      "Device-local configuration not found in this browser. No configuration was created or adopted.",
+    );
+  if (
+    stored.kind === "recovery" &&
+    /historical bootstrap required/i.test(stored.error)
+  ) {
+    const historical = await defaultBootstrap();
+    store.close();
+    store = await openDiskBoxAppStore({
+      ...options,
+      legacyBootstrap: historical,
+    });
+    stored = await refreshCommitted();
+  }
+  if (stored.kind === "recovery") throw new Error(stored.error);
+  // Historical snapshots boot from their own bytes immediately. Optional new
+  // deployment/tool/catalogue metadata is loaded only after activation below.
+  await init();
+  if (route.has("recipe")) {
+    requestedRecipe = await resolveDiskLibraryRecipe(await registry(), {
+      id: route.get("recipe"),
+      revision: route.get("revision"),
+    });
+  }
+  if (stored.kind === "unadopted") {
+    if (!writer.owned)
+      throw new Error(
+        "Close the owning tab and reload to adopt or create this disk box.",
+      );
+    let candidate;
+    if (stored.historical.kind === "ready") {
+      document.querySelector("#adopt-disks").hidden = false;
+      setStatus(
+        "Your saved machine is ready for explicit disk-box adoption. Original recovery records will be retained.",
+      );
+      await new Promise((resolve) =>
+        document
+          .querySelector("#adopt-disks")
+          .addEventListener("click", resolve, { once: true }),
+      );
+      document.querySelector("#adopt-disks").hidden = true;
+      candidate = await prepareSavedMachineAdoption(
+        stored.historical.snapshot,
+        { configurationId: crypto.randomUUID(), name: "My saved machine" },
+      );
+    } else {
+      candidate = await prepareDiskBoxRecipeLaunch(
+        emptyDiskBox(),
+        requestedRecipe ?? (await libraryRecipe("starter")),
+      );
+    }
+    await publishInitial(candidate, stored.token);
+  }
+  if (
+    localConfiguration &&
+    localConfiguration !== store.head.manifest.selectedConfigurationId
+  ) {
+    if (!writer.owned)
+      throw new Error(
+        "Close the owning tab before selecting a device-local configuration.",
+      );
+    if (
+      !confirm(
+        "Open this device-local configuration? Every other configuration and personal disk will be retained.",
+      )
+    )
+      throw new Error("Device-local configuration activation cancelled.");
+    const manifest = structuredClone(store.head.manifest);
+    manifest.selectedConfigurationId = localConfiguration;
+    try {
+      await publishInitial({ manifest, newBlobs: new Map() }, store.head.token);
+    } catch (error) {
+      if (error.code === "SYSTEM_DISK_RESTORE_REQUIRED")
+        throw new Error(
+          "The requested local configuration needs its retained system disk restored before it can boot. The selected configuration has not changed.",
+        );
+      throw error;
+    }
+  }
+  startupRuntime ??= await prepareMachine(committed.snapshot);
+  activateMachine(startupRuntime);
+  startupRuntime = undefined;
+  connectWorkspace();
   resumeMachine();
   setSaveStatus(
     writer.owned
@@ -1813,6 +2585,12 @@ try {
   );
   controls();
   terminalElement.focus({ preventScroll: true });
+  void renderLibrary().catch(libraryError);
+  if (new URL(location.href).searchParams.has("recipe")) {
+    document.querySelector("#disk-library").open = true;
+    libraryStatus.textContent =
+      "Launch recipe preview: use Activate tools and games setup to select your existing instance.";
+  }
   try {
     if (!deployment) await loadDeployment();
     const response = await fetch("tool-catalog.json", {
@@ -1827,6 +2605,7 @@ try {
     console.warn("Tool updates unavailable", error);
   } finally {
     controls();
+    if (deployment) void renderLibrary().catch(libraryError);
   }
 } catch (error) {
   try {
@@ -1835,16 +2614,27 @@ try {
     console.warn("Prepared startup cleanup failed", cleanupError);
   }
   startupRuntime = undefined;
-  setStatus(
-    `Recovery required: ${message(error)}. Saved data has not been replaced.`,
-    "error",
-  );
-  setSaveStatus(
-    "Machine could not start. Use Files and recovery to download available saved data.",
-    "error",
-  );
-  await rawRecovery().catch((cause) =>
-    console.warn("Raw recovery unavailable", cause),
-  );
+  if (
+    error.code === "SYSTEM_DISK_RESTORE_REQUIRED" &&
+    store?.head?.kind === "ready"
+  ) {
+    showSystemRecovery();
+    await renderLibrary().catch(libraryError);
+    await rawRecovery().catch((cause) =>
+      console.warn("Raw recovery unavailable", cause),
+    );
+  } else {
+    setStatus(
+      `Recovery required: ${message(error)}. Saved data has not been replaced.`,
+      "error",
+    );
+    setSaveStatus(
+      "Machine could not start. Use Files and recovery to download available saved data.",
+      "error",
+    );
+    await rawRecovery().catch((cause) =>
+      console.warn("Raw recovery unavailable", cause),
+    );
+  }
   controls();
 }

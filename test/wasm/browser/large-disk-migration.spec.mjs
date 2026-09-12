@@ -1,4 +1,9 @@
-import { expect, test } from "./legacy-fixture.mjs";
+import {
+  expect,
+  test,
+  seedLegacyDisk,
+  adoptHistoricalMachine,
+} from "./legacy-fixture.mjs";
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 
@@ -8,7 +13,8 @@ const built = (name) =>
   readFile(new URL(`../../../dist/wasm-browser/${name}`, import.meta.url));
 
 async function boot(page) {
-  await page.goto("/");
+  await seedLegacyDisk(page);
+  await adoptHistoricalMachine(page);
   await expect(page.locator("#status")).toHaveAttribute(
     "data-state",
     "running",
@@ -26,14 +32,16 @@ async function manage(page) {
 
 async function state(page) {
   return page.evaluate(async () => {
-    const { openSavedMachineStore } = await import("/saved-machine-store.js");
+    const { openDiskBoxAppStore } = await import("/disk-box-app-store.js");
     const { CpmDisk } = await import("/triptych_host_wasm.js");
     const hash = async (bytes) =>
       Array.from(
         new Uint8Array(await crypto.subtle.digest("SHA-256", bytes)),
         (byte) => byte.toString(16).padStart(2, "0"),
       ).join("");
-    const store = await openSavedMachineStore();
+    const store = await openDiskBoxAppStore({
+      lease: { isOwner: () => false },
+    });
     let disk;
     try {
       const head = await store.load();
@@ -270,7 +278,7 @@ test("quota failure atomically preserves legacy head and backup, then retries on
     IDBObjectStore.prototype.add = function (value, ...rest) {
       if (
         globalThis.failMigration &&
-        this.name === "drive-set-state-v4" &&
+        this.name === "disk-box-state-v1" &&
         value?.key?.startsWith("backup:")
       ) {
         globalThis.failMigration = false;

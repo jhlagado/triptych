@@ -1,10 +1,54 @@
 import { test, expect } from "@playwright/test";
+import { adoptHistoricalMachine, inspectDiskBox } from "./legacy-fixture.mjs";
 import { readFile, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { decodeSavedMachineArchive } from "../../../crates/triptych-host-wasm/web/saved-machine.js";
 
 async function boot(page) {
-  await page.goto("/");
+  // This suite preserves the historical writable A/B -> configurable-machine
+  // migration, independently of the new protected A/C public default suite.
+  await page.route("**/two-mib-historical-seed", (route) =>
+    route.fulfill({ contentType: "text/html", body: "<!doctype html>" }),
+  );
+  await page.goto("/two-mib-historical-seed");
+  await page.evaluate(async () => {
+    const { openDriveSetStore } = await import("/drive-set-store.js");
+    const read = async (name) => {
+      const response = await fetch(`/${name}`);
+      if (!response.ok)
+        throw new Error(`Historical seed asset unavailable: ${name}`);
+      return new Uint8Array(await response.arrayBuffer());
+    };
+    const store = await openDriveSetStore();
+    try {
+      const current = await store.load();
+      if (current.kind !== "empty")
+        throw new Error("Historical seed requires an empty database");
+      await store.saveCheckpoint(
+        { kind: "empty" },
+        {
+          bootstrap: {
+            profile: "triptych-cpu-v0.1-8m-ab",
+            bytes: await read("bootstrap-triptych-cpm-8m-ab-v1.bin"),
+          },
+          drives: {
+            A: {
+              name: "drive-a-system.img",
+              bytes: await read("drive-a-system.img"),
+            },
+            B: {
+              name: "drive-b-games.img",
+              bytes: await read("drive-b-games.img"),
+            },
+          },
+        },
+      );
+    } finally {
+      store.close();
+    }
+  });
+  await page.unroute("**/two-mib-historical-seed");
+  await adoptHistoricalMachine(page);
   await expect(page.locator("#status")).toHaveAttribute(
     "data-state",
     "running",
@@ -32,8 +76,10 @@ async function configure(page, count) {
 }
 async function metadata(page) {
   return page.evaluate(async () => {
-    const { openSavedMachineStore } = await import("/saved-machine-store.js");
-    const store = await openSavedMachineStore();
+    const { openDiskBoxAppStore } = await import("/disk-box-app-store.js");
+    const store = await openDiskBoxAppStore({
+      lease: { isOwner: () => false },
+    });
     try {
       const state = await store.load();
       if (state.kind !== "ready") throw new Error(JSON.stringify(state));
@@ -55,9 +101,11 @@ async function metadata(page) {
 
 async function gamesFiles(page) {
   return page.evaluate(async () => {
-    const { openSavedMachineStore } = await import("/saved-machine-store.js");
+    const { openDiskBoxAppStore } = await import("/disk-box-app-store.js");
     const { CpmDisk } = await import("/triptych_host_wasm.js");
-    const store = await openSavedMachineStore();
+    const store = await openDiskBoxAppStore({
+      lease: { isOwner: () => false },
+    });
     try {
       const { snapshot } = await store.load();
       const image = snapshot.slots ? snapshot.slots[1] : snapshot.drives.B;
@@ -81,7 +129,7 @@ async function gamesFiles(page) {
   });
 }
 
-test("public configuration preserves games, runs sparse P and restores removed media from an archive", async ({
+test("adopted historical A/B configuration preserves games, runs sparse P and restores removed media from an archive", async ({
   page,
 }, info) => {
   page.on("dialog", (dialog) => dialog.accept());
@@ -245,14 +293,14 @@ test("all sixteen independent images survive checkpoint, archive and rejected re
   const blobCount = () =>
     page.evaluate(async () => {
       const db = await new Promise((resolve, reject) => {
-        const request = indexedDB.open("triptych-cpu", 4);
+        const request = indexedDB.open("triptych-cpu");
         request.onsuccess = () => resolve(request.result);
         request.onerror = () => reject(request.error);
       });
       try {
         return await new Promise((resolve, reject) => {
-          const transaction = db.transaction("drive-set-blobs-v4", "readonly");
-          const request = transaction.objectStore("drive-set-blobs-v4").count();
+          const transaction = db.transaction("disk-box-blobs-v1", "readonly");
+          const request = transaction.objectStore("disk-box-blobs-v1").count();
           transaction.oncomplete = () => resolve(request.result);
           transaction.onabort = () => reject(transaction.error);
         });
@@ -267,6 +315,7 @@ test("all sixteen independent images survive checkpoint, archive and rejected re
   expect(await blobCount()).toBe(blobsBefore);
   await page.locator("#cancel-management").click();
   await page.locator("#close-files").click();
+  await expect(page.locator("#files-dialog")).toBeHidden();
   const pending = page.waitForEvent("download");
   const archiveStarted = Date.now();
   await page.locator("#download-set").click();
@@ -295,7 +344,7 @@ test("all sixteen independent images survive checkpoint, archive and rejected re
     const add = IDBObjectStore.prototype.add;
     IDBObjectStore.prototype.add = function (value, ...args) {
       if (
-        this.name === "drive-set-state-v4" &&
+        this.name === "disk-box-state-v1" &&
         value?.key?.startsWith("backup:")
       ) {
         IDBObjectStore.prototype.add = add;
@@ -427,11 +476,13 @@ test("ejection retains the configured count, capacity and complete restorable me
   await expect(page.locator("#terminal")).toContainText("EJECTED-B-RETAINED");
 });
 
-test("a genuine v3 saved head starts without replacement assets and promotes without changing historical records", async ({
+test("a genuine v3 saved head adopts without replacement assets or changing historical records", async ({
   page,
 }) => {
-  await page.route("**/app.js", (route) => route.abort());
-  await page.goto("/");
+  await page.route("**/v3-historical-seed", (route) =>
+    route.fulfill({ contentType: "text/html", body: "<!doctype html>" }),
+  );
+  await page.goto("/v3-historical-seed");
   await page.evaluate(async () => {
     const { openDriveSetStore } = await import("/drive-set-store.js");
     const [bootstrap, disk] = await Promise.all(
@@ -494,14 +545,21 @@ test("a genuine v3 saved head starts without replacement assets and promotes wit
       return route.abort();
     },
   );
-  await boot(page);
-  expect((await metadata(page)).token.kind).toBe("historical");
+  await page.goto("/");
+  await expect(page.locator("#adopt-disks")).toBeVisible();
+  expect((await inspectDiskBox(page)).kind).toBe("unadopted");
   expect(await historical()).toEqual(before);
+  await adoptHistoricalMachine(page, { navigate: false });
+  const adopted = await metadata(page);
+  expect(adopted.token.kind).toBe("disk-box");
+  expect(adopted.profile).toBe("legacy-e400");
   await manage(page);
   const promoted = await metadata(page);
-  expect(promoted.token.kind).toBe("v4");
-  expect(promoted.backups).toHaveLength(1);
-  expect(promoted.backups[0].operationId).toMatch(/^checkpoint:/);
+  expect(promoted.token.kind).toBe("disk-box");
+  // DB5 adoption retains the original historical authority in place, rather
+  // than manufacturing the old v4 checkpoint-promotion backup. Subsequent
+  // ordinary checkpoints must not change that historical recovery evidence.
+  expect(promoted.backups).toEqual(adopted.backups);
   expect(await historical()).toEqual(before);
   expect(freshRequests).toBe(0);
 });

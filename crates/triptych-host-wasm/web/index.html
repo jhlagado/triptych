@@ -50,13 +50,93 @@
         </button>
       </section>
       <div id="raw-recovery" class="controls"></div>
+      <button id="adopt-disks" type="button" hidden>
+        Adopt my saved machine into the disk box
+      </button>
+      <details id="disk-library">
+        <summary>Disk box and published library</summary>
+        <p id="library-status" role="status">
+          Published disks are protected. Personal disks remain here after
+          ejection.
+        </p>
+        <p>
+          Live changes require the guest to close files and flush at a
+          disk-change prompt. After insertion, the guest must reset that drive's
+          login state (BDOS 37) and reopen files. Other programs should exit to
+          CP/M first.
+        </p>
+        <label
+          ><input id="library-ready" type="checkbox" /> Guest has closed files
+          and flushed; it is ready for a disk change</label
+        >
+        <div class="library-controls">
+          <label
+            >Drive
+            <select id="library-slot" aria-label="Library drive"></select
+          ></label>
+          <label
+            >Disk name <input id="library-name" value="My disk" maxlength="255"
+          /></label>
+          <button id="library-blank" type="button">
+            Create blank personal disk
+          </button>
+          <label
+            >Import personal image
+            <input id="library-import" type="file" accept=".img,.dsk,.bin"
+          /></label>
+          <button id="library-copy" type="button">
+            Make writable copy of inserted disk
+          </button>
+          <button id="library-eject" type="button">Eject selected drive</button>
+          <button id="restore-system-disk" type="button" hidden>
+            Restore system disk to A
+          </button>
+          <button id="library-retry" type="button" hidden>
+            Retry pending disk change
+          </button>
+        </div>
+        <ul id="personal-disk-list" aria-label="Personal disks"></ul>
+        <ul id="published-disk-list" aria-label="Published disks"></ul>
+        <div class="library-controls">
+          <label
+            >Saved configuration
+            <select id="saved-configuration"></select>
+          </label>
+          <button id="activate-configuration" type="button">
+            Activate saved configuration
+          </button>
+          <a id="local-configuration-bookmark"
+            >Bookmark on this device only (not shareable)</a
+          >
+        </div>
+        <div class="library-controls">
+          <button id="launch-starter" type="button">
+            Activate tools and games setup
+          </button>
+          <button id="launch-fresh" type="button">
+            Create independent tools and games setup
+          </button>
+          <a id="share-starter">Share tools and games setup</a>
+          <button id="launch-library" type="button">
+            Activate protected library only
+          </button>
+          <a id="share-library"
+            >Share protected library only (no personal disks)</a
+          >
+          <button id="library-backup" type="button">
+            Download complete disk-box recovery
+          </button>
+        </div>
+      </details>
 
       <details id="supplied-disks">
-        <summary>Supplied disks: A: tools · B: Caverns and Hyperdrive</summary>
+        <summary>Published starter disks and older A/B downloads</summary>
         <p id="machine-choice"></p>
         <p>
-          New machines start with both disks. Type <code>B:</code>, then
-          <code>CAVERNS</code> or <code>HYPERDRV</code>. Type <code>A:</code>
+          New disk boxes use protected tools in A and games in C, with personal
+          work in B and saves in D. Type <code>D:</code>, then
+          <code>C:CAVERNS</code> or <code>C:HYPERDRV</code> to keep game saves
+          on D. Type <code>A:</code>
           to return to ATOM, NUC and EDIT.
         </p>
         <p>

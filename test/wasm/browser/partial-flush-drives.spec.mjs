@@ -1,4 +1,4 @@
-import { expect, test } from "./legacy-fixture.mjs";
+import { expect, test, adoptHistoricalMachine } from "./legacy-fixture.mjs";
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
@@ -13,15 +13,19 @@ const image = (byte = 0) => {
   return result;
 };
 
-async function saved(page) {
-  return page.evaluate(async () => {
-    const { openSavedMachineStore } = await import("/saved-machine-store.js");
+async function saved(page, historical = false) {
+  return page.evaluate(async (historical) => {
+    const open = historical
+      ? (await import("/saved-machine-store.js")).openSavedMachineStore
+      : (await import("/disk-box-app-store.js")).openDiskBoxAppStore;
     const digest = async (bytes) =>
       Array.from(
         new Uint8Array(await crypto.subtle.digest("SHA-256", bytes)),
         (value) => value.toString(16).padStart(2, "0"),
       ).join("");
-    const store = await openSavedMachineStore();
+    const store = await open(
+      historical ? undefined : { lease: { isOwner: () => false } },
+    );
     try {
       const value = await store.load();
       if (value.kind !== "ready") throw new Error(JSON.stringify(value));
@@ -36,7 +40,7 @@ async function saved(page) {
     } finally {
       store.close();
     }
-  });
+  }, historical);
 }
 
 for (const selected of [0, 1]) {
@@ -84,7 +88,7 @@ for (const selected of [0, 1]) {
         store.close();
       }
     }, Array.from(bootstrap));
-    const initial = await saved(page);
+    const initial = await saved(page, true);
     expect(initial.A).toBe(hash(image()));
     expect(initial.B).toBe(hash(image()));
 
@@ -132,7 +136,7 @@ for (const selected of [0, 1]) {
       checkpoint: expected.map(hash),
     });
 
-    await page.goto("/");
+    await adoptHistoricalMachine(page);
     await expect(page.locator("#terminal")).toHaveText("F");
     await expect
       .poll(async () => (await saved(page))[drive])

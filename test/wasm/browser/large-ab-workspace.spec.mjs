@@ -1,4 +1,9 @@
-import { expect, test } from "./legacy-fixture.mjs";
+import {
+  expect,
+  test,
+  seedLegacyDisk,
+  adoptHistoricalMachine,
+} from "./legacy-fixture.mjs";
 import { readFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { decodeDriveSet } from "../../../crates/triptych-host-wasm/web/drive-set.js";
@@ -7,14 +12,16 @@ const digest = (bytes) => createHash("sha256").update(bytes).digest("hex");
 
 async function state(page) {
   return page.evaluate(async () => {
-    const { openSavedMachineStore } = await import("/saved-machine-store.js");
+    const { openDiskBoxAppStore } = await import("/disk-box-app-store.js");
     const { CpmDisk } = await import("/triptych_host_wasm.js");
     const hash = async (bytes) =>
       Array.from(
         new Uint8Array(await crypto.subtle.digest("SHA-256", bytes)),
         (n) => n.toString(16).padStart(2, "0"),
       ).join("");
-    const store = await openSavedMachineStore();
+    const store = await openDiskBoxAppStore({
+      lease: { isOwner: () => false },
+    });
     try {
       const head = await store.load();
       if (head.kind !== "ready") throw new Error(head.error ?? head.kind);
@@ -96,7 +103,8 @@ test("A/B migration, B tool workflows, complete export and removal/restore prese
 }, info) => {
   test.setTimeout(300000);
   page.on("dialog", (dialog) => dialog.accept());
-  await page.goto("/");
+  await seedLegacyDisk(page);
+  await adoptHistoricalMachine(page);
   await prompt(page);
   await manage(page);
   const legacy = await state(page);
@@ -121,9 +129,11 @@ test("A/B migration, B tool workflows, complete export and removal/restore prese
   // Import released example source onto B, then install each verified tool
   // through the selected-drive UI. These are file copies, not OS adaptation.
   const sources = await page.evaluate(async () => {
-    const { openSavedMachineStore } = await import("/saved-machine-store.js");
+    const { openDiskBoxAppStore } = await import("/disk-box-app-store.js");
     const { CpmDisk } = await import("/triptych_host_wasm.js");
-    const store = await openSavedMachineStore();
+    const store = await openDiskBoxAppStore({
+      lease: { isOwner: () => false },
+    });
     const head = await store.load();
     const disk = new CpmDisk(head.snapshot.drives.A.bytes);
     try {
@@ -211,6 +221,7 @@ test("A/B migration, B tool workflows, complete export and removal/restore prese
   expect(worked.drives.B.files["HELLO.COM"]).toBeDefined();
   await page.locator("#cancel-management").click();
   await page.locator("#close-files").click();
+  await expect(page.locator("#files-dialog")).not.toBeVisible();
 
   const pending = page.waitForEvent("download");
   await page.locator("#download-set").click();
@@ -264,6 +275,23 @@ test("A/B migration, B tool workflows, complete export and removal/restore prese
 
   // When the emulator itself cannot load, both saved images and bootstrap
   // remain downloadable as the exact portable archive, without a running CPU.
+  const recoveryIds = await page.evaluate(async () => {
+    const { openDiskBoxStore } = await import("/disk-box-store.js");
+    const store = await openDiskBoxStore({ lease: { isOwner: () => false } });
+    try {
+      const loaded = await store.load();
+      const configuration = loaded.manifest.configurations.find(
+        (item) => item.id === loaded.manifest.selectedConfigurationId,
+      );
+      return configuration.slots.map((slot) => {
+        if (slot?.kind !== "personal")
+          throw new Error("expected retained personal disk");
+        return slot.diskId;
+      });
+    } finally {
+      store.close();
+    }
+  });
   await page.route("**/*.wasm", (route) => route.abort());
   await page.reload();
   await expect(page.locator("#status")).toHaveAttribute("data-state", "error");
@@ -276,7 +304,7 @@ test("A/B migration, B tool workflows, complete export and removal/restore prese
   for (const name of ["A", "B"]) {
     const pendingRaw = page.waitForEvent("download");
     await page
-      .getByRole("button", { name: `Download raw v4 ${name}`, exact: true })
+      .locator(`[data-recovery-disk-id="${recoveryIds[name === "A" ? 0 : 1]}"]`)
       .click();
     const rawPath = info.outputPath(`raw-${name}.img`);
     await (await pendingRaw).saveAs(rawPath);

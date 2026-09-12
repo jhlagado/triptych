@@ -2,8 +2,10 @@
 
 Date: 2026-09-12
 
-Status: priority WASM roadmap; live-swap foundation implemented and tested
-locally. Library storage, launch UI and public release remain pending.
+Status: library storage, protected mounts, live swaps and versioned launch UI
+have focused local proofs. Full release qualification and public deployment
+remain pending. The [release procedure](../disk-library-releases.md) covers
+candidate builds and permanent retention of published images.
 
 This restores the disk-manager proposal discussed in Caverns on 8 September,
 approximately 23:15–23:45 Melbourne time, and incorporates the 12 September
@@ -139,9 +141,14 @@ this evidence from the remaining release requirements. The selected
 [library contract](../specifications/disk-library-v1.md) defines disk ownership,
 publication order and adoption of historical storage.
 
-Next, implement the disk-box authority and its independent recovery reader,
-alongside the immutable catalogue and protected library mounts. Preserve legacy
-machines, backups and raw recovery exports throughout. A-system restoration,
-launch-instance reuse and browser controls follow those storage boundaries.
-Completion requires the public-site workflow; local host proofs do not establish
-ESP32 hardware behaviour.
+The disk-box authority, raw recovery downloads, protected catalogue mounts,
+A-system restoration and launch-instance reuse now have local tests. Browser
+tests cover game saves, failed preparation, an image outside the starter recipes,
+and an old shared link after a games-library update. The update test changes the
+games image while retaining the same operating-system bytes.
+
+The three local-configuration bookmark browser tests pass. Browser release
+builds now reject empty pins and candidate refresh before compilation. Next,
+qualify the complete check sequence, pin a clean library package and verify the
+final release on GitHub Pages. Completion requires the public-site workflow;
+local host proofs do not establish ESP32 hardware behaviour.

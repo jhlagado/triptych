@@ -17,9 +17,11 @@ const manifest = JSON.parse(
 assert.equal(manifest.schema, "triptych-browser-deployment-v1");
 if (Object.hasOwn(manifest, "storageSchema"))
   assert.ok(
-    ["triptych-drive-set-v3", "triptych-drive-set-v4"].includes(
-      manifest.storageSchema,
-    ),
+    [
+      "triptych-drive-set-v3",
+      "triptych-drive-set-v4",
+      "triptych-disk-box-v1",
+    ].includes(manifest.storageSchema),
     "unsupported declared storage schema",
   );
 assert.equal(manifest.distribution.schema, "triptych-cpm-distribution-v1");
@@ -98,7 +100,11 @@ for (const name of [
 ]) {
   assert.ok(names.has(name), `missing required asset ${name}`);
 }
-if (manifest.storageSchema === "triptych-drive-set-v4") {
+if (
+  ["triptych-drive-set-v4", "triptych-disk-box-v1"].includes(
+    manifest.storageSchema,
+  )
+) {
   for (const name of [
     "saved-machine.js",
     "saved-machine-store.js",
@@ -109,6 +115,23 @@ if (manifest.storageSchema === "triptych-drive-set-v4") {
     "two-mib-system.js",
   ])
     assert.ok(names.has(name), `missing saved-machine asset ${name}`);
+}
+if (manifest.storageSchema === "triptych-disk-box-v1") {
+  for (const name of [
+    "disk-box.js",
+    "disk-box-store.js",
+    "disk-box-adoption.js",
+    "disk-box-runtime.js",
+    "disk-box-app-store.js",
+    "disk-box-media-change.js",
+    "disk-box-recovery.js",
+    "disk-catalogue.js",
+    "disk-catalogue.json",
+    "disk-library-registry.js",
+    "disk-library-registry.json",
+    "disk-launch.js",
+  ])
+    assert.ok(names.has(name), `missing disk-box asset ${name}`);
 }
 const disk = await readFile(join(directory, "cpm22.img"));
 assert.equal(disk.length, manifest.distribution.disk.bytes);
