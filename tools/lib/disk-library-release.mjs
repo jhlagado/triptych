@@ -241,23 +241,33 @@ export function captureDiskLibraryRelease({
     geometry: "triptych-cpm-2m-v1",
     seed: { asset: seedAsset, systemProfile: null },
   });
-  for (const libraryOnly of [false, true]) {
-    const template = {
-      id: libraryOnly ? "library" : "starter",
-      name: libraryOnly
-        ? "Protected library only"
-        : "Tools, games and personal disks",
+  const templates = [false, true].map((libraryOnly) => ({
+    id: libraryOnly ? "library" : "starter",
+    name: libraryOnly
+      ? "Protected library only"
+      : "Tools, games and personal disks",
+    configuredCount: 4,
+    admission: admissionId,
+    bootstrap,
+    slots: [
+      systemImage,
+      libraryOnly ? null : role("work"),
+      gamesImage,
+      libraryOnly ? null : role("saves"),
+    ],
+    provenance: provenanceAsset,
+  }));
+  if (catalogue.images.some((image) => image.id === "colossal-cave-350"))
+    templates.push({
+      id: "colossal-cave-350",
+      name: "Colossal Cave with personal save disk",
       configuredCount: 4,
       admission: admissionId,
       bootstrap,
-      slots: [
-        systemImage,
-        libraryOnly ? null : role("work"),
-        gamesImage,
-        libraryOnly ? null : role("saves"),
-      ],
+      slots: [systemImage, role("work"), published("colossal-cave-350"), null],
       provenance: provenanceAsset,
-    };
+    });
+  for (const template of templates) {
     // The revision covers the entire origin-independent template, excluding
     // only revision itself. Object keys sort recursively; array order is kept.
     const revision = hash(Buffer.from(canonical(template)));

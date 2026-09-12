@@ -83,6 +83,40 @@ function fixture(version = 1) {
 const recipe = (captured, id) =>
   captured.manifest.recipes.find((row) => row.id === id);
 
+test("Colossal Cave recipe uses matching A, private B and protected data C without replacing starter games", () => {
+  const input = fixture();
+  const catalogue = JSON.parse(input.catalogueBytes);
+  const provenance = JSON.parse(input.provenanceBytes);
+  const bytes = new Uint8Array(2097152);
+  bytes[16384] = 99;
+  const sha256 = hash(bytes);
+  const image = {
+    ...catalogue.images[1],
+    id: "colossal-cave-350",
+    name: "Colossal Cave",
+    revision: sha256,
+    sha256,
+    asset: `library-colossal-cave-350-${sha256}.img`,
+  };
+  catalogue.images.push(image);
+  provenance.images.push({ asset: image.asset, bytes: bytes.length, sha256 });
+  input.assets.set(image.asset, bytes);
+  input.catalogueBytes = json(catalogue);
+  input.provenanceBytes = json(provenance);
+  const captured = capture(input);
+  const adventure = recipe(captured, "colossal-cave-350");
+  assert.equal(adventure.configuredCount, 4);
+  assert.deepEqual(adventure.slots, [
+    recipe(captured, "starter").slots[0],
+    recipe(captured, "starter").slots[1],
+    { kind: "published", image: { id: image.id, revision: sha256 } },
+    null,
+  ]);
+  assert.equal(recipe(captured, "starter").slots[2].image.id, "games-2m");
+  assert(captured.manifest.defaults.some((row) => row.id === image.id));
+  assert.deepEqual(captured.assets.get(image.asset), bytes);
+});
+
 test("captures exact publication evidence and origin-independent starter/library templates", () => {
   const input = fixture(),
     result = capture(input);

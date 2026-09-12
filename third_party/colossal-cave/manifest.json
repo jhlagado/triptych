@@ -1,0 +1,51 @@
+{
+  "schema": "triptych-colossal-cave-inputs-v1",
+  "id": "colossal-cave-350",
+  "name": "Colossal Cave Adventure (350 points)",
+  "imageLabel": "r1",
+  "source": "https://www.ifarchive.org/if-archive/games/cpm/Advent_CPM.zip",
+  "archiveListing": "https://www.ifarchive.org/indexes/if-archive/games/cpm/",
+  "foundation": "https://iftechfoundation.org/",
+  "archiveSha256": "9a9feb501c15c728f1e4e88eda6de325f1270052a205c6f27dc86f3c8d4d492a",
+  "copyright": "COPYRIGHT (C) 1977 SMALL SYSTEM SERVICES, INC. URBANA ILL. ALL RIGHTS RESERVED",
+  "license": "No licence supplied in the source archive; original copyright notice retained. Distribution authorised by John Hardy on 2026-09-12, with further rights investigation deferred; IFTF distribution rights not independently verified.",
+  "distributionDecision": {
+    "date": "2026-09-12",
+    "authorisedBy": "John Hardy",
+    "decision": "Proceed with distribution from the IF Archive source, retaining attribution and links; investigate rights further later.",
+    "rightsInvestigation": "deferred",
+    "iftfRightsIndependentlyVerified": false
+  },
+  "testedProfile": "triptych-cpu-v0.1-2m-n04",
+  "image": {
+    "file": "colossal-cave-350-r1.img",
+    "geometry": "triptych-cpm-2m-v1",
+    "byteLength": 2097152,
+    "sha256": "5dc331b1be3609cb72bb728d3f64b811d9aea95b8357c9cb3224d150596bad33",
+    "systemProfile": null,
+    "bootable": false
+  },
+  "files": [
+    {
+      "source": "Adventur.com",
+      "name": "ADVENTUR.COM",
+      "bytes": 45824,
+      "sha256": "10cdb0b98c9c34bf75ccbf81416afd345e9f5a03c5a829361440cd7ade34cce2"
+    },
+    {
+      "source": "Phrogz.din",
+      "name": "PHROGZ.DIN",
+      "bytes": 113792,
+      "sha256": "1608f09301e81c3a092ce91a534828f4abede339a3ebbc30de9297c65f5b6e7f"
+    }
+  ],
+  "transformations": "Uppercase CP/M filenames only. Both binaries are unchanged, with no padding or text conversion. The disk reserved system area is zero-filled.",
+  "saveWorkflow": {
+    "currentDrive": "C",
+    "launch": "ADVENTUR",
+    "suspend": ["SAVE", "YES"],
+    "protectedSoftware": ["SAVE 224 B:SAVED.COM", "B:SAVED"],
+    "writableCopy": ["SAVE 224 SAVED.COM", "SAVED"],
+    "qualificationScope": "224 pages tested only with triptych-cpu-v0.1-2m-n04. Keep C current so PHROGZ.DIN remains available. Guest proof does not establish browser persistence or hosted qualification."
+  }
+}

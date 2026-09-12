@@ -503,6 +503,178 @@ try {
     "Protected A ejection blocks reset; explicit exact-system restoration resumes fresh commands with zero personal blobs.",
   );
 
+  const caveId = "colossal-cave-350";
+  const caveHash =
+    "5dc331b1be3609cb72bb728d3f64b811d9aea95b8357c9cb3224d150596bad33";
+  const personal = (value, id) =>
+    value.manifest.personalDisks.find((row) => row.id === id);
+  async function mountCave(label) {
+    const page = await pageFor(label);
+    await boot(page);
+    await library(page);
+    const before = await state(page),
+      config = configuration(before);
+    assert.equal(config.configuredCount, 4);
+    assert.equal(config.bootstrap.profile, "triptych-cpu-v0.1-2m-n04");
+    const row = page.locator(
+      `[data-published-image-id="${caveId}"][data-published-image-revision="${caveHash}"]`,
+    );
+    await expect(row).toHaveCount(1);
+    await expect(row).toContainText("protected");
+    await page.locator("#library-slot").selectOption("2");
+    await page.locator("#library-ready").check();
+    await row.getByRole("button", { name: "Insert", exact: true }).click();
+    await expect
+      .poll(async () => configuration(await state(page)).slots[2]?.image?.id)
+      .toBe(caveId);
+    const mounted = await state(page),
+      image = configuration(mounted).slots[2].image;
+    assert.equal(image.revision, caveHash);
+    assert.equal(image.sha256, caveHash);
+    assert.equal(image.systemProfile, null);
+    assert.equal(image.byteLength, 2097152);
+    assert.deepEqual(
+      mounted.manifest.personalDisks,
+      before.manifest.personalDisks,
+    );
+    assert(!mounted.blobs.includes(caveHash));
+    for (const index of [0, 1, 3])
+      assert.deepEqual(
+        configuration(mounted).slots[index],
+        config.slots[index],
+      );
+    const imageUrl = new URL(image.url);
+    assert.equal(imageUrl.origin, base.origin);
+    assert(imageUrl.pathname.startsWith(base.pathname));
+    const imageAsset = imageUrl.pathname.slice(base.pathname.length);
+    assert.equal(assets.get(imageAsset)?.sha256, caveHash);
+    await drainResponses(page);
+    assert(
+      observed.find((entry) => entry.label === label).seen.has(imageAsset),
+      "actual hosted Colossal Cave image body was not verified",
+    );
+    const imageBytes = await readFile(join(directory, imageAsset));
+    assert(
+      imageBytes.subarray(0, 16384).every((byte) => byte === 0),
+      "Colossal Cave must remain a nonbootable data image",
+    );
+    return { page, mounted, imageAsset };
+  }
+  async function caveSave(page, destination) {
+    await command(page, "C:", "C>");
+    await command(page, "ADVENTUR", "WOULD YOU LIKE INSTRUCTIONS?");
+    await command(page, "NO", "DOWN A GULLY.");
+    await command(page, "ENTER", "THERE IS A BOTTLE OF WATER HERE.");
+    await command(page, "TAKE KEYS", "OK");
+    await command(page, "INVENTORY", "SET OF KEYS");
+    await command(page, "SAVE", "IS THIS ACCEPTABLE?");
+    await command(page, "YES", "C>");
+    // This 224-page memory-image save is qualified only for the N4 profile.
+    await command(page, `SAVE 224 ${destination}`, "C>");
+    await page.locator("#files").click();
+    await page.locator("#saved-and-exited").check();
+    await page.locator("#begin-management").click();
+    await expect(page.locator("#files-status")).toContainText("CPU paused.");
+    await expect(page.locator("#cancel-management")).toBeEnabled();
+    await page.locator("#close-files").click();
+    await expect(page.locator("#reset")).toBeEnabled();
+  }
+  async function caveRestore(page, executable) {
+    await boot(page);
+    await command(page, "C:", "C>");
+    await command(page, executable, "THERE IS A BOTTLE OF WATER HERE.");
+    await command(page, "INVENTORY", "SET OF KEYS");
+    await command(page, "QUIT", "DO YOU REALLY WANT TO QUIT NOW?");
+    await command(page, "YES", "C>");
+  }
+  async function downloadedC(page) {
+    await page.locator("#files").click();
+    await page.locator("#file-drive").selectOption("C");
+    await page.locator("#close-files").click();
+    const downloading = page.waitForEvent("download");
+    await page.locator("#download").click();
+    return readFile(await (await downloading).path());
+  }
+  const cave = await mountCave("colossal-cave-protected");
+  const caveConfig = configuration(cave.mounted);
+  await caveSave(cave.page, "B:SAVED.COM");
+  const caveSaved = await state(cave.page);
+  assert.notEqual(
+    personal(caveSaved, caveConfig.slots[1].diskId).content.sha256,
+    personal(cave.mounted, caveConfig.slots[1].diskId).content.sha256,
+  );
+  assert.deepEqual(
+    personal(caveSaved, caveConfig.slots[3].diskId),
+    personal(cave.mounted, caveConfig.slots[3].diskId),
+  );
+  assert.deepEqual(configuration(caveSaved), caveConfig);
+  protectedDisksUncopied(caveSaved);
+  await caveRestore(cave.page, "B:SAVED");
+  assert.deepEqual((await state(cave.page)).manifest, caveSaved.manifest);
+  assert.equal(hash(await downloadedC(cave.page)), caveHash);
+  await command(cave.page, "SAVE 1 DENIED.COM", "Bdos Err On C: Bad Sector");
+  assert.deepEqual(await state(cave.page), caveSaved);
+  assert.equal(hash(await downloadedC(cave.page)), caveHash);
+  console.log(
+    "Hosted Colossal Cave: protected C plays, saves executable on B, restores keys after reload, quits, and rejects a C write without changing its image.",
+  );
+
+  const caveCopy = await mountCave("colossal-cave-personal-copy");
+  const copyOriginal = configuration(caveCopy.mounted);
+  await caveCopy.page
+    .locator("#library-name")
+    .fill("Hosted Colossal Cave personal copy");
+  await caveCopy.page.locator("#library-ready").check();
+  await caveCopy.page.locator("#library-copy").click();
+  await expect
+    .poll(
+      async () => (await state(caveCopy.page)).manifest.personalDisks.length,
+    )
+    .toBe(caveCopy.mounted.manifest.personalDisks.length + 1);
+  const copied = await state(caveCopy.page),
+    copiedDisk = copied.manifest.personalDisks.find(
+      (row) => row.name === "Hosted Colossal Cave personal copy",
+    );
+  assert.equal(copiedDisk.content.sha256, caveHash);
+  assert(
+    ![copyOriginal.slots[1].diskId, copyOriginal.slots[3].diskId].includes(
+      copiedDisk.id,
+    ),
+  );
+  await caveCopy.page.locator("#library-ready").check();
+  await caveCopy.page
+    .locator(`[data-disk-id="${copiedDisk.id}"]`)
+    .getByRole("button", { name: "Insert", exact: true })
+    .click();
+  await expect
+    .poll(
+      async () => configuration(await state(caveCopy.page)).slots[2]?.diskId,
+    )
+    .toBe(copiedDisk.id);
+  assert.equal(
+    configuration(await state(caveCopy.page)).slots[2].writable,
+    true,
+  );
+  await caveSave(caveCopy.page, "SAVED.COM");
+  const copySaved = await state(caveCopy.page);
+  assert.notEqual(personal(copySaved, copiedDisk.id).content.sha256, caveHash);
+  for (const index of [1, 3])
+    assert.deepEqual(
+      personal(copySaved, copyOriginal.slots[index].diskId),
+      personal(caveCopy.mounted, copyOriginal.slots[index].diskId),
+    );
+  assert.deepEqual(configuration(copySaved).slots[0], copyOriginal.slots[0]);
+  await caveRestore(caveCopy.page, "SAVED");
+  assert.deepEqual((await state(caveCopy.page)).manifest, copySaved.manifest);
+  assert.equal(
+    hash(await downloadedC(caveCopy.page)),
+    personal(copySaved, copiedDisk.id).content.sha256,
+  );
+  assert.equal(hash(await fetched(caveCopy.imageAsset, 2097152)), caveHash);
+  console.log(
+    "Hosted Colossal Cave: explicit personal C copy saves/restores independently; original hosted image and private B/D remain unchanged.",
+  );
+
   const mobile = await pageFor("mobile", true);
   await boot(mobile);
   const mobileScreen = await mobile.locator("#terminal").textContent();

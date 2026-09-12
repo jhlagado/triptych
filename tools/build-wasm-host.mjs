@@ -16,6 +16,8 @@ import { pathToFileURL } from "node:url";
 
 import { buildCpmDistribution } from "./lib/cpm-distribution.mjs";
 import { buildBrowserToolCatalog } from "./lib/browser-tool-catalog.mjs";
+import { buildColossalCaveImage } from "./build-colossal-cave-image.mjs";
+import { appendColossalCaveLibrary } from "./lib/colossal-cave-library.mjs";
 import { buildTwoMibSystem } from "./lib/two-mib-system.mjs";
 import { captureDiskLibraryRelease } from "./lib/disk-library-release.mjs";
 import {
@@ -238,7 +240,7 @@ try {
       largeAbSystem,
       CpmDisk,
     });
-    const library = buildDiskLibraryDistribution({
+    const baseLibrary = buildDiskLibraryDistribution({
       distribution,
       twoMibSystem: librarySystem,
       componentLockBytes: await readFile(
@@ -246,6 +248,10 @@ try {
       ),
       CpmDisk,
     });
+    const library = appendColossalCaveLibrary(
+      baseLibrary,
+      await buildColossalCaveImage({ CpmDisk }),
+    );
     // Identical image bytes keep their first publication's source reference.
     // A later machine build may have a new revision without changing that disk.
     // Other metadata changes under the same immutable identity are errors.
