@@ -221,7 +221,8 @@ describe("additive two-MiB deployment qualification", () => {
     await saveManifest();
     const result = check(revision, true, true);
     expect(result.status, result.stderr).toBe(0);
-    expect(JSON.parse(result.stdout).assets).toBe(64);
+    // 33 starter assets plus two modules and sixteen system/bootstrap pairs.
+    expect(JSON.parse(result.stdout).assets).toBe(67);
     expect(manifest.diskProfiles).toEqual(historicalProfiles);
     expect(manifest.assets.slice(0, historicalAssets.length)).toEqual(
       historicalAssets,

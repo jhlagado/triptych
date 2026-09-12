@@ -196,7 +196,8 @@ describe("exact current-build browser recovery archive", () => {
     await addTwoMibDeploymentFixture(source, manifest);
     await saveManifest();
     const receipt = await archiveBrowserRecovery(options());
-    expect(receipt.assetCount).toBe(64);
+    // 33 starter assets plus two modules and sixteen system/bootstrap pairs.
+    expect(receipt.assetCount).toBe(67);
     expect(receipt.intendedStorageSchema).toBe("triptych-drive-set-v3");
     expect(receipt.runtimeQualification).toBe("not-performed");
     expect(manifest.diskProfiles).toEqual(oldProfiles);
