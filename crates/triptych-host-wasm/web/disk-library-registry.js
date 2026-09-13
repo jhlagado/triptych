@@ -119,12 +119,17 @@ async function bytesAt(url, { fetch, crypto }, reference) {
       "missing or redirected asset",
     );
     const raw = response.headers.get("content-length"),
+      encoding = response.headers.get("content-encoding")?.trim().toLowerCase(),
+      decodedLengthHeader =
+        raw !== null && (!encoding || encoding === "identity"),
       expected = reference?.bytes;
     check(
       raw === null ||
         (/^(0|[1-9]\d*)$/.test(raw) &&
           Number(raw) <= MAX &&
-          (expected === undefined || Number(raw) === expected)),
+          (!decodedLengthHeader ||
+            expected === undefined ||
+            Number(raw) === expected)),
       "content length exceeds bound or differs",
     );
     check(response.body?.getReader, "streaming body required");
@@ -151,7 +156,7 @@ async function bytesAt(url, { fetch, crypto }, reference) {
     }
     check(
       (expected === undefined || count === expected) &&
-        (raw === null || count === Number(raw)),
+        (!decodedLengthHeader || count === Number(raw)),
       "body length differs",
     );
     const result = new Uint8Array(count);

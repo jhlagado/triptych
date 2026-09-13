@@ -146,6 +146,23 @@ async function fixture() {
 }
 const baseUrl = "https://example.test/app/index.html";
 
+test("accepts decoded response bytes when HTTP content encoding changes the wire length", async () => {
+  const f = await fixture();
+  const encodedFetch = async (url, options) => {
+    const response = await f.fetch(url, options);
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    return new Response(bytes, {
+      status: response.status,
+      headers: {
+        "content-encoding": "gzip",
+        "content-length": String(Math.max(1, Math.floor(bytes.length / 2))),
+      },
+    });
+  };
+  const registry = await load({ baseUrl, fetch: encodedFetch, crypto });
+  assert.equal(registry.metadata.defaults[0].id, "starter");
+});
+
 test("old retained admission stays exact when the default resident bytes change", async () => {
   const f = await fixture();
   const oldReference = {
