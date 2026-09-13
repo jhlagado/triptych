@@ -139,6 +139,10 @@ for (const selected of [0, 1]) {
 
     await adoptHistoricalMachine(page);
     await expect(page.locator("#terminal")).toHaveText("F");
+    await expect(page.locator("#save-status")).toHaveAttribute(
+      "data-state",
+      "saved",
+    );
     await expect
       .poll(async () => (await saved(page))[drive])
       .toBe(hash(expected[selected]));
