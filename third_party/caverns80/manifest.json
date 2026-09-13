@@ -4,8 +4,8 @@
   "version": "0.1.1",
   "loadAddress": 256,
   "entryAddress": 256,
-  "bytes": 22896,
-  "sha256": "6e4c4154d7136645c18effccfc5d60ca3d59ae7b19a963b389608ecaf18e2dfb",
+  "bytes": 22895,
+  "sha256": "b29797e09ff7b54c7caeb99bf0ed9583c371a42022dbad4fbe8d418f77cb3270",
   "assembler": {
     "name": "atom-z80",
     "revision": "802b5c2d320bec777f427755ff2d7338e3b80a05"
@@ -13,14 +13,14 @@
   "sourceFormat": "native-atom",
   "memory": {
     "start": 256,
-    "endExclusive": 23152,
-    "allocatedBytes": 22896,
-    "stackStart": 22640,
-    "stackEndExclusive": 23152,
+    "endExclusive": 23151,
+    "allocatedBytes": 22895,
+    "stackStart": 22639,
+    "stackEndExclusive": 23151,
     "stackBytes": 512,
     "dynamicAllocationBytes": 0
   },
-  "sourceSha256": "50fc8fc53adfbd788bc9e323dc0c794cf2bbdcf38cd190ceaf833f43ba751fa1",
+  "sourceSha256": "aac83c6512a56aba34ca8f0d204fa97c592e00dec7792a339e9869741ce48669",
   "sourceFiles": {
     "src/actions.asm": "d0aba81eb9a21eecd4c4c9746232145c6425f2de71d77965cd0ef29a4454468b",
     "src/combat.asm": "fd05950fa230d82da371fa6f0f27a5cd583f91cf704a86fd7c3dc5e2e65ec706",
@@ -42,7 +42,7 @@
     "src/savedisk.asm": "40c2fcdc5ee6b366dd3aa4b6281faf3f3903b8d1ff4237baeaefec674154d220",
     "src/scoring.asm": "a9d2726524768fae3036655a7c9ab36f38c9b174e054fe9a0d8bf75250ea4116",
     "src/startup.asm": "b905a65be8584e60747abcc2f85e45d08785f2300ace3c0c512ac3b510a3339a",
-    "src/strings.asm": "2cdd7b757cf2c694a6c0ef5a88eaf2c1d462cc48d76a17777d5bf677f8fed324",
+    "src/strings.asm": "30d50c75a3248af39a717dad072f5b70388aad024abd94a6f67e36df2222ffd9",
     "src/system.asm": "24ec62aa803d68fb5bf638fe260f75b4be1b620c8189493d96516689eacd9a55",
     "src/tables.asm": "14fd2b55ecd936df10a407c83d45efff8c0caae9872e54c574763757a98a1029",
     "src/vars.asm": "f4c71c20363ae99d711b3543e1b842a539b48557c3dc7b961e5c4c6f9dc9ed12"

@@ -192,14 +192,14 @@
       "source": {
         "kind": "git",
         "repository": "https://github.com/jhlagado/caverns80.git",
-        "revision": "0a0a67fda6163fdad982be7d5d20031d2b151c4d",
+        "revision": "3b056f35ecf864063434700dad39263ff65e827f",
         "path": "src/main.asm"
       },
       "recipe": "verified-release",
       "artifact": {
         "path": "third_party/caverns80/CAVERNS.COM",
-        "bytes": 22896,
-        "sha256": "6e4c4154d7136645c18effccfc5d60ca3d59ae7b19a963b389608ecaf18e2dfb",
+        "bytes": 22895,
+        "sha256": "b29797e09ff7b54c7caeb99bf0ed9583c371a42022dbad4fbe8d418f77cb3270",
         "manifest": "third_party/caverns80/manifest.json",
         "provenance": "third_party/caverns80/release.provenance.json"
       },
