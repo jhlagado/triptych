@@ -66,7 +66,7 @@ test("the Advent link boots a stateless drive A containing the complete game", a
   await prompt(page);
   await expect(page).toHaveTitle("Colossal Cave Adventure — Triptych");
   await expect(page.locator("#status")).toHaveText(
-    "Colossal Cave is in drive A. Type ADVENT.",
+    "Colossal Cave is in drive A. Type ADVENT. B: is writable; cleared on page reload.",
   );
   await expect(page.locator("#open-library")).toBeHidden();
   await expect(page.locator("#files")).toBeHidden();
@@ -88,6 +88,31 @@ test("the Advent link boots a stateless drive A containing the complete game", a
   const afterReload = await command(page, "DIR", "A>");
   expect(afterReload).toContain("ADVENT");
   expect(afterReload).toContain("PHROGZ");
+});
+
+test("direct demos have an independent temporary writable B", async ({
+  page,
+  context,
+}) => {
+  await page.goto("/?disk=advent");
+  await prompt(page);
+  await command(page, "B:", "B>");
+  await command(page, "SAVE 1 WORK.COM", "B>");
+  expect(await command(page, "DIR", "B>")).toContain("WORK");
+  await page.locator("#reset").click();
+  await prompt(page);
+  await command(page, "B:", "B>");
+  expect(await command(page, "DIR", "B>")).toContain("WORK");
+  const other = await context.newPage();
+  await other.goto("/?disk=games");
+  await prompt(other);
+  await command(other, "B:", "B>");
+  expect(await command(other, "DIR", "B>")).toContain("NO FILE");
+  await page.reload();
+  await prompt(page);
+  await command(page, "B:", "B>");
+  expect(await command(page, "DIR", "B>")).toContain("NO FILE");
+  expect(await triptychDatabases(page)).toEqual([]);
 });
 
 test("an unknown direct disk fails without opening browser storage", async ({

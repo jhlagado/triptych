@@ -2978,6 +2978,16 @@ async function startDirectLaunch(route) {
     name: launch.name,
     bytes: launch.image,
   };
+  const workDisk = CpmDisk.create_two_mib();
+  try {
+    slots[1] = {
+      instanceId: crypto.randomUUID(),
+      name: "Temporary work disk",
+      bytes: workDisk.export_candidate(),
+    };
+  } finally {
+    workDisk.free();
+  }
   const snapshot = {
     schema: "triptych-drive-set-v4",
     configuredCount: launch.configuredCount,
@@ -2987,8 +2997,8 @@ async function startDirectLaunch(route) {
   startupRuntime = await prepareSavedMachineRuntime({
     snapshot,
     TriptychCpu,
-    writable: false,
-    slotWritable: slots.map(() => false),
+    writable: true,
+    slotWritable: slots.map((_, index) => index === 1),
     deployment,
     guardSystemDisk: true,
   });
@@ -2997,6 +3007,7 @@ async function startDirectLaunch(route) {
     launch.id === "advent"
       ? "Colossal Cave is in drive A. Type ADVENT."
       : `Games are in drive A. ${launch.instruction}.`;
+  directInstruction += " B: is writable; cleared on page reload.";
   document.body.classList.add("direct-launch");
   document.title = `${launch.name} — Triptych`;
   document.querySelector("main > header h1").textContent = launch.name;
