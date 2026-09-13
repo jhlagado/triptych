@@ -187,6 +187,7 @@ let deployment;
 let libraryRegistry;
 let requestedRecipe;
 let directSession = false;
+let directInstruction = "";
 let recipePreviewGeneration = 0;
 
 function canRunMachine() {
@@ -795,7 +796,7 @@ function resumeMachine() {
   resetButton.disabled = filesDialog.open || !canRunMachine();
   setStatus(
     directSession
-      ? "Colossal Cave is in drive A. Type ADVENT."
+      ? directInstruction
       : `Running ${activeMedia.slots.map((slot, index) => `${String.fromCharCode(65 + index)}: ${slot?.name ?? "empty"}`).join(" · ")}${writer?.owned ? "" : " (read-only tab)"}; click or tap the terminal and type at A>.`,
     "running",
   );
@@ -906,7 +907,7 @@ resetButton.addEventListener("click", () => {
   renderTerminal(terminalElement, terminal.snapshot());
   setStatus(
     directSession
-      ? "Colossal Cave is in drive A. Type ADVENT."
+      ? directInstruction
       : "Machine reset; disk contents and flushed writes were retained.",
     "running",
   );
@@ -2992,6 +2993,10 @@ async function startDirectLaunch(route) {
     guardSystemDisk: true,
   });
   directSession = true;
+  directInstruction =
+    launch.id === "advent"
+      ? "Colossal Cave is in drive A. Type ADVENT."
+      : `Games are in drive A. ${launch.instruction}.`;
   document.body.classList.add("direct-launch");
   document.title = `${launch.name} — Triptych`;
   document.querySelector("main > header h1").textContent = launch.name;

@@ -35,6 +35,7 @@ import {
 import {
   buildPublicDriveDistribution,
   buildDiskLibraryDistribution,
+  buildGamesDirectLaunch,
 } from "./lib/public-drive-distribution.mjs";
 import {
   buildLargeDiskSystem,
@@ -258,6 +259,11 @@ try {
       cave: colossalCave,
       CpmDisk,
     });
+    const gamesLaunch = buildGamesDirectLaunch({
+      library: baseLibrary,
+      CpmDisk,
+    });
+    directLaunch.descriptor.launches.push(gamesLaunch.descriptor);
     // Identical image bytes keep their first publication's source reference.
     // A later machine build may have a new revision without changing that disk.
     // Other metadata changes under the same immutable identity are errors.
@@ -393,6 +399,16 @@ try {
       writeFile(
         join(stagedOutput, directLaunch.image.asset),
         directLaunch.image.bytes,
+        { flag: "wx" },
+      ),
+      writeFile(
+        join(stagedOutput, gamesLaunch.image.asset),
+        gamesLaunch.image.bytes,
+        { flag: "wx" },
+      ),
+      writeFile(
+        join(stagedOutput, "direct-games-provenance.json"),
+        `${JSON.stringify(gamesLaunch.provenance, null, 2)}\n`,
         { flag: "wx" },
       ),
       writeFile(

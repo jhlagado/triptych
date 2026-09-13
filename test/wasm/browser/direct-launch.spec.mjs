@@ -32,6 +32,33 @@ const triptychDatabases = (page) =>
       .filter((name) => name?.startsWith("triptych")),
   );
 
+test("games on A run in a second tab alongside Advent", async ({
+  page,
+  context,
+}) => {
+  await page.goto("/?disk=advent");
+  await prompt(page);
+  const games = await context.newPage();
+  await games.goto("/?disk=games");
+  await prompt(games);
+  const listing = await command(games, "DIR", "A>");
+  for (const name of ["CAVERNS", "HYPERDRV", "HYPERD2"])
+    expect(listing).toContain(name);
+  for (const name of ["CAVERNS", "HYPERDRV", "HYPERD2"]) {
+    await games.locator("#reset").click();
+    await prompt(games);
+    await command(
+      games,
+      name,
+      name === "HYPERDRV" ? "?" : "[Space/Enter: more, Q: skip]",
+    );
+  }
+  await command(page, "ADVENT", "WOULD YOU LIKE INSTRUCTIONS?");
+  expect(await triptychDatabases(games)).toEqual([]);
+  await expect(games.locator("#files")).toBeHidden();
+  await expect(games.locator("#open-library")).toBeHidden();
+});
+
 test("the Advent link boots a stateless drive A containing the complete game", async ({
   page,
 }) => {

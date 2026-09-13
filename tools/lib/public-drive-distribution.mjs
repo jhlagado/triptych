@@ -9,6 +9,57 @@ import {
 } from "./large-ab-system.mjs";
 
 const hash = (bytes) => createHash("sha256").update(bytes).digest("hex");
+
+/** Compose a bootable demo from the already verified system and games disks. */
+export function buildGamesDirectLaunch({ library, CpmDisk }) {
+  const source = (id) => {
+    const row = library.catalogue.images.find((image) => image.id === id);
+    assert(row, `missing ${id}`);
+    const image = library.images.find((image) => image.asset === row.asset);
+    assert.equal(hash(image.bytes), row.sha256);
+    return image.bytes;
+  };
+  const system = source("system-2m-n04");
+  const games = new CpmDisk(source("games-2m"));
+  const disk = new CpmDisk(system);
+  let bytes;
+  try {
+    for (const name of ["CAVERNS.COM", "HYPERDRV.COM", "HYPERD2.COM"])
+      disk.add_import(name, games.read_file(name));
+    bytes = Uint8Array.from(disk.export_candidate());
+    assert.deepEqual(bytes.subarray(0, 16384), system.subarray(0, 16384));
+    const reopened = new CpmDisk(bytes);
+    try {
+      for (const name of ["CAVERNS.COM", "HYPERDRV.COM", "HYPERD2.COM"])
+        assert.deepEqual(reopened.read_file(name), games.read_file(name));
+    } finally {
+      reopened.free();
+    }
+  } finally {
+    games.free();
+    disk.free();
+  }
+  const sha256 = hash(bytes);
+  const asset = `launch-games-${sha256}.img`;
+  return {
+    image: { asset, bytes },
+    descriptor: {
+      id: "games",
+      name: "Caverns & Hyperdrive",
+      instruction: "Type CAVERNS, HYPERDRV or HYPERD2",
+      profile: library.bootstrap.profile,
+      image: { asset, bytes: bytes.length, sha256 },
+    },
+    provenance: {
+      sources: library.catalogue.images.filter((row) =>
+        ["system-2m-n04", "games-2m"].includes(row.id),
+      ),
+      image: { asset, bytes: bytes.length, sha256 },
+      preparation:
+        "System area and game files copied unchanged from the verified library inputs; see disk-library-provenance.json.",
+    },
+  };
+}
 const GAMES = [
   ["caverns80", "CAVERNS.COM"],
   ["hyperdrive", "HYPERDRV.COM"],
