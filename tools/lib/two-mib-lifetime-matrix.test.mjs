@@ -127,7 +127,7 @@ const historical = [
   [
     "atom-chain",
     atomSuite,
-    "13829c5acc5f234511a722aa50f6d0925d368774265e266a78928d8ee09cebcb",
+    "b9407be8338522827ff6fe6e7495b06e64a3d7fa30e4c256b5cbb6ed2881491b",
   ],
   [
     "nucleus",
