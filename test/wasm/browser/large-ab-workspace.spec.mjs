@@ -11,7 +11,7 @@ import { decodeDriveSet } from "../../../crates/triptych-host-wasm/web/drive-set
 
 const digest = (bytes) => createHash("sha256").update(bytes).digest("hex");
 
-async function state(page) {
+async function readState(page) {
   return page.evaluate(async () => {
     const { openDiskBoxAppStore } = await import("/disk-box-app-store.js");
     const { CpmDisk } = await import("/triptych_host_wasm.js");
@@ -58,6 +58,21 @@ async function state(page) {
       store.close();
     }
   });
+}
+
+async function state(page) {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await readState(page);
+    } catch (error) {
+      if (
+        attempt === 9 ||
+        !String(error).includes("Disk-box authority changed while reading.")
+      )
+        throw error;
+      await page.waitForTimeout(25);
+    }
+  }
 }
 
 async function prompt(page, drive = "A") {
