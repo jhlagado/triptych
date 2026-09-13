@@ -6,6 +6,7 @@ import { webcrypto } from "node:crypto";
 import { fetchLargeAbDiskSystem } from "../crates/triptych-host-wasm/web/disk-profile.js";
 import { fetchTwoMibSystem } from "../crates/triptych-host-wasm/web/two-mib-system.js";
 import { fetchPublicDriveSet } from "../crates/triptych-host-wasm/web/public-distribution.js";
+import { loadDirectLaunch } from "../crates/triptych-host-wasm/web/direct-launch.js";
 
 const directory = resolve(process.argv[2] ?? "dist/wasm-browser");
 const expectedRevision = process.argv[3];
@@ -75,6 +76,8 @@ for (const name of [
   "working-disk-store.js",
   "working-disk-revisions.js",
   "disk-workspace.js",
+  "direct-launch.js",
+  "direct-launch-provenance.json",
   "disk-profile.js",
   "drive-set.js",
   "drive-set-store.js",
@@ -100,6 +103,25 @@ for (const name of [
 ]) {
   assert.ok(names.has(name), `missing required asset ${name}`);
 }
+const direct = await loadDirectLaunch({
+  deployment: manifest,
+  id: "advent",
+  baseUrl: "https://deployment.invalid/",
+  crypto: webcrypto,
+  fetch: async (url) => {
+    const bytes = await readFile(
+      join(directory, new URL(url).pathname.slice(1)),
+    );
+    return new Response(bytes, {
+      headers: { "content-length": String(bytes.length) },
+    });
+  },
+});
+assert.equal(direct.name, "Colossal Cave Adventure");
+assert.equal(direct.instruction, "Type ADVENT");
+assert.equal(direct.profile, "triptych-cpu-v0.1-2m-n04");
+assert.equal(direct.configuredCount, 4);
+assert.equal(direct.image.length, 2097152);
 if (
   ["triptych-drive-set-v4", "triptych-disk-box-v1"].includes(
     manifest.storageSchema,

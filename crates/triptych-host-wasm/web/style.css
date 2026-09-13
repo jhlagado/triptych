@@ -86,6 +86,19 @@ h1 {
   display: none;
 }
 
+body.direct-launch #status[data-state="running"] {
+  display: block;
+}
+
+body.direct-launch .status-group {
+  min-width: min(100%, 20rem);
+}
+
+body.direct-launch #status {
+  color: #9deaac;
+  text-align: left;
+}
+
 #status,
 #save-status {
   margin: 0;

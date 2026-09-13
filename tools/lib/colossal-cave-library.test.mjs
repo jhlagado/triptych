@@ -10,6 +10,7 @@ import {
 } from "../build-colossal-cave-image.mjs";
 import {
   appendColossalCaveLibrary as append,
+  buildColossalCaveDirectLaunch,
   COLOSSAL_CAVE_IMAGE_SHA256 as expectedHash,
 } from "./colossal-cave-library.mjs";
 import { captureDiskLibraryRelease } from "./disk-library-release.mjs";
@@ -176,6 +177,51 @@ test("appended image is retained by current N4 release capture without changing 
       residentLockBytes: await readFile(resolve(root, profile.residents.lock)),
     },
   });
+  const direct = buildColossalCaveDirectLaunch({
+    library: base,
+    cave: original,
+    CpmDisk,
+  });
+  assert.equal(direct.descriptor.schema, "triptych-direct-launches-v1");
+  assert.deepEqual(direct.descriptor.launches[0], {
+    id: "advent",
+    name: "Colossal Cave Adventure",
+    instruction: "Type ADVENT",
+    profile: "triptych-cpu-v0.1-2m-n04",
+    image: {
+      asset: direct.image.asset,
+      bytes: 2097152,
+      sha256: hash(direct.image.bytes),
+    },
+  });
+  assert.deepEqual(
+    direct.image.bytes.subarray(0, 16384),
+    tuple.system,
+    "direct disk keeps the exact N4 system area",
+  );
+  const directDisk = new CpmDisk(direct.image.bytes);
+  try {
+    assert(directDisk.file_names().includes("ADVENT.COM"));
+    assert(directDisk.file_names().includes("PHROGZ.DIN"));
+    assert(!directDisk.file_names().includes("ADVENTUR.COM"));
+    assert.equal(
+      hash(directDisk.read_file("ADVENT.COM")),
+      COLOSSAL_CAVE_FILES[0].sha256,
+    );
+    assert.equal(
+      hash(directDisk.read_file("PHROGZ.DIN")),
+      COLOSSAL_CAVE_FILES[1].sha256,
+    );
+  } finally {
+    directDisk.free();
+  }
+  assert.equal(direct.provenance.files[0].installedAs, "ADVENT.COM");
+  assert.match(direct.provenance.sourceImage.license, /No licence supplied/i);
+  assert.equal(
+    direct.provenance.sourceImage.distributionDecision.authorisedBy,
+    "John Hardy",
+  );
+  assert.equal(hash(original.image), expectedHash, "source image unchanged");
   const result = append(base, candidate());
   const envelope = {
     schema: "triptych-browser-deployment-v1",

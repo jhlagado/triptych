@@ -17,7 +17,10 @@ import { pathToFileURL } from "node:url";
 import { buildCpmDistribution } from "./lib/cpm-distribution.mjs";
 import { buildBrowserToolCatalog } from "./lib/browser-tool-catalog.mjs";
 import { buildColossalCaveImage } from "./build-colossal-cave-image.mjs";
-import { appendColossalCaveLibrary } from "./lib/colossal-cave-library.mjs";
+import {
+  appendColossalCaveLibrary,
+  buildColossalCaveDirectLaunch,
+} from "./lib/colossal-cave-library.mjs";
 import { buildTwoMibSystem } from "./lib/two-mib-system.mjs";
 import { captureDiskLibraryRelease } from "./lib/disk-library-release.mjs";
 import {
@@ -248,10 +251,13 @@ try {
       ),
       CpmDisk,
     });
-    const library = appendColossalCaveLibrary(
-      baseLibrary,
-      await buildColossalCaveImage({ CpmDisk }),
-    );
+    const colossalCave = await buildColossalCaveImage({ CpmDisk });
+    const library = appendColossalCaveLibrary(baseLibrary, colossalCave);
+    const directLaunch = buildColossalCaveDirectLaunch({
+      library: baseLibrary,
+      cave: colossalCave,
+      CpmDisk,
+    });
     // Identical image bytes keep their first publication's source reference.
     // A later machine build may have a new revision without changing that disk.
     // Other metadata changes under the same immutable identity are errors.
@@ -332,6 +338,7 @@ try {
         "disk-box-runtime.js",
         "disk-box-media-change.js",
         "disk-launch.js",
+        "direct-launch.js",
         "disk-box-store.js",
         "disk-box-app-store.js",
         "disk-box-recovery.js",
@@ -381,6 +388,16 @@ try {
       writeFile(
         join(stagedOutput, "disk-library-provenance.json"),
         libraryProvenanceBytes,
+        { flag: "wx" },
+      ),
+      writeFile(
+        join(stagedOutput, directLaunch.image.asset),
+        directLaunch.image.bytes,
+        { flag: "wx" },
+      ),
+      writeFile(
+        join(stagedOutput, "direct-launch-provenance.json"),
+        `${JSON.stringify(directLaunch.provenance, null, 2)}\n`,
         { flag: "wx" },
       ),
       ...Object.entries(publicDistribution.drives).map(([letter, drive]) =>
@@ -455,6 +472,7 @@ try {
           distribution: distribution.manifest,
           diskProfiles: [largeSystem.profile, largeAbSystem.profile],
           twoMibProfiles,
+          directLaunches: directLaunch.descriptor,
           publicDrives: publicDistribution.descriptor,
           host: {
             wasmBindgen: version,

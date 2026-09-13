@@ -8,6 +8,7 @@ import {
   textInputToBytes,
 } from "./terminal.js";
 import { acquireDiskWriter } from "./disk-workspace.js";
+import { loadDirectLaunch } from "./direct-launch.js";
 import {
   openDiskBoxAppStore,
   createDiskBoxArchiveWorkspace,
@@ -67,8 +68,20 @@ const libraryView = document.querySelector("#library-view");
 const machineHeader = document.querySelector("main > header");
 const terminalShell = document.querySelector(".terminal-shell");
 const mobileControls = document.querySelector(".mobile-terminal-controls");
+const initialRoute = new URL(location.href).searchParams;
+const directLaunchId = initialRoute.has("disk")
+  ? initialRoute.get("disk")
+  : undefined;
+if (directLaunchId !== undefined) {
+  document.body.classList.add("direct-launch");
+  document.querySelector("#open-library").hidden = true;
+  document.querySelector("#files").hidden = true;
+  document.querySelector("#retry-save").hidden = true;
+  saveStatusElement.hidden = true;
+}
 
 function showLibraryView({ updateAddress = true } = {}) {
+  if (directLaunchId !== undefined) return;
   machineHeader.hidden = true;
   terminalShell.hidden = true;
   mobileControls.hidden = true;
@@ -95,7 +108,9 @@ function showComputerView({ updateAddress = true } = {}) {
 }
 
 function showAddressedView() {
-  if (location.hash === "#library") showLibraryView({ updateAddress: false });
+  if (directLaunchId !== undefined) showComputerView({ updateAddress: false });
+  else if (location.hash === "#library")
+    showLibraryView({ updateAddress: false });
   else showComputerView({ updateAddress: false });
 }
 
@@ -112,8 +127,7 @@ showAddressedView();
 // A second, explicitly selected machine lets returning visitors play the
 // published starter disks without replacing their existing working machine.
 // This stable namespace persists game saves across visits and tool releases.
-const suppliedMachine =
-  new URL(location.href).searchParams.get("machine") === "supplied";
+const suppliedMachine = initialRoute.get("machine") === "supplied";
 const storageName = suppliedMachine ? "triptych-supplied" : "triptych-cpu";
 const startFreshMarker = "triptych:start-fresh-in-progress:v1";
 function localConfigurationSelection(route) {
@@ -172,7 +186,12 @@ let catalog;
 let deployment;
 let libraryRegistry;
 let requestedRecipe;
+let directSession = false;
 let recipePreviewGeneration = 0;
+
+function canRunMachine() {
+  return directSession || !!workspace?.canRun;
+}
 async function registry() {
   libraryRegistry ??= loadDiskLibraryRegistry({ baseUrl: document.baseURI });
   try {
@@ -327,7 +346,7 @@ function message(error) {
   return error instanceof Error ? error.message : String(error);
 }
 function controls() {
-  const running = machineRunning && workspace?.canRun;
+  const running = machineRunning && canRunMachine();
   resetButton.disabled = !running || filesDialog.open;
   downloadButton.disabled = !imageAt(committed?.snapshot);
   downloadButton.textContent = `Download saved disk ${selectedDrive}`;
@@ -478,7 +497,7 @@ function stopMachine(error) {
 function enqueueInput(bytes) {
   if (
     !machineRunning ||
-    !workspace?.canRun ||
+    !canRunMachine() ||
     filesDialog.open ||
     bytes.length === 0
   )
@@ -498,7 +517,7 @@ function enqueueInput(bytes) {
 }
 
 function focusMobileInput() {
-  if (filesDialog.open || !workspace?.canRun || !machineRunning) return;
+  if (filesDialog.open || !canRunMachine() || !machineRunning) return;
   setKeyboardOpen(true);
   mobileInput.focus({ preventScroll: true });
 }
@@ -533,7 +552,7 @@ function drainOutput() {
 }
 
 function runMachine(generation) {
-  if (!machineRunning || !workspace?.canRun || generation !== runGeneration)
+  if (!machineRunning || !canRunMachine() || generation !== runGeneration)
     return;
   try {
     const deadline = performance.now() + 6;
@@ -773,9 +792,11 @@ function resumeMachine() {
   machineRunning = true;
   // Workspace cancellation resumes synchronously before its caller clears the
   // old management token. Do not inspect staged Files state at this boundary.
-  resetButton.disabled = filesDialog.open || !workspace?.canRun;
+  resetButton.disabled = filesDialog.open || !canRunMachine();
   setStatus(
-    `Running ${activeMedia.slots.map((slot, index) => `${String.fromCharCode(65 + index)}: ${slot?.name ?? "empty"}`).join(" · ")}${writer?.owned ? "" : " (read-only tab)"}; click or tap the terminal and type at A>.`,
+    directSession
+      ? "Colossal Cave is in drive A. Type ADVENT."
+      : `Running ${activeMedia.slots.map((slot, index) => `${String.fromCharCode(65 + index)}: ${slot?.name ?? "empty"}`).join(" · ")}${writer?.owned ? "" : " (read-only tab)"}; click or tap the terminal and type at A>.`,
     "running",
   );
   const generation = ++runGeneration;
@@ -875,7 +896,7 @@ window.visualViewport?.addEventListener("scroll", syncVisualViewport);
 syncVisualViewport();
 
 resetButton.addEventListener("click", () => {
-  if (!machineRunning || !workspace?.canRun || filesDialog.open) return;
+  if (!machineRunning || !canRunMachine() || filesDialog.open) return;
   machine.reset();
   if (machine.system_recovery_pending?.()) {
     showSystemRecovery();
@@ -884,7 +905,9 @@ resetButton.addEventListener("click", () => {
   terminal.clear();
   renderTerminal(terminalElement, terminal.snapshot());
   setStatus(
-    "Machine reset; disk contents and flushed writes were retained.",
+    directSession
+      ? "Colossal Cave is in drive A. Type ADVENT."
+      : "Machine reset; disk contents and flushed writes were retained.",
     "running",
   );
   terminalElement.focus();
@@ -2929,135 +2952,196 @@ async function adoptHistoricalDiskBox(stored) {
   return adopted;
 }
 
-try {
-  await resumeInterruptedStartFresh();
-  const route = new URL(location.href).searchParams;
-  let localConfiguration = localConfigurationSelection(route);
-  writer = await acquireDiskWriter({ name: `${storageName}:disk-writer` });
-  const options = {
-    name: storageName,
-    lease: { isOwner: () => !!writer.owned },
-    onBlocked: (text) => setSaveStatus(text, "error"),
-  };
-  store = await openDiskBoxAppStore(options);
-  let stored = await refreshCommitted();
+function selectedDirectLaunch(route) {
+  if (!route.has("disk")) return undefined;
   if (
-    stored.kind === "recovery" &&
-    /historical bootstrap required/i.test(stored.error)
-  ) {
-    const historical = await defaultBootstrap();
-    store.close();
-    store = await openDiskBoxAppStore({
-      ...options,
-      legacyBootstrap: historical,
-    });
-    stored = await refreshCommitted();
-  }
-  if (stored.kind === "recovery") throw new Error(stored.error);
-  // Historical snapshots boot from their own bytes immediately. Optional new
-  // deployment/tool/catalogue metadata is loaded only after activation below.
-  await init();
-  if (
-    localConfiguration &&
-    stored.kind === "unadopted" &&
-    stored.historical.kind === "ready"
+    route.getAll("disk").length !== 1 ||
+    [...route.keys()].some((key) => key !== "disk")
   )
-    stored = await adoptHistoricalDiskBox(stored);
-  if (
-    localConfiguration &&
-    (stored.kind !== "ready" ||
-      !stored.manifest.configurations.some(
-        (item) => item.id === localConfiguration,
-      ))
-  ) {
-    const resolution = await resolveMissingLocalConfiguration(
-      localConfiguration,
-      stored,
-    );
-    localConfiguration = resolution.selected;
-    stored = resolution.stored;
-  }
-  if (stored.kind === "recovery") throw new Error(stored.error);
-  if (route.has("recipe")) {
-    await previewRequestedRecipe({
-      id: route.get("recipe"),
-      revision: route.get("revision"),
-    });
-  }
-  if (stored.kind === "unadopted") {
-    if (stored.historical.kind === "ready") {
-      stored = await adoptHistoricalDiskBox(stored);
-    } else {
-      if (!writer.owned)
-        throw new Error(
-          "Close the owning tab and reload to create this disk box.",
-        );
-      const candidate = await prepareDiskBoxRecipeLaunch(
-        emptyDiskBox(),
-        requestedRecipe ?? (await libraryRecipe("starter")),
-      );
-      await publishInitial(candidate, stored.token);
-    }
-  }
-  if (
-    localConfiguration &&
-    localConfiguration !== store.head.manifest.selectedConfigurationId
-  ) {
-    if (!writer.owned)
-      throw new Error(
-        "Close the owning tab before selecting a device-local configuration.",
-      );
-    if (
-      !confirm(
-        "Open this device-local configuration? Every other configuration and personal disk will be retained.",
-      )
-    )
-      throw new Error("Device-local configuration activation cancelled.");
-    const manifest = structuredClone(store.head.manifest);
-    manifest.selectedConfigurationId = localConfiguration;
-    try {
-      await publishInitial({ manifest, newBlobs: new Map() }, store.head.token);
-    } catch (error) {
-      if (error.code === "SYSTEM_DISK_RESTORE_REQUIRED")
-        throw new Error(
-          "The requested local configuration needs its retained system disk restored before it can boot. The selected configuration has not changed.",
-        );
-      throw error;
-    }
-  }
-  startupRuntime ??= await prepareMachine(committed.snapshot);
+    throw new Error("Use one software link without other machine options.");
+  return route.get("disk");
+}
+
+async function startDirectLaunch(route) {
+  const id = selectedDirectLaunch(route);
+  await init();
+  await loadDeployment();
+  const launch = await loadDirectLaunch({
+    deployment,
+    id,
+    baseUrl: document.baseURI,
+  });
+  const slots = Array.from({ length: launch.configuredCount }, () => null);
+  slots[0] = {
+    instanceId: crypto.randomUUID(),
+    name: launch.name,
+    bytes: launch.image,
+  };
+  const snapshot = {
+    schema: "triptych-drive-set-v4",
+    configuredCount: launch.configuredCount,
+    bootstrap: { profile: launch.profile, bytes: launch.bootstrap },
+    slots,
+  };
+  startupRuntime = await prepareSavedMachineRuntime({
+    snapshot,
+    TriptychCpu,
+    writable: false,
+    slotWritable: slots.map(() => false),
+    deployment,
+    guardSystemDisk: true,
+  });
+  directSession = true;
+  document.body.classList.add("direct-launch");
+  document.title = `${launch.name} — Triptych`;
+  document.querySelector("main > header h1").textContent = launch.name;
+  document.querySelector("#open-library").hidden = true;
+  filesButton.hidden = true;
+  document.querySelector("#retry-save").hidden = true;
+  saveStatusElement.hidden = true;
   activateMachine(startupRuntime);
   startupRuntime = undefined;
-  connectWorkspace();
   resumeMachine();
-  setSaveStatus(
-    writer.owned
-      ? "Saved in this browser"
-      : "Read-only tab: disk writes are disabled. Close the owning tab and reload for write access.",
-    writer.owned ? "saved" : "idle",
-  );
   controls();
   terminalElement.focus({ preventScroll: true });
-  void renderLibrary().catch(libraryError);
-  if (new URL(location.href).searchParams.has("recipe")) {
-    showLibraryView();
-    libraryStatus.textContent = "A shared setup is ready to use.";
-  }
-  try {
-    if (!deployment) await loadDeployment();
-    const response = await fetch("tool-catalog.json", {
-      cache: "no-store",
-      redirect: "error",
-    });
-    if (!response.ok) throw new Error("Could not load tool-catalog.json.");
-    catalog = await response.json();
-    validateToolCatalog(catalog, deployment.distribution);
-  } catch (error) {
-    catalog = undefined;
-    console.warn("Tool updates unavailable", error);
-  } finally {
+}
+
+try {
+  const route = new URL(location.href).searchParams;
+  if (route.has("disk")) {
+    await startDirectLaunch(route);
+  } else {
+    await resumeInterruptedStartFresh();
+    let localConfiguration = localConfigurationSelection(route);
+    writer = await acquireDiskWriter({ name: `${storageName}:disk-writer` });
+    const options = {
+      name: storageName,
+      lease: { isOwner: () => !!writer.owned },
+      onBlocked: (text) => setSaveStatus(text, "error"),
+    };
+    store = await openDiskBoxAppStore(options);
+    let stored = await refreshCommitted();
+    if (
+      stored.kind === "recovery" &&
+      /historical bootstrap required/i.test(stored.error)
+    ) {
+      const historical = await defaultBootstrap();
+      store.close();
+      store = await openDiskBoxAppStore({
+        ...options,
+        legacyBootstrap: historical,
+      });
+      stored = await refreshCommitted();
+    }
+    if (stored.kind === "recovery") throw new Error(stored.error);
+    // Historical snapshots boot from their own bytes immediately. Optional new
+    // deployment/tool/catalogue metadata is loaded only after activation below.
+    await init();
+    if (
+      localConfiguration &&
+      stored.kind === "unadopted" &&
+      stored.historical.kind === "ready"
+    )
+      stored = await adoptHistoricalDiskBox(stored);
+    if (
+      localConfiguration &&
+      (stored.kind !== "ready" ||
+        !stored.manifest.configurations.some(
+          (item) => item.id === localConfiguration,
+        ))
+    ) {
+      const resolution = await resolveMissingLocalConfiguration(
+        localConfiguration,
+        stored,
+      );
+      localConfiguration = resolution.selected;
+      stored = resolution.stored;
+    }
+    if (stored.kind === "recovery") throw new Error(stored.error);
+    if (route.has("recipe")) {
+      await previewRequestedRecipe({
+        id: route.get("recipe"),
+        revision: route.get("revision"),
+      });
+    }
+    if (stored.kind === "unadopted") {
+      if (stored.historical.kind === "ready") {
+        stored = await adoptHistoricalDiskBox(stored);
+      } else {
+        if (!writer.owned)
+          throw new Error(
+            "Close the owning tab and reload to create this disk box.",
+          );
+        const candidate = await prepareDiskBoxRecipeLaunch(
+          emptyDiskBox(),
+          requestedRecipe ?? (await libraryRecipe("starter")),
+        );
+        await publishInitial(candidate, stored.token);
+      }
+    }
+    if (
+      localConfiguration &&
+      localConfiguration !== store.head.manifest.selectedConfigurationId
+    ) {
+      if (!writer.owned)
+        throw new Error(
+          "Close the owning tab before selecting a device-local configuration.",
+        );
+      if (
+        !confirm(
+          "Open this device-local configuration? Every other configuration and personal disk will be retained.",
+        )
+      )
+        throw new Error("Device-local configuration activation cancelled.");
+      const manifest = structuredClone(store.head.manifest);
+      manifest.selectedConfigurationId = localConfiguration;
+      try {
+        await publishInitial(
+          { manifest, newBlobs: new Map() },
+          store.head.token,
+        );
+      } catch (error) {
+        if (error.code === "SYSTEM_DISK_RESTORE_REQUIRED")
+          throw new Error(
+            "The requested local configuration needs its retained system disk restored before it can boot. The selected configuration has not changed.",
+          );
+        throw error;
+      }
+    }
+    startupRuntime ??= await prepareMachine(committed.snapshot);
+    activateMachine(startupRuntime);
+    startupRuntime = undefined;
+    connectWorkspace();
+    resumeMachine();
+    setSaveStatus(
+      writer.owned
+        ? "Saved in this browser"
+        : "Read-only tab: disk writes are disabled. Close the owning tab and reload for write access.",
+      writer.owned ? "saved" : "idle",
+    );
     controls();
-    if (deployment) void renderLibrary().catch(libraryError);
+    terminalElement.focus({ preventScroll: true });
+    void renderLibrary().catch(libraryError);
+    if (new URL(location.href).searchParams.has("recipe")) {
+      showLibraryView();
+      libraryStatus.textContent = "A shared setup is ready to use.";
+    }
+    try {
+      if (!deployment) await loadDeployment();
+      const response = await fetch("tool-catalog.json", {
+        cache: "no-store",
+        redirect: "error",
+      });
+      if (!response.ok) throw new Error("Could not load tool-catalog.json.");
+      catalog = await response.json();
+      validateToolCatalog(catalog, deployment.distribution);
+    } catch (error) {
+      catalog = undefined;
+      console.warn("Tool updates unavailable", error);
+    } finally {
+      controls();
+      if (deployment) void renderLibrary().catch(libraryError);
+    }
   }
 } catch (error) {
   try {
