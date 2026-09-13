@@ -47,6 +47,9 @@ test("public recipe links preview metadata in place and preserve native modified
     libraryError: (error) => {
       throw error;
     },
+    showLibraryView: () => {
+      elements.set("library-visible", true);
+    },
   };
   vm.runInNewContext(source.slice(previewStart, previewEnd), context);
   for (const id of ["share-starter", "share-library", "share-colossal-cave"]) {
@@ -81,7 +84,7 @@ test("public recipe links preview metadata in place and preserve native modified
       id: "arbitrary",
       revision: "b".repeat(64),
     });
-    assert.equal(elements.get("#disk-library").open, true);
+    assert.equal(elements.get("library-visible"), true);
     assert.match(
       elements.get("#requested-recipe-description").textContent,
       /Preview only/,

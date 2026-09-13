@@ -9,43 +9,6 @@
   color: #dce8de;
 }
 
-main > details {
-  margin: 0.4rem 0;
-  padding: 0.4rem 0.65rem;
-  border: 1px solid #415d48;
-  border-radius: 0.5rem;
-}
-main > details > summary,
-#colossal-cave-guide > summary {
-  cursor: pointer;
-  font-weight: 550;
-  min-height: 1.75rem;
-  align-content: center;
-}
-main > details[open] > summary {
-  margin-bottom: 0.6rem;
-}
-#downloads-recovery .controls {
-  margin: 0.5rem 0 0;
-}
-.library-controls {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.75rem;
-  margin: 1rem 0;
-}
-#disk-library li {
-  margin: 0.5rem 0;
-  overflow-wrap: anywhere;
-}
-#disk-library li button {
-  margin-left: 0.5rem;
-}
-#disk-library input[type="file"] {
-  max-width: 16rem;
-}
-
 * {
   box-sizing: border-box;
 }
@@ -68,6 +31,19 @@ main {
   width: min(100% - 2rem, 72rem);
   margin: 0 auto;
   padding: 0.65rem 0;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }
 
 header {
@@ -135,7 +111,7 @@ h1 {
 }
 
 #save-status[data-state="saved"] {
-  color: #8ed69e;
+  display: none;
 }
 
 #save-status[data-state="error"] {
@@ -147,6 +123,138 @@ h1 {
   flex-wrap: wrap;
   gap: 0.65rem;
   margin-bottom: 0.8rem;
+}
+
+#library-view {
+  min-height: calc(100dvh - 1.3rem);
+}
+
+.library-heading {
+  position: sticky;
+  z-index: 2;
+  top: 0;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.4rem 0 0.8rem;
+  background: #111713;
+}
+
+.library-heading h2 {
+  margin: 0;
+  font-size: 1.3rem;
+}
+
+#disk-library {
+  display: grid;
+  gap: 0.85rem;
+}
+
+#disk-library > .visually-hidden {
+  display: block;
+}
+
+.library-section,
+.notice {
+  margin: 0;
+  padding: 1rem;
+  border: 1px solid #38533f;
+  border-radius: 0.65rem;
+  background: rgb(7 16 9 / 52%);
+}
+
+.library-section h3,
+.notice h2 {
+  margin: 0;
+}
+
+.library-section > summary,
+.library-section details > summary {
+  min-height: 2rem;
+  cursor: pointer;
+  font-weight: 650;
+  align-content: center;
+}
+
+.section-intro,
+#library-status {
+  margin: 0.25rem 0 0.75rem;
+  color: #aab8ad;
+}
+
+#library-status:empty {
+  display: none;
+}
+
+.library-controls,
+.drive-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem;
+  margin: 0.75rem 0 0;
+}
+
+.change-ready {
+  display: block;
+  margin-top: 0.85rem;
+  color: #c6d2c8;
+}
+
+.disk-cards {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+  gap: 0.65rem;
+}
+
+.drive-list {
+  display: grid;
+  margin: 0.75rem 0;
+  padding: 0;
+  list-style: none;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: 0.45rem;
+}
+
+.drive-list li {
+  display: grid;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid #2d4634;
+  border-radius: 0.45rem;
+  background: #101a13;
+  gap: 0.15rem;
+}
+
+.disk-title {
+  display: block;
+  font-weight: 650;
+}
+
+.disk-state {
+  display: block;
+  color: #9eaca1;
+  font-size: 0.86rem;
+}
+
+.disk-cards li {
+  padding: 0.8rem;
+  overflow-wrap: anywhere;
+  border: 1px solid #2d4634;
+  border-radius: 0.5rem;
+  background: #101a13;
+}
+
+.disk-cards li button {
+  min-height: 2.2rem;
+  margin: 0.55rem 0.35rem 0 0;
+  padding: 0 0.75rem;
+}
+
+#disk-library input[type="file"] {
+  max-width: 16rem;
 }
 
 .file-control,
@@ -186,6 +294,17 @@ button:hover:not(:disabled),
   background: #233127;
 }
 
+button.danger {
+  border-color: #a65151;
+  background: #3a1717;
+  color: #ffdada;
+}
+
+button.danger:hover:not(:disabled) {
+  border-color: #dc7777;
+  background: #512020;
+}
+
 button:disabled {
   cursor: not-allowed;
   opacity: 0.45;
@@ -197,7 +316,8 @@ button:disabled {
 
 #terminal {
   width: 100%;
-  height: 34.4em;
+  height: calc(100dvh - 5rem);
+  min-height: 24rem;
   max-height: none;
   margin: 0;
   overflow: auto;
@@ -299,12 +419,6 @@ button:disabled {
   color: #baf7c6;
 }
 
-footer {
-  margin-top: 0.75rem;
-  color: #819086;
-  font-size: 0.85rem;
-}
-
 dialog {
   width: min(54rem, calc(100vw - 1rem));
   max-height: calc(var(--visual-viewport-height) - 1rem);
@@ -364,7 +478,8 @@ dialog li button {
   }
 
   #terminal {
-    height: min(34.4em, max(20rem, calc(100dvh - 18rem)));
+    height: calc(100dvh - 9rem);
+    min-height: 18rem;
   }
 
   .mobile-terminal-controls {
@@ -397,8 +512,7 @@ dialog li button {
 
   body.terminal-keyboard-open header,
   body.terminal-keyboard-open .controls,
-  body.terminal-keyboard-open main > details,
-  body.terminal-keyboard-open footer {
+  body.terminal-keyboard-open #library-view {
     display: none;
   }
 
@@ -434,6 +548,22 @@ dialog li button {
     min-width: 0;
     min-height: 2.6rem;
     padding: 0 0.35rem;
+  }
+}
+
+@media (max-width: 44rem) {
+  .library-section,
+  .notice {
+    padding: 0.75rem;
+  }
+
+  .disk-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .library-controls > *,
+  .drive-controls > * {
+    max-width: 100%;
   }
 }
 

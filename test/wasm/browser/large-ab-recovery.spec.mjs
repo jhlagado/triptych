@@ -9,12 +9,16 @@ import { readFile } from "node:fs/promises";
 import { decodeDriveSet } from "../../../crates/triptych-host-wasm/web/drive-set.js";
 
 import { decodeDiskBoxRecovery } from "../../../crates/triptych-host-wasm/web/disk-box-recovery.js";
+import { openDownloads } from "./downloads-fixture.mjs";
 
 const hash = (bytes) => createHash("sha256").update(bytes).digest("hex");
 
 async function manage(page) {
-  if (!(await page.locator("#files-dialog").isVisible()))
+  if (!(await page.locator("#files-dialog").isVisible())) {
+    if (await page.locator("#library-view").isVisible())
+      await page.locator("#close-library").click();
     await page.locator("#files").click();
+  }
   await page.locator("#saved-and-exited").check();
   await page.locator("#begin-management").click();
   await expect(page.locator("#file-import")).toBeEnabled();
@@ -185,7 +189,8 @@ for (const corruption of ["head digest", "B payload"]) {
     await expect(page.locator("#download-set")).toBeDisabled();
     // DB5 exports one lossless raw archive rather than individual v4 blobs.
     // Decode transport checksums without requiring the damaged source to validate.
-    await page.locator("#disk-library > summary").click();
+    await page.locator("#open-library").click();
+    await openDownloads(page);
     const rawArchive = await decodeDiskBoxRecovery(
       new Blob([
         await downloaded(
@@ -222,6 +227,8 @@ for (const corruption of ["head digest", "B payload"]) {
     expect(
       rawArchive["working-disks"].some((row) => row.key === "drive-a"),
     ).toBe(true);
+    if (await page.locator("#library-view").isVisible())
+      await page.locator("#close-library").click();
     await page.locator("#files").click();
     const row = page.locator("#backup-list li").filter({ hasText: backup.id });
     const archive = await decodeDriveSet(

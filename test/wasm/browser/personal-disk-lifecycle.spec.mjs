@@ -62,6 +62,16 @@ const selected = (state) =>
       configuration.id === state.manifest.selectedConfigurationId,
   );
 
+async function openLibrary(page) {
+  if (!(await page.locator("#library-view").isVisible()))
+    await page.locator("#open-library").click();
+}
+
+async function showComputer(page) {
+  if (await page.locator("#library-view").isVisible())
+    await page.locator("#close-library").click();
+}
+
 async function downloadDisk(row, page, path) {
   const pending = page.waitForEvent("download");
   await row.getByRole("button", { name: "Download", exact: true }).click();
@@ -100,7 +110,7 @@ test("personal image import, rename, download and cross-slot reload preserve exa
       (await page.locator("#terminal").textContent()).trimEnd().endsWith("A>"),
     )
     .toBe(true);
-  await page.locator("#disk-library > summary").click();
+  await openLibrary(page);
 
   const initial = await diskBoxState(page);
   const initialIds = initial.manifest.personalDisks.map((disk) => disk.id);
@@ -117,7 +127,7 @@ test("personal image import, rename, download and cross-slot reload preserve exa
     .locator("#personal-disk-list li")
     .filter({ hasText: "Imported stage three" });
   await expect(importedRow).toHaveCount(1);
-  await expect(importedRow).toContainText("ejected");
+  await expect(importedRow).toContainText("not inserted");
 
   const importedState = await diskBoxState(page);
   const imported = importedState.manifest.personalDisks.find(
@@ -148,11 +158,12 @@ test("personal image import, rename, download and cross-slot reload preserve exa
 
   await page.locator("#library-slot").selectOption("1");
   await page.locator("#library-ready").check();
-  await renamedRow.getByRole("button", { name: "Insert", exact: true }).click();
+  await renamedRow.getByRole("button", { name: /^Insert / }).click();
   await expect
     .poll(async () => selected(await diskBoxState(page)).slots[1]?.diskId)
     .toBe(imported.id);
 
+  await showComputer(page);
   await page.locator("#files").click();
   await page.locator("#saved-and-exited").check();
   await page.locator("#begin-management").click();
@@ -174,6 +185,7 @@ test("personal image import, rename, download and cross-slot reload preserve exa
     page.locator("#file-list li").filter({ hasText: "PROOF.TXT" }),
   ).toHaveCount(1);
   await page.locator("#close-files").click();
+  await openLibrary(page);
 
   const written = await diskBoxState(page, imported.id);
   const writtenDisk = written.manifest.personalDisks.find(
@@ -199,7 +211,7 @@ test("personal image import, rename, download and cross-slot reload preserve exa
 
   await page.locator("#library-slot").selectOption("3");
   await page.locator("#library-ready").check();
-  await renamedRow.getByRole("button", { name: "Insert", exact: true }).click();
+  await renamedRow.getByRole("button", { name: /^Insert / }).click();
   await expect
     .poll(async () => selected(await diskBoxState(page)).slots[3]?.diskId)
     .toBe(imported.id);
@@ -211,7 +223,7 @@ test("personal image import, rename, download and cross-slot reload preserve exa
       (await page.locator("#terminal").textContent()).trimEnd().endsWith("A>"),
     )
     .toBe(true);
-  await page.locator("#disk-library > summary").click();
+  await openLibrary(page);
   const afterReload = await diskBoxState(page, imported.id);
   expect(afterReload).toEqual(beforeReloadState);
   expect(selected(afterReload).slots[1]).toBeNull();

@@ -48,6 +48,8 @@ async function prompt(page, suffix = "A>") {
     .toBe(true);
 }
 async function command(page, text, suffix) {
+  if (await page.locator("#library-view").isVisible())
+    await page.locator("#close-library").click();
   const terminal = page.locator("#terminal"),
     before = await terminal.textContent();
   await terminal.focus();
@@ -62,8 +64,8 @@ async function command(page, text, suffix) {
   return terminal.textContent();
 }
 async function openLibrary(page) {
-  if (!(await page.locator("#disk-library").evaluate((node) => node.open)))
-    await page.locator("#disk-library > summary").click();
+  if (!(await page.locator("#library-view").isVisible()))
+    await page.locator("#open-library").click();
 }
 async function mountPublished(page, request) {
   page.on("dialog", (dialog) => dialog.accept());
@@ -84,10 +86,10 @@ async function mountPublished(page, request) {
     `[data-published-image-id="${IMAGE_ID}"][data-published-image-revision="${IMAGE_HASH}"]`,
   );
   await expect(row).toHaveCount(1);
-  await expect(row).toContainText("protected");
+  await expect(row).toContainText("Read-only");
   await page.locator("#library-slot").selectOption("2");
   await page.locator("#library-ready").check();
-  await row.getByRole("button", { name: "Insert", exact: true }).click();
+  await row.getByRole("button", { name: /^Insert / }).click();
   await expect
     .poll(async () => selected(await state(page)).slots[2]?.image?.id)
     .toBe(IMAGE_ID);
@@ -247,7 +249,7 @@ test("an explicit personal Colossal Cave copy saves on C independently of its pu
   await page.locator("#library-ready").check();
   await page
     .locator(`[data-disk-id="${disk.id}"]`)
-    .getByRole("button", { name: "Insert", exact: true })
+    .getByRole("button", { name: /^Insert / })
     .click();
   await expect
     .poll(async () => selected(await state(page)).slots[2]?.diskId)

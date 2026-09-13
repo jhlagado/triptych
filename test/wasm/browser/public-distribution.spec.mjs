@@ -222,9 +222,10 @@ test("supplied machine link preserves the usual machine and keeps independent sa
       files: expect.arrayContaining(["HELLO.COM"]),
     });
   const usual = await state(page);
+  await page.locator("#open-library").click();
   await page.locator("#supplied-disks summary").click();
   await page
-    .getByRole("link", { name: "Open the supplied A+B machine" })
+    .getByRole("link", { name: "Open the older supplied machine" })
     .click();
   await prompt(page, "A>");
   expect(await state(page)).toEqual(usual);

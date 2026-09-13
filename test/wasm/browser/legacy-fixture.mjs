@@ -154,7 +154,7 @@ export async function adoptHistoricalMachine(
   if (navigate) await page.goto(url);
   await expect(page.locator("#adopt-disks")).toBeVisible();
   await expect(page.locator("#status")).toContainText(
-    "explicit disk-box adoption",
+    "Update needed before startup",
   );
   await page.locator("#adopt-disks").click();
   await expect(page.locator("#status")).toHaveAttribute(

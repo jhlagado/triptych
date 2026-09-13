@@ -20,6 +20,7 @@
           class="controls primary-controls"
           aria-label="Machine controls"
         >
+          <button id="open-library" type="button">Library</button>
           <button id="files" type="button">Files</button>
           <button id="reset" type="button" disabled>Reset</button>
           <button id="retry-save" type="button" hidden>Retry saving</button>
@@ -28,192 +29,196 @@
           <p id="status" role="status" aria-live="polite">
             Loading WebAssembly…
           </p>
-          <p id="save-status" role="status" aria-live="polite">
-            Opening browser storage…
-          </p>
+          <p id="save-status" role="status" aria-live="polite"></p>
         </div>
       </header>
 
-      <details id="downloads-recovery">
-        <summary>Downloads and recovery</summary>
-        <section class="controls" aria-label="Downloads">
-          <button id="download" type="button" disabled>
-            Download saved disk
-          </button>
-          <button id="download-recovery" type="button" disabled>
-            Download latest checkpoint
-          </button>
-          <button id="download-set" type="button" disabled>
-            Download saved drive set
-          </button>
-          <button id="download-checkpoint-set" type="button" disabled>
-            Download latest checkpoint set
-          </button>
-          <button id="legacy-recovery" type="button" hidden>
-            Download legacy recovery data
-          </button>
+      <section id="library-view" hidden>
+        <div class="library-heading">
+          <button id="close-library" type="button">← Computer</button>
+          <h2>Disk library</h2>
+        </div>
+
+        <section id="saved-machine-update" class="notice" hidden>
+          <h2>Update your saved machine</h2>
+          <p>
+            Your disks will be kept and a recovery copy will remain available.
+          </p>
+          <button id="adopt-disks" type="button">Update and start</button>
         </section>
-        <div id="raw-recovery" class="controls"></div>
-      </details>
-      <button id="adopt-disks" type="button" hidden>
-        Adopt my saved machine into the disk box
-      </button>
-      <section id="local-configuration-resolution" hidden>
-        <h2>Choose a configuration on this device</h2>
-        <p id="local-configuration-resolution-message"></p>
-        <div class="library-controls">
-          <label
-            >Existing saved configuration
-            <select id="local-configuration-choice"></select>
-          </label>
-          <button id="resolve-local-configuration" type="button">
-            Open selected saved configuration
-          </button>
-          <button id="create-local-configuration" type="button">
-            Create a new independent tools and games setup
-          </button>
-        </div>
-      </section>
-      <details id="disk-library">
-        <summary>Disk box and published library</summary>
-        <p id="library-status" role="status">
-          Published disks are protected. Personal disks remain here after
-          ejection.
-        </p>
-        <p>
-          Live changes require the guest to close files and flush at a
-          disk-change prompt. After insertion, the guest must reset that drive's
-          login state (BDOS 37) and reopen files. Other programs should exit to
-          CP/M first.
-        </p>
-        <label
-          ><input id="library-ready" type="checkbox" /> Guest has closed files
-          and flushed; it is ready for a disk change</label
-        >
-        <div class="library-controls">
-          <label
-            >Drive
-            <select id="library-slot" aria-label="Library drive"></select
-          ></label>
-          <label
-            >Disk name <input id="library-name" value="My disk" maxlength="255"
-          /></label>
-          <button id="library-blank" type="button">
-            Create blank personal disk
-          </button>
-          <label
-            >Import personal image
-            <input id="library-import" type="file" accept=".img,.dsk,.bin"
-          /></label>
-          <button id="library-copy" type="button">
-            Make writable copy of inserted disk
-          </button>
-          <button id="library-eject" type="button">Eject selected drive</button>
-          <button id="restore-system-disk" type="button" hidden>
-            Restore system disk to A
-          </button>
-          <button id="library-retry" type="button" hidden>
-            Retry pending disk change
-          </button>
-        </div>
-        <ul id="personal-disk-list" aria-label="Personal disks"></ul>
-        <ul id="published-disk-list" aria-label="Published disks"></ul>
-        <div class="library-controls">
-          <label
-            >Saved configuration
-            <select id="saved-configuration"></select>
-          </label>
-          <button id="activate-configuration" type="button">
-            Activate saved configuration
-          </button>
-          <a id="local-configuration-bookmark"
-            >Bookmark on this device only (not shareable)</a
-          >
-        </div>
-        <div class="library-controls">
-          <div id="requested-recipe-preview" hidden>
-            <p id="requested-recipe-description"></p>
-            <button id="launch-requested" type="button">
-              Activate requested setup
+
+        <section id="local-configuration-resolution" class="notice" hidden>
+          <h2>This saved machine is not on this device</h2>
+          <p id="local-configuration-resolution-message"></p>
+          <div class="library-controls">
+            <label
+              >Saved machine
+              <select id="local-configuration-choice"></select>
+            </label>
+            <button id="resolve-local-configuration" type="button">
+              Open selected
+            </button>
+            <button id="create-local-configuration" type="button">
+              Create new machine
             </button>
           </div>
-          <button id="launch-starter" type="button">
-            Activate tools and games setup
-          </button>
-          <button id="launch-fresh" type="button">
-            Create independent tools and games setup
-          </button>
-          <a id="share-starter">Share tools and games setup</a>
-          <button id="launch-library" type="button">
-            Activate protected library only
-          </button>
-          <a id="share-library"
-            >Share protected library only (no personal disks)</a
-          >
-          <button id="library-backup" type="button">
-            Download complete disk-box recovery
-          </button>
-        </div>
-        <details id="colossal-cave-guide" hidden>
-          <summary>Colossal Cave: start, save and resume</summary>
-          <p>
-            <a id="share-colossal-cave">Open the Colossal Cave setup preview</a
-            >. On a returning browser, choose
-            <strong>Activate requested setup</strong>
-            and confirm. Your other configurations and personal disks are
-            retained. This setup uses protected system A, personal work B,
-            protected Colossal Cave C and empty D.
-          </p>
-          <p>
-            These instructions are tested only with the four-drive (N4) profile.
-            Enter <code>C:</code>, then <code>ADVENTUR</code>. Keep C current so
-            the game can read <code>PHROGZ.DIN</code>.
-          </p>
-          <p>
-            To save, enter <code>SAVE</code> in the game and answer
-            <code>YES</code>. At the C&gt; prompt, enter
-            <code>SAVE 224 B:SAVED.COM</code> to store the suspended game on
-            personal B. To resume, select <code>C:</code> and enter
-            <code>B:SAVED</code>.
-          </p>
-          <p>
-            Before closing or reloading the page, open Files, acknowledge that
-            the guest program has exited, and choose Enter disk management. Wait
-            for CPU paused, then close Files. Download your disk or a complete
-            backup to keep saves outside this browser.
-          </p>
-          <p>
-            If you explicitly make a writable copy and insert it in C instead,
-            use <code>SAVE 224 SAVED.COM</code> after the game's SAVE/YES, then
-            <code>SAVED</code> to resume with C current. The protected published
-            image cannot hold saves. Reusing the same save filename replaces
-            that saved game; use a different filename to keep an earlier save.
-          </p>
-        </details>
-      </details>
+        </section>
 
-      <details id="supplied-disks">
-        <summary>Published starter disks and older A/B downloads</summary>
-        <p id="machine-choice"></p>
-        <p>
-          New disk boxes use protected tools in A and games in C, with personal
-          work in B and saves in D. Type <code>D:</code>, then
-          <code>C:CAVERNS</code>, <code>C:HYPERDRV</code> or
-          <code>C:HYPERD2</code> to keep game saves on D. Type <code>A:</code>
-          to return to ATOM, NUC and EDIT.
-        </p>
-        <p>
-          <a href="?machine=supplied">Open the supplied A+B machine</a>
-          (separate saved workspace; does not replace your existing disks).
-          <a href="?">Return to your usual machine</a>.
-        </p>
-        <p>
-          Download the original published images:
-          <a href="drive-a-system.img" download>A: system and tools</a> ·
-          <a href="drive-b-games.img" download>B: games</a>. These downloads do
-          not include your saved work.
-        </p>
-      </details>
+        <section id="disk-library">
+          <p id="library-status" role="status" tabindex="-1"></p>
+
+          <section class="library-section">
+            <h3>In this machine</h3>
+            <ul
+              id="mounted-drive-list"
+              class="drive-list"
+              aria-label="Inserted disks"
+            ></ul>
+            <div class="drive-controls">
+              <label
+                >Drive
+                <select id="library-slot" aria-label="Library drive"></select
+              ></label>
+              <button id="library-eject" type="button">Eject</button>
+              <button id="restore-system-disk" type="button" hidden>
+                Restore system disk
+              </button>
+              <button id="library-retry" type="button" hidden>Retry</button>
+            </div>
+            <label class="change-ready"
+              ><input id="library-ready" type="checkbox" /> I am at the CP/M
+              prompt and ready to change this disk</label
+            >
+          </section>
+
+          <section class="library-section">
+            <h3>Software disks</h3>
+            <p class="section-intro">
+              Ready to use and protected from changes.
+            </p>
+            <ul
+              id="published-disk-list"
+              class="disk-cards"
+              aria-label="Software disks"
+            ></ul>
+          </section>
+
+          <section class="library-section">
+            <h3>My data disks</h3>
+            <p class="section-intro">Writable disks saved in this browser.</p>
+            <ul
+              id="personal-disk-list"
+              class="disk-cards"
+              aria-label="My data disks"
+            ></ul>
+            <details id="add-data-disk" open>
+              <summary>Add a data disk</summary>
+              <div class="library-controls">
+                <label
+                  >Name
+                  <input id="library-name" value="My disk" maxlength="255"
+                /></label>
+                <button id="library-blank" type="button">New blank disk</button>
+                <label class="file-control"
+                  ><span>Import image</span>
+                  <input
+                    id="library-import"
+                    type="file"
+                    accept=".img,.dsk,.bin"
+                /></label>
+                <button id="library-copy" type="button">
+                  Make writable copy
+                </button>
+              </div>
+            </details>
+          </section>
+
+          <details id="ready-made-machines" class="library-section">
+            <summary>Ready-made machines</summary>
+            <div id="requested-recipe-preview" class="notice" hidden>
+              <p id="requested-recipe-description"></p>
+              <button id="launch-requested" type="button">
+                Use this setup
+              </button>
+            </div>
+            <div class="library-controls">
+              <button id="launch-starter" type="button">
+                Use standard setup
+              </button>
+              <button id="launch-fresh" type="button">New clean machine</button>
+              <a id="share-starter">Share standard setup</a>
+              <button id="launch-library" type="button">
+                Software disks only
+              </button>
+              <a id="share-library">Share software disks only</a>
+            </div>
+            <div class="library-controls">
+              <label
+                >Saved machine
+                <select id="saved-configuration"></select>
+              </label>
+              <button id="activate-configuration" type="button">
+                Open saved machine
+              </button>
+              <a id="local-configuration-bookmark">Bookmark this machine</a>
+            </div>
+            <details id="colossal-cave-guide" hidden>
+              <summary>Colossal Cave help</summary>
+              <p>
+                <a id="share-colossal-cave">Open the Colossal Cave setup</a>.
+                Select C and run <code>ADVENTUR</code>. Use B for saved games.
+              </p>
+            </details>
+          </details>
+
+          <details id="downloads-recovery" class="library-section">
+            <summary>Backup and recovery</summary>
+            <section class="controls" aria-label="Downloads">
+              <button id="download" type="button" disabled>
+                Download disk
+              </button>
+              <button id="download-recovery" type="button" disabled>
+                Latest checkpoint
+              </button>
+              <button id="download-set" type="button" disabled>
+                Download all drives
+              </button>
+              <button id="download-checkpoint-set" type="button" disabled>
+                Checkpoint of all drives
+              </button>
+              <button id="legacy-recovery" type="button" hidden>
+                Download old recovery data
+              </button>
+              <button id="library-backup" type="button">
+                Download all my disks
+              </button>
+            </section>
+            <div id="raw-recovery" class="controls"></div>
+            <hr />
+            <h3>Start fresh</h3>
+            <p>
+              Use this once if an old browser copy will not update. Normal
+              updates keep your disks.
+            </p>
+            <button id="erase-triptych-data" class="danger" type="button">
+              Erase old browser state and reload
+            </button>
+          </details>
+
+          <details id="supplied-disks" class="library-section">
+            <summary>Older downloads</summary>
+            <p id="machine-choice"></p>
+            <p>
+              <a href="?machine=supplied">Open the older supplied machine</a> ·
+              <a href="?">Return to your usual machine</a>
+            </p>
+            <p>
+              <a href="drive-a-system.img" download>System and tools image</a> ·
+              <a href="drive-b-games.img" download>Games image</a>
+            </p>
+          </details>
+        </section>
+      </section>
 
       <div class="terminal-shell">
         <pre
@@ -257,11 +262,6 @@
           →
         </button>
       </div>
-
-      <footer>
-        Click or tap the terminal to type. On mobile, use the buttons above for
-        Ctrl, Esc, Tab and arrow keys.
-      </footer>
     </main>
     <dialog id="files-dialog" aria-labelledby="files-title">
       <div class="dialog-heading">

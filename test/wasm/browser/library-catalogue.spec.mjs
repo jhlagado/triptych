@@ -47,17 +47,17 @@ test("a retained image outside all recipes is visible and mounts protected witho
   });
   await page.goto("/");
   await expect(page.locator("#terminal")).toContainText("A>");
-  await page.locator("#disk-library > summary").click();
+  await page.locator("#open-library").click();
   const row = page.locator(
     `[data-published-image-id="${image.id}"][data-published-image-revision="${image.revision}"]`,
   );
   await expect(row).toHaveCount(1);
   await expect(row).toContainText("Extra retained data");
-  await expect(row).toContainText("protected");
+  await expect(row).toContainText("Read-only");
   expect(imageFetches).toBe(0);
   await page.locator("#library-slot").selectOption("1");
   await page.locator("#library-ready").check();
-  await row.getByRole("button", { name: "Insert", exact: true }).click();
+  await row.getByRole("button", { name: /^Insert / }).click();
   await expect.poll(() => imageFetches).toBeGreaterThanOrEqual(1);
   await expect
     .poll(() =>
@@ -98,6 +98,7 @@ test("a retained image outside all recipes is visible and mounts protected witho
       ),
     )
     .toBe(true);
+  await page.locator("#close-library").click();
   await page.locator("#files").click();
   await page.locator("#file-drive").selectOption("B");
   await page.locator("#close-files").click();

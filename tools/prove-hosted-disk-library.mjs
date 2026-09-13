@@ -209,10 +209,11 @@ try {
     await page.waitForLoadState("networkidle");
   }
   async function library(page) {
-    if (
-      !(await page.locator("#disk-library").evaluate((element) => element.open))
-    )
-      await page.locator("#disk-library > summary").click();
+    if (!(await page.locator("#library-view").isVisible()))
+      await page.locator("#open-library").click();
+    await page
+      .locator("#ready-made-machines")
+      .evaluate((node) => (node.open = true));
     await expect(page.locator("#share-starter")).toHaveAttribute(
       "href",
       /revision=[a-f0-9]{64}$/,
@@ -225,6 +226,8 @@ try {
     await expect(panel).toHaveJSProperty("open", true);
   }
   async function command(page, text, suffix = "?") {
+    if (await page.locator("#library-view").isVisible())
+      await page.locator("#close-library").click();
     const terminal = page.locator("#terminal"),
       before = await terminal.textContent();
     await terminal.focus();
@@ -360,6 +363,7 @@ try {
   assert.match(await command(desktop, "LOOK"), /stand beside the docking bay/i);
   await quit(desktop, "HYPERD2");
   // The management barrier acknowledges the complete writable checkpoint.
+  await library(desktop);
   await desktop.locator("#library-ready").check();
   await desktop.locator("#library-name").fill("Hosted acceptance ejected disk");
   await desktop.locator("#library-blank").click();
@@ -402,13 +406,14 @@ try {
   await desktop.locator("#library-ready").check();
   await desktop
     .locator(`[data-disk-id="${extraDisk.id}"]`)
-    .getByRole("button", { name: "Insert", exact: true })
+    .getByRole("button", { name: /^Insert / })
     .click();
   await expect
     .poll(async () => configuration(await state(desktop)).slots[1]?.diskId)
     .toBe(extraDisk.id);
   await prompt(desktop, "D>"); // A CPU reboot would have returned to A>.
   await command(desktop, "DIR", "D>");
+  await library(desktop);
   await desktop.locator("#library-ready").check();
   await desktop.locator("#library-eject").click();
   await expect
@@ -453,6 +458,7 @@ try {
   );
 
   await library(desktop);
+  await downloadsAndRecovery(desktop);
   const downloading = desktop.waitForEvent("download");
   await desktop.locator("#library-backup").click();
   const backup = await downloading;
@@ -499,6 +505,7 @@ try {
     protectedConfiguration.systemDisk,
   );
   await expect(protectedPage.locator("#reset")).toBeEnabled();
+  await protectedPage.locator("#close-library").click();
   await protectedPage.locator("#reset").click();
   await expect(protectedPage.locator("#status")).toHaveAttribute(
     "data-state",
@@ -546,10 +553,10 @@ try {
       `[data-published-image-id="${caveId}"][data-published-image-revision="${caveHash}"]`,
     );
     await expect(row).toHaveCount(1);
-    await expect(row).toContainText("protected");
+    await expect(row).toContainText("Read-only");
     await page.locator("#library-slot").selectOption("2");
     await page.locator("#library-ready").check();
-    await row.getByRole("button", { name: "Insert", exact: true }).click();
+    await row.getByRole("button", { name: /^Insert / }).click();
     await expect
       .poll(async () => configuration(await state(page)).slots[2]?.image?.id)
       .toBe(caveId);
@@ -677,7 +684,7 @@ try {
   await caveCopy.page.locator("#library-ready").check();
   await caveCopy.page
     .locator(`[data-disk-id="${copiedDisk.id}"]`)
-    .getByRole("button", { name: "Insert", exact: true })
+    .getByRole("button", { name: /^Insert / })
     .click();
   await expect
     .poll(

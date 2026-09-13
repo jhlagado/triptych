@@ -66,10 +66,11 @@ async function historicalState(page) {
   });
 }
 async function library(page) {
-  if (
-    !(await page.locator("#disk-library").evaluate((element) => element.open))
-  )
-    await page.locator("#disk-library > summary").click();
+  if (!(await page.locator("#library-view").isVisible()))
+    await page.locator("#open-library").click();
+  await page
+    .locator("#ready-made-machines")
+    .evaluate((node) => (node.open = true));
   await expect(page.locator("#saved-configuration option")).not.toHaveCount(0);
 }
 
@@ -92,6 +93,7 @@ test("an adopted configuration remains selectable and its local bookmark reopens
   const launched = await state(page),
     recipeId = launched.manifest.selectedConfigurationId;
   expect(recipeId).not.toBe(originalId);
+  await library(page);
   await expect(
     page.locator(`#saved-configuration option[value="${originalId}"]`),
   ).toContainText("My saved machine");
@@ -101,7 +103,7 @@ test("an adopted configuration remains selectable and its local bookmark reopens
     .getAttribute("href");
   expect(bookmark).toBe(`?configuration=${originalId}`);
   await expect(page.locator("#local-configuration-bookmark")).toContainText(
-    "not shareable",
+    "Bookmark this machine",
   );
   expect(
     await page.locator("#share-starter").getAttribute("href"),
@@ -111,6 +113,7 @@ test("an adopted configuration remains selectable and its local bookmark reopens
   await expect
     .poll(async () => (await state(page)).manifest.selectedConfigurationId)
     .toBe(originalId);
+  await library(page);
   await page.locator("#saved-configuration").selectOption(recipeId);
   await page.locator("#library-ready").check();
   await page.locator("#activate-configuration").click();
@@ -221,6 +224,7 @@ test("an unbootable saved choice stays in the resolver and leaves the current se
     .toBe(2);
   const independentId = (await state(page)).manifest.selectedConfigurationId;
 
+  await library(page);
   await page.locator("#library-slot").selectOption("0");
   await page.locator("#library-ready").check();
   await page.locator("#library-eject").click();

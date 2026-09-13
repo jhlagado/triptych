@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { decodeDiskBoxRecovery } from "../../../crates/triptych-host-wasm/web/disk-box-recovery.js";
 import { seedHistoricalRecords } from "./legacy-fixture.mjs";
+import { openDownloads } from "./downloads-fixture.mjs";
 
 test("raw backup preserves malformed historical records without adopting them", async ({
   page,
@@ -22,7 +23,8 @@ test("raw backup preserves malformed historical records without adopting them", 
   });
   await page.goto("/");
   await expect(page.locator("#status")).toHaveAttribute("data-state", "error");
-  await page.locator("#disk-library > summary").click();
+  await page.locator("#open-library").click();
+  await openDownloads(page);
   const pending = page.waitForEvent("download");
   await page.locator("#library-backup").click();
   const bytes = await readFile(await (await pending).path());
@@ -50,7 +52,7 @@ async function boot(page, route = "/") {
       (await page.locator("#terminal").textContent()).trimEnd().endsWith("A>"),
     )
     .toBe(true);
-  await page.locator("#disk-library > summary").click();
+  await page.locator("#open-library").click();
   await expect(page.locator("#share-starter")).toHaveAttribute(
     "href",
     /revision=[a-f0-9]{64}$/,
@@ -101,6 +103,7 @@ for (const recovery of ["reset", "reload"]) {
       .toBeNull();
     expect(selected(await state(page)).systemDisk).toEqual(original.systemDisk);
     if (recovery === "reset") {
+      await page.locator("#close-library").click();
       await expect(page.locator("#reset")).toBeEnabled();
       await page.locator("#reset").click();
     } else await page.reload();
@@ -140,6 +143,7 @@ test("complete backup downloads recoverable ejected disks without copying protec
   await page.locator("#library-blank").click();
   await expect(page.locator("#personal-disk-list li")).toHaveCount(3);
   const before = await state(page);
+  await openDownloads(page);
   const downloaded = page.waitForEvent("download");
   await page.locator("#library-backup").click();
   const download = await downloaded;
@@ -215,6 +219,7 @@ test("real games restore changed inventory from private D across browser reload 
   await boot(page);
   const original = await state(page),
     originalConfig = selected(original);
+  await page.locator("#close-library").click();
   await command(page, "D:", "D>");
   const savedInventory = {};
   for (const game of ["CAVERNS", "HYPERDRV"]) {
@@ -327,10 +332,10 @@ test("blank disks remain independent of drive slots and a writable copy does not
   expect(disk).toBeTruthy();
   expect(selected(created).slots).toEqual(original.slots);
   const row = page.locator(`[data-disk-id="${disk.id}"]`);
-  await expect(row).toContainText("ejected");
+  await expect(row).toContainText("not inserted");
   await page.locator("#library-slot").selectOption("1");
   await page.locator("#library-ready").check();
-  await row.getByRole("button", { name: "Insert", exact: true }).click();
+  await row.getByRole("button", { name: /^Insert / }).click();
   await expect
     .poll(async () => selected(await state(page)).slots[1]?.diskId)
     .toBe(disk.id);
@@ -339,9 +344,9 @@ test("blank disks remain independent of drive slots and a writable copy does not
   await expect
     .poll(async () => selected(await state(page)).slots[1])
     .toBeNull();
-  await expect(row).toContainText("ejected");
+  await expect(row).toContainText("not inserted");
   await page.locator("#library-ready").check();
-  await row.getByRole("button", { name: "Insert", exact: true }).click();
+  await row.getByRole("button", { name: /^Insert / }).click();
   await expect
     .poll(async () => selected(await state(page)).slots[1]?.diskId)
     .toBe(disk.id);
@@ -439,6 +444,9 @@ test("protected-only shared recipe boots a new browser with no personal disk rec
   }
   const before = await state(page);
   page.on("dialog", (dialog) => dialog.accept());
+  await page
+    .locator("#ready-made-machines")
+    .evaluate((node) => (node.open = true));
   await page.locator("#library-ready").check();
   await page.locator("#launch-library").click();
   await expect

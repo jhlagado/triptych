@@ -207,6 +207,8 @@ test("old recipe and personal work survive a new games default; new setup remain
   await page.goto(oldRoute);
   await expect(page.locator("#terminal")).toContainText("A>");
   page.on("dialog", (dialog) => dialog.accept());
+  if (await page.locator("#library-view").isVisible())
+    await page.locator("#close-library").click();
   await page.locator("#files").click();
   await page.locator("#saved-and-exited").check();
   await page.locator("#begin-management").click();
@@ -244,7 +246,10 @@ test("old recipe and personal work survive a new games default; new setup remain
   // Leave the explicit old preview before choosing the new default setup.
   await page.goto("/");
   await expect(page.locator("#terminal")).toContainText("A>");
-  await page.locator("#disk-library > summary").click();
+  await page.locator("#open-library").click();
+  await page
+    .locator("#ready-made-machines")
+    .evaluate((node) => (node.open = true));
   const nextReference = release.merged.manifest.defaults.find(
     (row) => row.id === "starter",
   );

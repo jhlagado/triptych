@@ -30,7 +30,10 @@ for (const rejectedAsset of ["bootstrap", "seed"]) {
     await page.goto("/");
     const terminal = page.locator("#terminal");
     await expect(terminal).toContainText("A>");
-    await page.locator("#disk-library > summary").click();
+    await page.locator("#open-library").click();
+    await page
+      .locator("#ready-made-machines")
+      .evaluate((node) => (node.open = true));
     await expect(page.locator("#share-starter")).toHaveAttribute(
       "href",
       /revision=[a-f0-9]{64}$/,
@@ -65,6 +68,7 @@ for (const rejectedAsset of ["bootstrap", "seed"]) {
     expect(await state(page)).toEqual(before);
 
     const originalScreen = await terminal.textContent();
+    await page.locator("#close-library").click();
     await terminal.focus();
     await page.keyboard.type("DIR");
     await page.keyboard.press("Enter");
@@ -81,6 +85,7 @@ for (const rejectedAsset of ["bootstrap", "seed"]) {
     expect(await state(page)).toEqual(before);
 
     await page.unroute(`**/${asset}`, route);
+    await page.locator("#open-library").click();
     await page.locator("#library-ready").check();
     await page.locator("#launch-fresh").click();
     await expect

@@ -81,14 +81,14 @@ test("a returning user explicitly activates the exact requested recipe, retains 
     (row) => row.id === reference.id && row.revision === reference.revision,
   );
   const url = `/?recipe=${reference.id}&revision=${reference.revision}`;
-  await page.locator("#disk-library > summary").click();
+  await page.locator("#open-library").click();
+  await page
+    .locator("#ready-made-machines")
+    .evaluate((node) => (node.open = true));
   await expect(page.locator("#colossal-cave-guide")).toBeVisible();
   await page.locator("#colossal-cave-guide summary").click();
   await expect(page.locator("#colossal-cave-guide")).toContainText(
-    "SAVE 224 B:SAVED.COM",
-  );
-  await expect(page.locator("#colossal-cave-guide")).toContainText(
-    "four-drive (N4)",
+    "Select C and run ADVENTUR",
   );
   await expect(page.locator("#share-colossal-cave")).toHaveAttribute(
     "href",
@@ -96,7 +96,7 @@ test("a returning user explicitly activates the exact requested recipe, retains 
   );
   await page.locator("#share-colossal-cave").click();
   await expect(page.locator("#requested-recipe-description")).toContainText(
-    reference.revision,
+    recipe.name,
   );
   expect(new URL(page.url()).search).toBe("");
   await expect(page.locator("#terminal")).toContainText(/KEEP\s+COM/);
@@ -155,6 +155,10 @@ test("a returning user explicitly activates the exact requested recipe, retains 
   await expect(page.locator("#library-ready")).not.toBeChecked();
   await expect(page.locator("#reset")).toBeEnabled();
   expect(await state(page)).toEqual(activated);
+  await page.locator("#open-library").click();
+  await page
+    .locator("#ready-made-machines")
+    .evaluate((node) => (node.open = true));
   await page.locator("#saved-configuration").selectOption(original.id);
   await page.locator("#library-ready").check();
   await page.locator("#activate-configuration").click();

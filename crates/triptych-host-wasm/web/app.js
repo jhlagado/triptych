@@ -63,6 +63,51 @@ const showKeyboardButton = document.querySelector("#show-keyboard");
 const controlKeyButton = document.querySelector("#terminal-control-key");
 const mobileKeyButtons = document.querySelectorAll("[data-terminal-key]");
 const terminal = new TerminalBuffer();
+const libraryView = document.querySelector("#library-view");
+const machineHeader = document.querySelector("main > header");
+const terminalShell = document.querySelector(".terminal-shell");
+const mobileControls = document.querySelector(".mobile-terminal-controls");
+
+function showLibraryView({ updateAddress = true } = {}) {
+  machineHeader.hidden = true;
+  terminalShell.hidden = true;
+  mobileControls.hidden = true;
+  libraryView.hidden = false;
+  document.body.classList.add("library-open");
+  if (updateAddress && location.hash !== "#library")
+    history.pushState(
+      null,
+      "",
+      `${location.pathname}${location.search}#library`,
+    );
+  document.querySelector("#close-library").focus({ preventScroll: true });
+}
+
+function showComputerView({ updateAddress = true } = {}) {
+  libraryView.hidden = true;
+  machineHeader.hidden = false;
+  terminalShell.hidden = false;
+  mobileControls.hidden = false;
+  document.body.classList.remove("library-open");
+  if (updateAddress && location.hash)
+    history.pushState(null, "", `${location.pathname}${location.search}`);
+  terminalElement.focus({ preventScroll: true });
+}
+
+function showAddressedView() {
+  if (location.hash === "#library") showLibraryView({ updateAddress: false });
+  else showComputerView({ updateAddress: false });
+}
+
+document
+  .querySelector("#open-library")
+  .addEventListener("click", () => showLibraryView());
+document
+  .querySelector("#close-library")
+  .addEventListener("click", () => showComputerView());
+window.addEventListener("popstate", showAddressedView);
+window.addEventListener("hashchange", showAddressedView);
+showAddressedView();
 
 // A second, explicitly selected machine lets returning visitors play the
 // published starter disks without replacing their existing working machine.
@@ -70,6 +115,7 @@ const terminal = new TerminalBuffer();
 const suppliedMachine =
   new URL(location.href).searchParams.get("machine") === "supplied";
 const storageName = suppliedMachine ? "triptych-supplied" : "triptych-cpu";
+const startFreshMarker = "triptych:start-fresh-in-progress:v1";
 function localConfigurationSelection(route) {
   if (!route.has("configuration")) return undefined;
   if (
@@ -152,11 +198,11 @@ async function previewRequestedRecipe(reference) {
   if (generation !== recipePreviewGeneration) return;
   requestedRecipe = recipe;
   document.querySelector("#requested-recipe-preview").hidden = false;
+  document.querySelector("#ready-made-machines").open = true;
   document.querySelector("#requested-recipe-description").textContent =
-    `Requested public setup: ${recipe.descriptor.name} (${recipe.reference.id}, revision ${recipe.reference.revision}). Preview only: opening this preview does not replace an existing selected configuration. Activate requested setup to select its existing local instance or create it once. All other configurations and personal disks are retained.`;
-  document.querySelector("#disk-library").open = true;
-  libraryStatus.textContent =
-    "Launch recipe preview: use Activate requested setup to select this exact public recipe. Other setup buttons select their separately labelled recipes.";
+    `${recipe.descriptor.name}. Review it here, then choose Use this setup. Your other machines and data disks will be kept.`;
+  showLibraryView();
+  libraryStatus.textContent = "A shared setup is ready to use.";
 }
 
 // A preview must not unload a running machine or interrupt queued disk saves.
@@ -1904,7 +1950,7 @@ let startupSystemRecovery = false;
 function showSystemRecovery() {
   startupSystemRecovery = !machine;
   pauseMachine();
-  document.querySelector("#disk-library").open = true;
+  showLibraryView();
   restoreSystemButton.hidden = false;
   libraryStatus.textContent =
     "The guest needs its retained system disk in A. Confirm closed/flushed files, then Restore system disk. Dirty transfers or pending input remain paused for explicit recovery; no media are replaced automatically.";
@@ -1922,6 +1968,8 @@ const libraryHash = async (bytes) =>
   ).join("");
 function libraryError(error) {
   libraryStatus.textContent = message(error);
+  libraryStatus.scrollIntoView({ block: "start", behavior: "smooth" });
+  libraryStatus.focus({ preventScroll: true });
   controls();
 }
 function currentLibrarySlot() {
@@ -1976,12 +2024,12 @@ function updateLiveView(snapshot) {
   lastFlushCounts = runtime.flushCounts();
   renderActiveConfiguration();
 }
-async function libraryBarrier() {
+async function libraryBarrier({ requireGuestReady = true } = {}) {
   if (libraryBusy || managementToken || !workspace?.canRun || !writer?.owned)
     throw new Error(
       "Finish the current operation before changing the disk box.",
     );
-  if (!libraryReady.checked)
+  if (requireGuestReady && !libraryReady.checked)
     throw new Error(
       "Confirm that the guest has closed files and flushed first.",
     );
@@ -2039,6 +2087,7 @@ async function libraryCommit(candidate, barrier, restart = false) {
     libraryBusy = false;
     libraryReady.checked = false;
     await renderLibrary();
+    if (restart) showComputerView();
   } catch (error) {
     prepared?.dispose();
     libraryStatus.textContent =
@@ -2121,7 +2170,7 @@ async function addPersonal(bytes, name) {
   } finally {
     image.free();
   }
-  const barrier = await libraryBarrier();
+  const barrier = await libraryBarrier({ requireGuestReady: false });
   const manifest = structuredClone(store.head.manifest),
     sha256 = await libraryHash(bytes);
   manifest.personalDisks.push({
@@ -2145,19 +2194,45 @@ async function renderLibrary() {
   if (store?.head?.kind !== "ready") return;
   const config = store.configuration,
     selected = Number(librarySlot.value || 1);
+  const mountedDrives = document.querySelector("#mounted-drive-list");
+  mountedDrives.replaceChildren();
+  for (let index = 0; index < config.configuredCount; index++) {
+    const binding = config.slots[index];
+    const row = document.createElement("li");
+    const title = document.createElement("span");
+    title.className = "disk-title";
+    const diskName =
+      binding?.kind === "published"
+        ? binding.image.name
+        : binding?.kind === "personal"
+          ? store.head.manifest.personalDisks.find(
+              (disk) => disk.id === binding.diskId,
+            )?.name
+          : undefined;
+    title.textContent = `${String.fromCharCode(65 + index)}: ${diskName ?? "Empty"}`;
+    const state = document.createElement("span");
+    state.className = "disk-state";
+    state.textContent = binding
+      ? binding.kind === "published"
+        ? "Read-only"
+        : "Writable"
+      : "No disk";
+    row.append(title, state);
+    mountedDrives.append(row);
+  }
   const configurations = document.querySelector("#saved-configuration");
   configurations.replaceChildren();
   for (const saved of store.head.manifest.configurations) {
     const option = document.createElement("option");
     option.value = saved.id;
-    option.textContent = saved.name + " · " + saved.id.slice(0, 8);
+    option.textContent = saved.name;
     configurations.append(option);
   }
   configurations.value = config.id;
   document.querySelector("#local-configuration-bookmark").href =
     localConfigurationBookmark(config.id);
   restoreSystemButton.hidden =
-    !runtime?.systemGuardEnabled && !startupSystemRecovery;
+    !startupSystemRecovery && !machine?.system_recovery_pending?.();
   librarySlot.replaceChildren();
   for (let i = 0; i < config.configuredCount; i++) {
     const option = document.createElement("option");
@@ -2174,26 +2249,28 @@ async function renderLibrary() {
         ? [String.fromCharCode(65 + index)]
         : [],
     );
-    row.append(
-      document.createTextNode(
-        disk.name +
-          " · " +
-          (mounted.length ? mounted.join(", ") : "ejected") +
-          " ",
-      ),
-    );
-    row.append(
-      button("Insert", async () => {
-        try {
-          await insertLibraryBinding(
-            { kind: "personal", diskId: disk.id, writable: true },
-            await store.authority.readPersonalDisk(disk.id),
-          );
-        } catch (error) {
-          libraryError(error);
-        }
-      }),
-    );
+    const title = document.createElement("span");
+    title.className = "disk-title";
+    title.textContent = disk.name;
+    const state = document.createElement("span");
+    state.className = "disk-state";
+    state.textContent = mounted.length
+      ? `Writable · in ${mounted.join(", ")}`
+      : "Writable · not inserted";
+    row.append(title, state);
+    const insertButton = button("Insert", async () => {
+      try {
+        await insertLibraryBinding(
+          { kind: "personal", diskId: disk.id, writable: true },
+          await store.authority.readPersonalDisk(disk.id),
+        );
+      } catch (error) {
+        libraryError(error);
+      }
+    });
+    insertButton.dataset.libraryInsert = "";
+    insertButton.dataset.diskName = disk.name;
+    row.append(insertButton);
     row.append(
       button("Download", async () =>
         download(
@@ -2207,7 +2284,7 @@ async function renderLibrary() {
         try {
           const name = prompt("Personal disk name", disk.name);
           if (name === null) return;
-          const barrier = await libraryBarrier(),
+          const barrier = await libraryBarrier({ requireGuestReady: false }),
             manifest = structuredClone(store.head.manifest);
           manifest.personalDisks.find((item) => item.id === disk.id).name =
             name;
@@ -2245,7 +2322,9 @@ async function renderLibrary() {
     schema: "triptych-disk-catalogue-v1",
     images: retained.metadata.images,
   };
-  for (const entry of catalogue.images) {
+  const currentImages = new Map();
+  for (const image of catalogue.images) currentImages.set(image.id, image);
+  for (const entry of currentImages.values()) {
     const slot = {
       kind: "published",
       image: publishedImageReference(
@@ -2258,33 +2337,43 @@ async function renderLibrary() {
     const row = document.createElement("li");
     row.dataset.publishedImageId = entry.id;
     row.dataset.publishedImageRevision = entry.revision;
-    row.textContent =
-      slot.image.name +
-      " · protected · " +
-      entry.id +
-      " @ " +
-      entry.revision.slice(0, 12) +
-      " ";
-    row.append(
-      button("Insert", async () => {
-        try {
-          const { fetchPublishedImage } = await import("./disk-catalogue.js");
-          await insertLibraryBinding(
-            slot,
-            await fetchPublishedImage(slot.image),
-          );
-        } catch (error) {
-          libraryError(error);
-        }
-      }),
-    );
+    const title = document.createElement("span");
+    title.className = "disk-title";
+    title.textContent = slot.image.name;
+    const state = document.createElement("span");
+    state.className = "disk-state";
+    state.textContent = `Read-only · ${Math.round(entry.byteLength / 1048576)} MB`;
+    row.append(title, state);
+    const insertButton = button("Insert", async () => {
+      try {
+        const { fetchPublishedImage } = await import("./disk-catalogue.js");
+        await insertLibraryBinding(slot, await fetchPublishedImage(slot.image));
+      } catch (error) {
+        libraryError(error);
+      }
+    });
+    insertButton.dataset.libraryInsert = "";
+    insertButton.dataset.diskName = slot.image.name;
+    row.append(insertButton);
     published.append(row);
   }
-  libraryStatus.textContent =
-    "Personal disks: " +
-    store.head.manifest.personalDisks.length +
-    ". Published disks stay protected; ejected disks are retained.";
+  updateLibraryDriveActions();
+  libraryStatus.textContent = "";
 }
+
+function updateLibraryDriveActions() {
+  const drive = String.fromCharCode(65 + currentLibrarySlot());
+  document.querySelector("#library-eject").textContent = `Eject ${drive}`;
+  for (const button of document.querySelectorAll("[data-library-insert]")) {
+    button.textContent = `Insert into ${drive}`;
+    button.setAttribute(
+      "aria-label",
+      `Insert ${button.dataset.diskName} into drive ${drive}`,
+    );
+  }
+}
+
+librarySlot.addEventListener("change", updateLibraryDriveActions);
 document.querySelector("#library-blank").addEventListener("click", async () => {
   let disk;
   try {
@@ -2443,6 +2532,139 @@ document
     }
   });
 
+function eraseDatabase(name) {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.deleteDatabase(name);
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error);
+    request.onblocked = () => {
+      libraryStatus.textContent =
+        "Waiting for another Triptych tab to close before erasing…";
+    };
+  });
+}
+
+function startFreshPending() {
+  try {
+    return localStorage.getItem(startFreshMarker) === "yes";
+  } catch {
+    return false;
+  }
+}
+
+async function resumeInterruptedStartFresh() {
+  if (!startFreshPending()) return;
+  setStatus("Finishing an interrupted browser reset…");
+  const leases = await Promise.all([
+    acquireDiskWriter({ name: "triptych-cpu:disk-writer" }),
+    acquireDiskWriter({ name: "triptych-supplied:disk-writer" }),
+  ]);
+  try {
+    if (leases.some((lease) => !lease.owned))
+      throw new Error(
+        "Close every other Triptych tab, then reload to finish the browser reset.",
+      );
+    await Promise.all([
+      eraseDatabase("triptych-cpu"),
+      eraseDatabase("triptych-supplied"),
+    ]);
+    localStorage.removeItem(startFreshMarker);
+  } finally {
+    await Promise.all(leases.map((lease) => lease.release()));
+  }
+}
+
+async function refreshPublishedApplication() {
+  const base = new URL("./", location.href);
+  const page = new URL("index.html", base);
+  page.searchParams.set("fresh", Date.now());
+  const urls = new Set([
+    page.href,
+    new URL("app.js", base).href,
+    new URL("style.css", base).href,
+    new URL("triptych_host_wasm.js", base).href,
+    new URL("triptych_host_wasm_bg.wasm", base).href,
+    new URL("deployment-manifest.json", base).href,
+    new URL("disk-library-registry.json", base).href,
+    new URL("tool-catalog.json", base).href,
+    new URL("bootstrap.bin", base).href,
+  ]);
+  for (const entry of performance.getEntriesByType("resource")) {
+    const url = new URL(entry.name);
+    if (
+      url.origin === location.origin &&
+      url.pathname.startsWith(base.pathname) &&
+      /\.(?:css|html|js|json|wasm)$/.test(url.pathname)
+    )
+      urls.add(url.href);
+  }
+  const responses = await Promise.all(
+    [...urls].map((url) => fetch(url, { cache: "reload", redirect: "error" })),
+  );
+  const failed = responses.find((response) => !response.ok);
+  if (failed)
+    throw new Error(
+      `The latest Triptych software could not be loaded (${failed.status}). Saved data was not erased.`,
+    );
+}
+
+document
+  .querySelector("#erase-triptych-data")
+  .addEventListener("click", async () => {
+    if (
+      !confirm(
+        "Erase every Triptych machine and data disk saved in this browser? Download a backup first if you may need them. This cannot be undone.",
+      )
+    )
+      return;
+    let otherWriter;
+    let tornDown = false;
+    try {
+      if (!writer?.owned || libraryBusy || workspace?.state !== "running")
+        throw new Error(
+          "Start fresh in the tab that owns this machine, with no disk operation in progress.",
+        );
+      const otherStorageName =
+        storageName === "triptych-cpu" ? "triptych-supplied" : "triptych-cpu";
+      otherWriter = await acquireDiskWriter({
+        name: `${otherStorageName}:disk-writer`,
+      });
+      if (!otherWriter.owned)
+        throw new Error(
+          "Close every other Triptych tab, then try Start fresh again. Saved data was not erased.",
+        );
+      libraryStatus.textContent = "Loading the latest Triptych software…";
+      await refreshPublishedApplication();
+      localStorage.setItem(startFreshMarker, "yes");
+      libraryStatus.textContent = "Removing saved Triptych data…";
+      pauseMachine();
+      await workspace?.close();
+      runtime?.dispose();
+      runtime = undefined;
+      machine = undefined;
+      store?.close();
+      store = undefined;
+      tornDown = true;
+      await Promise.all([
+        eraseDatabase("triptych-cpu"),
+        eraseDatabase("triptych-supplied"),
+      ]);
+      localStorage.removeItem(startFreshMarker);
+      await writer.release();
+      writer = undefined;
+      await otherWriter.release();
+      otherWriter = undefined;
+      location.replace(`${location.pathname}?fresh=${Date.now()}`);
+    } catch (error) {
+      await otherWriter?.release();
+      if (!tornDown) libraryError(error);
+      else {
+        alert(`${message(error)} Reloading Triptych.`);
+        location.reload();
+      }
+    }
+  });
+
 restoreSystemButton.addEventListener("click", async () => {
   let checked;
   try {
@@ -2574,6 +2796,7 @@ async function resolveMissingLocalConfiguration(requestedId, initial) {
     `Configuration ${requestedId.slice(0, 8)} is not saved in this browser. ` +
     "The machine is stopped and nothing has been published. Choose an exact saved configuration, or explicitly create a new independent setup. Creating cannot recover the missing configuration's private disks.";
   panel.hidden = false;
+  showLibraryView();
   setStatus("Choose a saved configuration or create a new setup.");
   setSaveStatus("Machine has not started; saved data is unchanged.", "idle");
 
@@ -2681,6 +2904,7 @@ async function resolveMissingLocalConfiguration(requestedId, initial) {
     "",
     localConfigurationBookmark(resolution.selected),
   );
+  showComputerView();
   return resolution;
 }
 
@@ -2688,22 +2912,25 @@ async function adoptHistoricalDiskBox(stored) {
   if (!writer.owned)
     throw new Error("Close the owning tab and reload to adopt this disk box.");
   const adoptButton = document.querySelector("#adopt-disks");
-  adoptButton.hidden = false;
-  setStatus(
-    "Your saved machine is ready for explicit disk-box adoption. Original recovery records will be retained.",
-  );
+  const updatePanel = document.querySelector("#saved-machine-update");
+  updatePanel.hidden = false;
+  showLibraryView();
+  setStatus("Update needed before startup.");
   await new Promise((resolve) =>
     adoptButton.addEventListener("click", resolve, { once: true }),
   );
-  adoptButton.hidden = true;
+  updatePanel.hidden = true;
   const candidate = await prepareSavedMachineAdoption(
     stored.historical.snapshot,
     { configurationId: crypto.randomUUID(), name: "My saved machine" },
   );
-  return publishInitial(candidate, stored.token);
+  const adopted = await publishInitial(candidate, stored.token);
+  showComputerView();
+  return adopted;
 }
 
 try {
+  await resumeInterruptedStartFresh();
   const route = new URL(location.href).searchParams;
   let localConfiguration = localConfigurationSelection(route);
   writer = await acquireDiskWriter({ name: `${storageName}:disk-writer` });
@@ -2813,9 +3040,8 @@ try {
   terminalElement.focus({ preventScroll: true });
   void renderLibrary().catch(libraryError);
   if (new URL(location.href).searchParams.has("recipe")) {
-    document.querySelector("#disk-library").open = true;
-    libraryStatus.textContent =
-      "Launch recipe preview: use Activate requested setup to select this exact public recipe. Other setup buttons select their separately labelled recipes.";
+    showLibraryView();
+    libraryStatus.textContent = "A shared setup is ready to use.";
   }
   try {
     if (!deployment) await loadDeployment();
@@ -2855,7 +3081,7 @@ try {
       "error",
     );
     setSaveStatus(
-      "Machine could not start. Open Downloads and recovery to download available saved data.",
+      "Machine could not start. Open Library, then Backup and recovery, to download available saved data.",
       "error",
     );
     await rawRecovery().catch((cause) =>
