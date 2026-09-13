@@ -19,7 +19,12 @@ async function state(page, name = "triptych-cpu") {
         tx.oncomplete = () =>
           resolve(
             head.result
-              ? { manifest: head.result.manifest, blobs: blobs.result }
+              ? {
+                  revision: head.result.revision,
+                  digest: head.result.digest,
+                  manifest: head.result.manifest,
+                  blobs: blobs.result,
+                }
               : null,
           );
         tx.onabort = () => reject(tx.error);
@@ -28,6 +33,37 @@ async function state(page, name = "triptych-cpu") {
       db.close();
     }
   }, name);
+}
+async function historicalState(page) {
+  return page.evaluate(async () => {
+    const db = await new Promise((resolve, reject) => {
+      const request = indexedDB.open("triptych-cpu");
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    try {
+      const row = await new Promise((resolve, reject) => {
+        const tx = db.transaction("working-disks");
+        const request = tx.objectStore("working-disks").get("drive-a");
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+      const bytes = new Uint8Array(row.bytes);
+      const digest = Array.from(
+        new Uint8Array(await crypto.subtle.digest("SHA-256", bytes)),
+        (byte) => byte.toString(16).padStart(2, "0"),
+      ).join("");
+      return {
+        schema: row.schema,
+        key: row.key,
+        name: row.name,
+        byteLength: bytes.length,
+        digest,
+      };
+    } finally {
+      db.close();
+    }
+  });
 }
 async function library(page) {
   if (
@@ -94,41 +130,175 @@ test("an adopted configuration remains selectable and its local bookmark reopens
   expect(reopened.blobs).toEqual(launched.blobs);
 });
 
-test("supplied local bookmarks preserve their namespace and never initialize a missing configuration elsewhere", async ({
+test("a missing local bookmark waits for exact selection without booting or publishing", async ({
   page,
-  browser,
 }) => {
-  await page.goto("/?machine=supplied");
-  await expect(page.locator("#terminal")).toContainText("A>");
-  await library(page);
-  const before = await state(page, "triptych-supplied");
-  const bookmark = await page
-    .locator("#local-configuration-bookmark")
-    .getAttribute("href");
-  expect(bookmark).toBe(
-    `?machine=supplied&configuration=${before.manifest.selectedConfigurationId}`,
+  test.setTimeout(120000);
+  await seedLegacyDisk(page);
+  const historicalBefore = await historicalState(page);
+  const missingId = "00000000-0000-4000-8000-000000000099";
+
+  await page.goto(`/?configuration=${missingId}`);
+  await expect(page.locator("#adopt-disks")).toBeVisible();
+  await expect(page.locator("#local-configuration-resolution")).toBeHidden();
+  expect(await state(page)).toBeNull();
+  expect(await historicalState(page)).toEqual(historicalBefore);
+  expect((await page.locator("#terminal").textContent()).includes("A>")).toBe(
+    false,
   );
-  const context = await browser.newContext();
-  try {
-    const other = await context.newPage();
-    await other.goto(new URL(bookmark, page.url()).href);
-    await expect(other.locator("#status")).toHaveAttribute(
-      "data-state",
-      "error",
-    );
-    await expect(other.locator("#status")).toContainText(
-      "Device-local configuration not found",
-    );
-    await expect(other.locator("#adopt-disks")).toBeHidden();
-    expect(await state(other, "triptych-supplied")).toBeNull();
-    expect(await state(other, "triptych-cpu")).toBeNull();
-    expect(
-      (await other.locator("#terminal").textContent()).includes("A>"),
-    ).toBe(false);
-  } finally {
-    await context.close();
-  }
-  expect(await state(page, "triptych-supplied")).toEqual(before);
+
+  await page.locator("#adopt-disks").click();
+  await expect(page.locator("#local-configuration-resolution")).toBeVisible();
+  await expect(page.locator("#local-configuration-choice option")).toHaveCount(
+    1,
+  );
+  const before = await state(page);
+  const targetId = before.manifest.selectedConfigurationId;
+  expect((await page.locator("#terminal").textContent()).includes("A>")).toBe(
+    false,
+  );
+  expect(await historicalState(page)).toEqual(historicalBefore);
+
+  await page.locator("#local-configuration-choice").selectOption(targetId);
+  await page.locator("#resolve-local-configuration").click();
+  await expect(page.locator("#terminal")).toContainText("A>");
+  expect(new URL(page.url()).search).toBe(`?configuration=${targetId}`);
+  const after = await state(page);
+  expect(after).toEqual(before);
+  expect(await historicalState(page)).toEqual(historicalBefore);
+});
+
+test("creating after historical adoption retains the adopted setup and starts one independent setup", async ({
+  page,
+}) => {
+  test.setTimeout(120000);
+  await seedLegacyDisk(page);
+  const historicalBefore = await historicalState(page);
+  const missingId = "00000000-0000-4000-8000-000000000097";
+
+  await page.goto(`/?configuration=${missingId}`);
+  await page.evaluate(async () => {
+    const { TriptychCpu } = await import("/triptych_host_wasm.js");
+    const original = TriptychCpu.prototype.free;
+    window.__triptychTestFreeCount = 0;
+    TriptychCpu.prototype.free = function (...args) {
+      window.__triptychTestFreeCount += 1;
+      return original.apply(this, args);
+    };
+  });
+  await page.locator("#adopt-disks").click();
+  await expect(page.locator("#local-configuration-resolution")).toBeVisible();
+  const adopted = await state(page);
+  const adoptedId = adopted.manifest.selectedConfigurationId;
+
+  await page.locator("#create-local-configuration").click();
+  await expect(page.locator("#terminal")).toContainText("A>");
+  const created = await state(page);
+  expect(created.manifest.configurations).toHaveLength(2);
+  expect(
+    created.manifest.configurations.some((item) => item.id === adoptedId),
+  ).toBe(true);
+  expect(created.manifest.selectedConfigurationId).not.toBe(adoptedId);
+  expect(await page.evaluate(() => window.__triptychTestFreeCount)).toBe(1);
+  expect(await historicalState(page)).toEqual(historicalBefore);
+});
+
+test("an unbootable saved choice stays in the resolver and leaves the current setup selected", async ({
+  page,
+}) => {
+  test.setTimeout(120000);
+  page.on("dialog", (dialog) => dialog.accept());
+  await page.goto("/");
+  await expect(page.locator("#terminal")).toContainText("A>");
+  const original = await state(page);
+  const originalId = original.manifest.selectedConfigurationId;
+
+  await library(page);
+  await page.locator("#library-ready").check();
+  await page.locator("#launch-fresh").click();
+  await expect
+    .poll(async () => (await state(page)).manifest.configurations.length)
+    .toBe(2);
+  const independentId = (await state(page)).manifest.selectedConfigurationId;
+
+  await page.locator("#library-slot").selectOption("0");
+  await page.locator("#library-ready").check();
+  await page.locator("#library-eject").click();
+  await expect
+    .poll(() =>
+      state(page).then(
+        (saved) =>
+          saved.manifest.configurations.find(
+            (item) => item.id === saved.manifest.selectedConfigurationId,
+          ).slots[0],
+      ),
+    )
+    .toBeNull();
+
+  await page.goto(`/?configuration=${originalId}`);
+  await expect(page.locator("#terminal")).toContainText("A>");
+  expect((await state(page)).manifest.selectedConfigurationId).toBe(originalId);
+
+  const missingId = "00000000-0000-4000-8000-000000000096";
+  await page.goto(`/?configuration=${missingId}`);
+  await expect(page.locator("#local-configuration-resolution")).toBeVisible();
+  await page.locator("#local-configuration-choice").selectOption(independentId);
+  await page.locator("#resolve-local-configuration").click();
+
+  await expect(page.locator("#local-configuration-resolution")).toBeVisible();
+  await expect(
+    page.locator("#local-configuration-resolution-message"),
+  ).toContainText("retained system disk");
+  await expect(page.locator("#resolve-local-configuration")).toBeEnabled();
+  expect((await state(page)).manifest.selectedConfigurationId).toBe(originalId);
+  await expect(page.locator("#restore-system-disk")).toBeHidden();
+});
+
+test("explicit fresh resolution creates one independent starter in only the supplied namespace", async ({
+  page,
+}) => {
+  test.setTimeout(120000);
+  await page.goto("/");
+  await expect(page.locator("#terminal")).toContainText("A>");
+  const defaultBefore = await state(page);
+  const missingId = "00000000-0000-4000-8000-000000000098";
+
+  await page.goto(`/?machine=supplied&configuration=${missingId}`);
+  await expect(page.locator("#local-configuration-resolution")).toBeVisible();
+  await expect(page.locator("#resolve-local-configuration")).toBeDisabled();
+  expect(await state(page, "triptych-supplied")).toBeNull();
+  expect(await state(page)).toEqual(defaultBefore);
+  expect((await page.locator("#terminal").textContent()).includes("A>")).toBe(
+    false,
+  );
+
+  await page.locator("#create-local-configuration").click();
+  await expect(page.locator("#terminal")).toContainText("A>");
+  const supplied = await state(page, "triptych-supplied");
+  expect(supplied.manifest.configurations).toHaveLength(1);
+  expect(supplied.manifest.launchInstances).toHaveLength(1);
+  expect(supplied.manifest.personalDisks).toHaveLength(2);
+  expect(supplied.manifest.selectedConfigurationId).not.toBe(missingId);
+  expect(new URL(page.url()).search).toBe(
+    `?machine=supplied&configuration=${supplied.manifest.selectedConfigurationId}`,
+  );
+  expect(await state(page)).toEqual(defaultBefore);
+});
+
+test("a configuration display name is never accepted as a local identity", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await expect(page.locator("#terminal")).toContainText("A>");
+  const before = await state(page);
+  const displayName = before.manifest.configurations[0].name;
+  await page.goto(`/?configuration=${encodeURIComponent(displayName)}`);
+  await expect(page.locator("#status")).toHaveAttribute("data-state", "error");
+  await expect(page.locator("#status")).toContainText(
+    "Invalid device-local configuration identifier",
+  );
+  await expect(page.locator("#local-configuration-resolution")).toBeHidden();
+  expect(await state(page)).toEqual(before);
 });
 
 test("combined public and local selectors reject without creating a disk-box head", async ({

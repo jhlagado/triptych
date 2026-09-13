@@ -2507,7 +2507,7 @@ async function publishInitial(candidate, token) {
   const configuration = candidate.manifest.configurations.find(
     (item) => item.id === candidate.manifest.selectedConfigurationId,
   );
-  startupRuntime = await prepareSavedMachineRuntime({
+  const prepared = await prepareSavedMachineRuntime({
     snapshot,
     TriptychCpu,
     writable: !!writer.owned,
@@ -2517,6 +2517,13 @@ async function publishInitial(candidate, token) {
     deployment: await runtimeDeployment(candidate.manifest),
     guardSystemDisk: snapshot.schema === "triptych-drive-set-v4",
   });
+  try {
+    startupRuntime?.dispose();
+  } catch (error) {
+    prepared.dispose();
+    throw error;
+  }
+  startupRuntime = prepared;
   const publication = await store.authority.commitChange(
     token,
     crypto.randomUUID(),
@@ -2527,6 +2534,7 @@ async function publishInitial(candidate, token) {
     throw new Error("Initial disk-box publication was superseded.");
   const loaded = await refreshCommitted();
   requireExactPublication(publication, loaded, snapshot);
+  return loaded;
 }
 
 function requireExactPublication(publication, loaded, snapshot) {
@@ -2544,9 +2552,160 @@ function requireExactPublication(publication, loaded, snapshot) {
     );
 }
 
+async function resolveMissingLocalConfiguration(requestedId, initial) {
+  const panel = document.querySelector("#local-configuration-resolution");
+  const messageElement = document.querySelector(
+    "#local-configuration-resolution-message",
+  );
+  const choice = document.querySelector("#local-configuration-choice");
+  const openButton = document.querySelector("#resolve-local-configuration");
+  const createButton = document.querySelector("#create-local-configuration");
+  choice.replaceChildren();
+  if (initial.kind === "ready") {
+    for (const saved of initial.manifest.configurations) {
+      const option = document.createElement("option");
+      option.value = saved.id;
+      option.textContent = saved.name + " · " + saved.id.slice(0, 8);
+      choice.append(option);
+    }
+  }
+  openButton.disabled = choice.options.length === 0;
+  messageElement.textContent =
+    `Configuration ${requestedId.slice(0, 8)} is not saved in this browser. ` +
+    "The machine is stopped and nothing has been published. Choose an exact saved configuration, or explicitly create a new independent setup. Creating cannot recover the missing configuration's private disks.";
+  panel.hidden = false;
+  setStatus("Choose a saved configuration or create a new setup.");
+  setSaveStatus("Machine has not started; saved data is unchanged.", "idle");
+
+  const controller = new AbortController();
+  let resolution;
+  try {
+    resolution = await new Promise((resolve, reject) => {
+      const act = async (action) => {
+        openButton.disabled = true;
+        createButton.disabled = true;
+        let publicationStarted = false;
+        let authorityCheckComplete = false;
+        let authorityFailed = false;
+        try {
+          const current = await refreshCommitted();
+          authorityCheckComplete = true;
+          if (current.kind === "recovery") {
+            authorityFailed = true;
+            throw new Error(current.error);
+          }
+          if (action === "open") {
+            const id = choice.value;
+            if (
+              current.kind !== "ready" ||
+              !current.manifest.configurations.some((item) => item.id === id)
+            )
+              throw new Error(
+                "Selected device-local configuration is no longer available.",
+              );
+            if (id !== current.manifest.selectedConfigurationId) {
+              if (!writer.owned)
+                throw new Error(
+                  "Close the owning tab and reload before changing device-local configuration.",
+                );
+              const manifest = structuredClone(current.manifest);
+              manifest.selectedConfigurationId = id;
+              publicationStarted = true;
+              const stored = await publishInitial(
+                { manifest, newBlobs: new Map() },
+                current.token,
+              );
+              resolve({ selected: id, stored });
+            } else {
+              resolve({ selected: id, stored: current });
+            }
+          } else {
+            if (!writer.owned)
+              throw new Error(
+                "Close the owning tab and reload before creating a device-local configuration.",
+              );
+            const base =
+              current.kind === "ready" ? current.manifest : emptyDiskBox();
+            const candidate = await prepareDiskBoxRecipeLaunch(
+              base,
+              await libraryRecipe("starter"),
+              { freshInstance: true },
+            );
+            publicationStarted = true;
+            const stored = await publishInitial(candidate, current.token);
+            resolve({
+              selected: candidate.manifest.selectedConfigurationId,
+              stored,
+            });
+          }
+        } catch (error) {
+          if (
+            action === "open" &&
+            error.code === "SYSTEM_DISK_RESTORE_REQUIRED"
+          ) {
+            messageElement.textContent =
+              `Could not open that saved configuration: ${message(error)} ` +
+              "The current configuration remains selected. Choose another configuration or create a new independent setup.";
+            openButton.disabled = choice.options.length === 0;
+            createButton.disabled = false;
+            return;
+          }
+          if (
+            publicationStarted ||
+            !authorityCheckComplete ||
+            authorityFailed
+          ) {
+            reject(error);
+            return;
+          }
+          messageElement.textContent =
+            `Could not complete that choice: ${message(error)} ` +
+            "The machine remains stopped and no publication was attempted. Choose again or reload.";
+          openButton.disabled = choice.options.length === 0;
+          createButton.disabled = false;
+        }
+      };
+      openButton.addEventListener("click", () => void act("open"), {
+        signal: controller.signal,
+      });
+      createButton.addEventListener("click", () => void act("create"), {
+        signal: controller.signal,
+      });
+    });
+  } finally {
+    controller.abort();
+    panel.hidden = true;
+  }
+  history.replaceState(
+    null,
+    "",
+    localConfigurationBookmark(resolution.selected),
+  );
+  return resolution;
+}
+
+async function adoptHistoricalDiskBox(stored) {
+  if (!writer.owned)
+    throw new Error("Close the owning tab and reload to adopt this disk box.");
+  const adoptButton = document.querySelector("#adopt-disks");
+  adoptButton.hidden = false;
+  setStatus(
+    "Your saved machine is ready for explicit disk-box adoption. Original recovery records will be retained.",
+  );
+  await new Promise((resolve) =>
+    adoptButton.addEventListener("click", resolve, { once: true }),
+  );
+  adoptButton.hidden = true;
+  const candidate = await prepareSavedMachineAdoption(
+    stored.historical.snapshot,
+    { configurationId: crypto.randomUUID(), name: "My saved machine" },
+  );
+  return publishInitial(candidate, stored.token);
+}
+
 try {
   const route = new URL(location.href).searchParams;
-  const localConfiguration = localConfigurationSelection(route);
+  let localConfiguration = localConfigurationSelection(route);
   writer = await acquireDiskWriter({ name: `${storageName}:disk-writer` });
   const options = {
     name: storageName,
@@ -2555,16 +2714,6 @@ try {
   };
   store = await openDiskBoxAppStore(options);
   let stored = await refreshCommitted();
-  if (
-    localConfiguration &&
-    (stored.kind !== "ready" ||
-      !stored.manifest.configurations.some(
-        (item) => item.id === localConfiguration,
-      ))
-  )
-    throw new Error(
-      "Device-local configuration not found in this browser. No configuration was created or adopted.",
-    );
   if (
     stored.kind === "recovery" &&
     /historical bootstrap required/i.test(stored.error)
@@ -2581,6 +2730,27 @@ try {
   // Historical snapshots boot from their own bytes immediately. Optional new
   // deployment/tool/catalogue metadata is loaded only after activation below.
   await init();
+  if (
+    localConfiguration &&
+    stored.kind === "unadopted" &&
+    stored.historical.kind === "ready"
+  )
+    stored = await adoptHistoricalDiskBox(stored);
+  if (
+    localConfiguration &&
+    (stored.kind !== "ready" ||
+      !stored.manifest.configurations.some(
+        (item) => item.id === localConfiguration,
+      ))
+  ) {
+    const resolution = await resolveMissingLocalConfiguration(
+      localConfiguration,
+      stored,
+    );
+    localConfiguration = resolution.selected;
+    stored = resolution.stored;
+  }
+  if (stored.kind === "recovery") throw new Error(stored.error);
   if (route.has("recipe")) {
     await previewRequestedRecipe({
       id: route.get("recipe"),
@@ -2588,33 +2758,19 @@ try {
     });
   }
   if (stored.kind === "unadopted") {
-    if (!writer.owned)
-      throw new Error(
-        "Close the owning tab and reload to adopt or create this disk box.",
-      );
-    let candidate;
     if (stored.historical.kind === "ready") {
-      document.querySelector("#adopt-disks").hidden = false;
-      setStatus(
-        "Your saved machine is ready for explicit disk-box adoption. Original recovery records will be retained.",
-      );
-      await new Promise((resolve) =>
-        document
-          .querySelector("#adopt-disks")
-          .addEventListener("click", resolve, { once: true }),
-      );
-      document.querySelector("#adopt-disks").hidden = true;
-      candidate = await prepareSavedMachineAdoption(
-        stored.historical.snapshot,
-        { configurationId: crypto.randomUUID(), name: "My saved machine" },
-      );
+      stored = await adoptHistoricalDiskBox(stored);
     } else {
-      candidate = await prepareDiskBoxRecipeLaunch(
+      if (!writer.owned)
+        throw new Error(
+          "Close the owning tab and reload to create this disk box.",
+        );
+      const candidate = await prepareDiskBoxRecipeLaunch(
         emptyDiskBox(),
         requestedRecipe ?? (await libraryRecipe("starter")),
       );
+      await publishInitial(candidate, stored.token);
     }
-    await publishInitial(candidate, stored.token);
   }
   if (
     localConfiguration &&

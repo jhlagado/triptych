@@ -58,6 +58,22 @@
       <button id="adopt-disks" type="button" hidden>
         Adopt my saved machine into the disk box
       </button>
+      <section id="local-configuration-resolution" hidden>
+        <h2>Choose a configuration on this device</h2>
+        <p id="local-configuration-resolution-message"></p>
+        <div class="library-controls">
+          <label
+            >Existing saved configuration
+            <select id="local-configuration-choice"></select>
+          </label>
+          <button id="resolve-local-configuration" type="button">
+            Open selected saved configuration
+          </button>
+          <button id="create-local-configuration" type="button">
+            Create a new independent tools and games setup
+          </button>
+        </div>
+      </section>
       <details id="disk-library">
         <summary>Disk box and published library</summary>
         <p id="library-status" role="status">
