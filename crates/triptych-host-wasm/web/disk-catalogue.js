@@ -214,12 +214,15 @@ export async function fetchPublishedImage(
         absoluteUrl(response.url) === image.url,
         "response URL changed",
       );
-    const length = response.headers.get("content-length");
+    const length = response.headers.get("content-length"),
+      encoding = response.headers.get("content-encoding")?.trim().toLowerCase(),
+      decodedLengthHeader =
+        length !== null && (!encoding || encoding === "identity");
     if (length !== null)
       requireValue(
         /^(?:0|[1-9][0-9]*)$/.test(length) &&
           Number(length) <= MAX_BYTES &&
-          Number(length) === image.byteLength,
+          (!decodedLengthHeader || Number(length) === image.byteLength),
         "content length exceeds bounds or differs",
       );
     requireValue(

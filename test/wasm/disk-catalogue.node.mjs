@@ -169,6 +169,20 @@ test("fetch validates complete body and captures descriptor before awaiting", as
   assert.equal(bytes[0], 7);
 });
 
+test("fetch accepts decoded image bytes when HTTP encoding changes wire length", async () => {
+  const result = await fetchPublishedImage(reference(), {
+    crypto: webcrypto,
+    fetch: async () =>
+      new Response(bytes, {
+        headers: {
+          "content-encoding": "gzip",
+          "content-length": "2",
+        },
+      }),
+  });
+  assert.deepEqual(result, bytes);
+});
+
 test("fetch rejects missing, short, changed, redirected and oversized streams", async () => {
   const read = (response) =>
     fetchPublishedImage(reference(), {
