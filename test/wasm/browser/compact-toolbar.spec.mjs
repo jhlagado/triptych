@@ -54,6 +54,13 @@ for (const viewport of [
     await expect(
       page.getByRole("heading", { name: "My data disks" }),
     ).toBeVisible();
+    await expect(page.locator(".quick-launch-card")).toHaveCount(2);
+    await expect(
+      page.locator('.quick-launch-card[href="?disk=advent"]'),
+    ).toBeVisible();
+    await expect(
+      page.locator('.quick-launch-card[href="?disk=games"]'),
+    ).toBeVisible();
     await openDownloads(page);
     await openDownloads(page); // The shared helper is idempotent.
     expect(await section.evaluate((element) => element.open)).toBe(true);
