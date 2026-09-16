@@ -332,6 +332,7 @@ try {
         "favicon.png",
         "apple-touch-icon.png",
         "disk-workspace.js",
+        "direct-b-slots.js",
         "disk-profile.js",
         "two-mib-system.js",
         "drive-set-v4.js",

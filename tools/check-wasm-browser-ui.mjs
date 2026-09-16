@@ -36,19 +36,31 @@ const webDirectory = resolve(
   "triptych-host-wasm",
   "web",
 );
-const [applicationSource, indexSource, persistenceSource, storeSource] =
-  await Promise.all([
-    readFile(resolve(webDirectory, "app.js"), "utf8"),
-    readFile(resolve(webDirectory, "index.html"), "utf8"),
-    readFile(resolve(webDirectory, "disk-workspace.js"), "utf8"),
-    readFile(resolve(webDirectory, "working-disk-revisions.js"), "utf8"),
-  ]);
+const [
+  applicationSource,
+  indexSource,
+  persistenceSource,
+  storeSource,
+  directBSource,
+] = await Promise.all([
+  readFile(resolve(webDirectory, "app.js"), "utf8"),
+  readFile(resolve(webDirectory, "index.html"), "utf8"),
+  readFile(resolve(webDirectory, "disk-workspace.js"), "utf8"),
+  readFile(resolve(webDirectory, "working-disk-revisions.js"), "utf8"),
+  readFile(resolve(webDirectory, "direct-b-slots.js"), "utf8"),
+]);
 assert.ok(applicationSource.includes('"ccp.bin"'));
 assert.ok(applicationSource.includes("disk.set(ccp, CCP_SYSTEM_OFFSET)"));
 assert.ok(applicationSource.includes("runtime.flushCounts()"));
 assert.ok(applicationSource.includes("workspace.saveCheckpoint"));
+assert.ok(applicationSource.includes("openDirectBSlot"));
 assert.ok(persistenceSource.includes("createDiskWorkspace"));
 assert.ok(storeSource.includes('const STORE = "disk-revisions"'));
+assert.ok(
+  directBSource.includes(
+    'export const DIRECT_B_DATABASE = "triptych-direct-b-v1"',
+  ),
+);
 assert.ok(indexSource.includes('id="save-status"'));
 
 // Relative icon URLs work both locally and under the GitHub Pages project path.

@@ -79,6 +79,24 @@ continues through sixteen. Existing saved machines retain their configuration
 until the user explicitly changes it. Curated recipes are the first URL path;
 external image URLs require a separate bounded-download and validation path.
 
+### Direct software links
+
+The small direct-demo vocabulary is separate from disk-box recipes:
+
+| URL form          | A                                           | CP/M B                                                  | Browser-local behavior                                                                                    |
+| ----------------- | ------------------------------------------- | ------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `?disk=ID`        | The immutable published image named by `ID` | Persistent slot `B1`                                    | The first tab owns `B1`; later tabs see the same bytes read-only.                                         |
+| `?disk=ID&b=auto` | The immutable published image named by `ID` | The first currently unowned slot from `B1` through `B8` | The selected slot is written back to the address bar, so a duplicated tab names the same slot explicitly. |
+| `?disk=ID&b=BN`   | The immutable published image named by `ID` | Persistent slot `BN`                                    | A tab that cannot acquire `BN` may read it but cannot publish writes.                                     |
+
+Each direct B slot is a two-MiB browser-local disk with a stable identity and
+generation. The slot is created on first writable use and survives reloads and
+published-tool updates. A tab's browser-managed exclusive lock is the write
+authority; closing or crashing the tab releases it. Generation checks reject a
+stale save rather than overwriting a newer slot. Direct links share A only;
+they never contain private B bytes or identities. Explicit cloning into a new
+slot remains the way to request independent writable contents.
+
 ## Prepared live media change
 
 Host readiness and guest filesystem consistency are separate conditions.
