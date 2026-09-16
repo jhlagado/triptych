@@ -68,9 +68,11 @@ async function historicalState(page) {
 async function library(page) {
   if (!(await page.locator("#library-view").isVisible()))
     await page.locator("#open-library").click();
+  await expect(page.locator("#library-view")).toBeVisible();
   await page
     .locator("#ready-made-machines")
     .evaluate((node) => (node.open = true));
+  await expect(page.locator("#saved-configuration")).toBeVisible();
   await expect(page.locator("#saved-configuration option")).not.toHaveCount(0);
 }
 

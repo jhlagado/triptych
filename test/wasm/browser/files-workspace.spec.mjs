@@ -513,6 +513,7 @@ test("adopted historical work in disk-box authority boots without downloading a 
   const path = info.outputPath("retained-bootstrap.img");
   await download.saveAs(path);
   expect(await readFile(path)).toEqual(Buffer.from(saved.bytes));
+  await page.locator("#close-library").click();
   await page.locator("#files").click();
   await expect(page.locator("#file-list")).toContainText("NUC.COM");
   expect(await head(page)).toEqual(saved);

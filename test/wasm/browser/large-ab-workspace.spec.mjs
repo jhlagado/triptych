@@ -101,8 +101,11 @@ async function command(page, value, drive = "B", returns = true) {
 }
 
 async function manage(page) {
-  if (!(await page.locator("#files-dialog").isVisible()))
+  if (!(await page.locator("#files-dialog").isVisible())) {
+    if (await page.locator("#library-view").isVisible())
+      await page.locator("#close-library").click();
     await page.locator("#files").click();
+  }
   await page.locator("#saved-and-exited").check();
   await page.locator("#begin-management").click();
   await expect(page.locator("#disk-input")).toBeEnabled();

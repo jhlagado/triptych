@@ -369,6 +369,8 @@ async function completeRecoveryDownloads(page, info, phase, expected) {
     "head",
     expected.snapshot,
   );
+  if (await page.locator("#library-view").isVisible())
+    await page.locator("#close-library").click();
   await page.locator("#files").click();
   await expect(page.locator("#backup-list [data-restore]")).toHaveCount(
     expected.backups.length,
