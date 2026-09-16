@@ -97,6 +97,16 @@ stale save rather than overwriting a newer slot. Direct links share A only;
 they never contain private B bytes or identities. Explicit cloning into a new
 slot remains the way to request independent writable contents.
 
+The direct computer view exposes two small recovery actions. `Reset B` is
+available only to the tab that owns the slot. After confirmation it queues
+behind any pending save, replaces the slot with a fresh two-MiB filesystem,
+increments its generation, broadcasts the change and reloads the machine. The
+system image in A is untouched. A second-tab `Reset B` is disabled rather than
+silently taking ownership. `New B slot` is an ordinary link with `b=auto` that
+opens in another tab; the current tab keeps its slot while automatic selection
+chooses the first other available slot. Neither action deletes unrelated
+disk-box data or requires manual IndexedDB work.
+
 ## Prepared live media change
 
 Host readiness and guest filesystem consistency are separate conditions.
