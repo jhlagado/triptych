@@ -2049,6 +2049,12 @@ const libraryStatus = document.querySelector("#library-status");
 const librarySlot = document.querySelector("#library-slot");
 const libraryReady = document.querySelector("#library-ready");
 const restoreSystemButton = document.querySelector("#restore-system-disk");
+function setLibraryBusy(busy) {
+  libraryBusy = busy;
+  libraryView.setAttribute("aria-busy", String(busy));
+  controls();
+}
+setLibraryBusy(false);
 let startupSystemRecovery = false;
 function showSystemRecovery() {
   startupSystemRecovery = !machine;
@@ -2136,13 +2142,13 @@ async function libraryBarrier({ requireGuestReady = true } = {}) {
     throw new Error(
       "Confirm that the guest has closed files and flushed first.",
     );
-  libraryBusy = true;
+  setLibraryBusy(true);
   try {
     const token = await workspace.beginManagement({ savedAndExited: true });
     await refreshCommitted();
     return token;
   } catch (error) {
-    libraryBusy = false;
+    setLibraryBusy(false);
     throw error;
   }
 }
@@ -2187,10 +2193,10 @@ async function libraryCommit(candidate, barrier, restart = false) {
     } else updateLiveView(committed.snapshot);
     connectWorkspace();
     resumeMachine();
-    libraryBusy = false;
     libraryReady.checked = false;
     await renderLibrary();
     if (restart) showComputerView();
+    setLibraryBusy(false);
   } catch (error) {
     prepared?.dispose();
     libraryStatus.textContent =
@@ -2226,7 +2232,7 @@ async function insertLibraryBinding(
         if (committedLive) resumeMachine();
         else {
           workspace.cancel(barrier);
-          libraryBusy = false;
+          setLibraryBusy(false);
         }
       },
       onCommitted: async (published) => {
@@ -2251,7 +2257,6 @@ async function insertLibraryBinding(
           );
         connectWorkspace();
         committedLive = true;
-        libraryBusy = false;
         libraryReady.checked = false;
         restoreSystemButton.hidden = false;
       },
@@ -2259,6 +2264,7 @@ async function insertLibraryBinding(
     await librarySession.commit();
     librarySession = undefined;
     await renderLibrary();
+    setLibraryBusy(false);
   } catch (error) {
     document.querySelector("#library-retry").hidden =
       librarySession?.status !== "uncertain";
@@ -2531,6 +2537,7 @@ document.querySelector("#library-retry").addEventListener("click", async () => {
     librarySession = undefined;
     document.querySelector("#library-retry").hidden = true;
     await renderLibrary();
+    setLibraryBusy(false);
   } catch (error) {
     libraryError(error);
   }
@@ -2613,7 +2620,7 @@ for (const [id, freshInstance, libraryOnly, useRequested] of [
         // No publication has been attempted. Release only this preparation's
         // session; once libraryCommit begins, its fail-stopped policy applies.
         workspace.cancel(barrier);
-        libraryBusy = false;
+        setLibraryBusy(false);
         throw error;
       }
       await libraryCommit(candidate, barrier, true);
@@ -2837,16 +2844,16 @@ restoreSystemButton.addEventListener("click", async () => {
         { slot: 0, restoreSystem: true },
       );
     } else {
-      libraryBusy = true;
+      setLibraryBusy(true);
       await publishInitial({ manifest, newBlobs: new Map() }, store.head.token);
       activateMachine(startupRuntime);
       startupRuntime = undefined;
       startupSystemRecovery = false;
       connectWorkspace();
       resumeMachine();
-      libraryBusy = false;
       libraryReady.checked = false;
       await renderLibrary();
+      setLibraryBusy(false);
       controls();
     }
   } catch (error) {

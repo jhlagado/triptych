@@ -66,6 +66,13 @@ async function historicalState(page) {
   });
 }
 async function library(page) {
+  // A configuration activation publishes durable state before the asynchronous
+  // restart/render has finished. Wait for the UI's explicit operation marker so
+  // a late showComputerView() cannot hide the library between these checks.
+  await expect(page.locator("#library-view")).toHaveAttribute(
+    "aria-busy",
+    "false",
+  );
   if (!(await page.locator("#library-view").isVisible()))
     await page.locator("#open-library").click();
   await expect(page.locator("#library-view")).toBeVisible();
