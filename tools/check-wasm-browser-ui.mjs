@@ -61,7 +61,10 @@ assert.ok(
     'export const DIRECT_B_DATABASE = "triptych-direct-b-v1"',
   ),
 );
+assert.ok(directBSource.includes("const reset = (value)"));
 assert.ok(indexSource.includes('id="save-status"'));
+assert.ok(indexSource.includes('id="direct-b-reset"'));
+assert.ok(indexSource.includes('id="direct-b-new"'));
 
 // Relative icon URLs work both locally and under the GitHub Pages project path.
 for (const [name, size] of [

@@ -24,8 +24,11 @@ async function boot(page) {
 }
 
 async function manage(page) {
-  if (!(await page.locator("#files-dialog").isVisible()))
+  if (!(await page.locator("#files-dialog").isVisible())) {
+    if (await page.locator("#library-view").isVisible())
+      await page.locator("#close-library").click();
     await page.locator("#files").click();
+  }
   await page.locator("#saved-and-exited").check();
   await page.locator("#begin-management").click();
   await expect(page.locator("#file-import")).toBeEnabled();
@@ -133,6 +136,8 @@ test("upgrade preserves files, exports exactly, reloads, updates tools and resto
   await page.reload();
   await expect(page.locator("#terminal")).toContainText("A>");
   expect(await state(page)).toEqual(large);
+  if (await page.locator("#library-view").isVisible())
+    await page.locator("#close-library").click();
   await page.locator("#terminal").focus();
   await page.keyboard.type("TYPE INPUT.NU");
   await page.keyboard.press("Enter");

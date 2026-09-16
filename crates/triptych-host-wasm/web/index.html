@@ -23,6 +23,15 @@
           <button id="open-library" type="button">Library</button>
           <button id="files" type="button">Files</button>
           <button id="reset" type="button" disabled>Reset</button>
+          <button id="direct-b-reset" type="button" hidden>Reset B</button>
+          <a
+            id="direct-b-new"
+            class="direct-b-action"
+            hidden
+            target="_blank"
+            rel="noopener"
+            >New B slot</a
+          >
           <button id="retry-save" type="button" hidden>Retry saving</button>
         </section>
         <div class="status-group">
@@ -66,6 +75,24 @@
 
         <section id="disk-library">
           <p id="library-status" role="status" tabindex="-1"></p>
+
+          <section class="library-section quick-launches">
+            <h2>Run a demo</h2>
+            <p class="section-intro">
+              Each link starts a fresh CP/M view with its software in A and a
+              persistent B work disk.
+            </p>
+            <div class="quick-launch-grid">
+              <a href="?disk=advent" class="quick-launch-card">
+                <span class="disk-title">Colossal Cave Adventure</span>
+                <span class="disk-state">Run ADVENT from the A prompt</span>
+              </a>
+              <a href="?disk=games" class="quick-launch-card">
+                <span class="disk-title">Caverns &amp; Hyperdrive</span>
+                <span class="disk-state">Run CAVERNS, HYPERDRV or HYPERD2</span>
+              </a>
+            </div>
+          </section>
 
           <section class="library-section">
             <h3>In this machine</h3>

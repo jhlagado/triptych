@@ -12,13 +12,17 @@ async function databases(page) {
 }
 
 test("Start fresh removes every Triptych database and boots the published system", async ({
+  context,
   page,
 }) => {
+  const direct = await context.newPage();
+  await boot(direct, "/?disk=advent");
+  await direct.close();
   await boot(page, "/?machine=supplied");
   await boot(page, "/");
   await expect
     .poll(() => databases(page))
-    .toEqual(["triptych-cpu", "triptych-supplied"]);
+    .toEqual(["triptych-cpu", "triptych-direct-b-v1", "triptych-supplied"]);
 
   await page.locator("#open-library").click();
   await page.locator("#library-name").fill("Erase proof");
@@ -39,6 +43,26 @@ test("Start fresh removes every Triptych database and boots the published system
   await expect(page.locator("#personal-disk-list")).not.toContainText(
     "Erase proof",
   );
+});
+
+test("Start fresh refuses while a direct-demo B slot is open", async ({
+  context,
+  page,
+}) => {
+  await boot(page, "/");
+  const direct = await context.newPage();
+  await boot(direct, "/?disk=advent");
+
+  await page.locator("#open-library").click();
+  await page.getByText("Backup and recovery", { exact: true }).click();
+  page.once("dialog", (dialog) => dialog.accept());
+  await page.locator("#erase-triptych-data").click();
+
+  await expect(page.locator("#library-status")).toContainText(
+    "Close every other Triptych tab",
+  );
+  await expect.poll(() => databases(page)).toContain("triptych-direct-b-v1");
+  await expect(direct.locator("#terminal")).toContainText("A>");
 });
 
 test("a non-owning tab cannot erase an owning tab's saved machines", async ({

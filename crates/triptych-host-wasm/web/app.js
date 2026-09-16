@@ -9,7 +9,13 @@ import {
 } from "./terminal.js";
 import { acquireDiskWriter } from "./disk-workspace.js";
 import { loadDirectLaunch } from "./direct-launch.js";
-import { openDirectBSlot, parseDirectBSelection } from "./direct-b-slots.js";
+import {
+  DIRECT_B_DATABASE,
+  DIRECT_B_SLOT_COUNT,
+  directBLockName,
+  openDirectBSlot,
+  parseDirectBSelection,
+} from "./direct-b-slots.js";
 import {
   openDiskBoxAppStore,
   createDiskBoxArchiveWorkspace,
@@ -59,6 +65,8 @@ const statusElement = document.querySelector("#status");
 const saveStatusElement = document.querySelector("#save-status");
 const diskInput = document.querySelector("#disk-input");
 const resetButton = document.querySelector("#reset");
+const directBResetButton = document.querySelector("#direct-b-reset");
+const directBNewLink = document.querySelector("#direct-b-new");
 const downloadButton = document.querySelector("#download");
 const mobileInput = document.querySelector("#mobile-terminal-input");
 const showKeyboardButton = document.querySelector("#show-keyboard");
@@ -351,6 +359,10 @@ function message(error) {
 function controls() {
   const running = machineRunning && canRunMachine();
   resetButton.disabled = !running || filesDialog.open;
+  directBResetButton.hidden = !directSession;
+  directBNewLink.hidden = !directSession;
+  directBResetButton.disabled =
+    !running || !directB?.writable || filesDialog.open;
   downloadButton.disabled = !imageAt(committed?.snapshot);
   downloadButton.textContent = `Download saved disk ${selectedDrive}`;
   downloadSetButton.disabled = !committed;
@@ -630,6 +642,15 @@ async function defaultBootstrap() {
     bootRom = bytes;
   }
   return bootRom;
+}
+
+function createDirectBlankDisk() {
+  const disk = CpmDisk.create_two_mib();
+  try {
+    return disk.export_source();
+  } finally {
+    disk.free();
+  }
 }
 
 async function loadDeployment() {
@@ -939,6 +960,37 @@ resetButton.addEventListener("click", () => {
     "running",
   );
   terminalElement.focus();
+});
+
+directBResetButton.addEventListener("click", async () => {
+  if (
+    !directSession ||
+    !directB?.writable ||
+    !machineRunning ||
+    !canRunMachine() ||
+    filesDialog.open
+  )
+    return;
+  if (
+    !confirm(
+      `Erase every file on ${directB.slot}? The system disk in A is unchanged, but this B disk cannot be recovered unless you downloaded it first.`,
+    )
+  )
+    return;
+  const slot = directB.slot;
+  pauseMachine();
+  setStatus(`Resetting ${slot}…`, "idle");
+  try {
+    await directB.reset(createDirectBlankDisk());
+    const handle = directB;
+    directB = undefined;
+    await handle.close().catch(() => {});
+    location.reload();
+  } catch (error) {
+    setStatus(`Could not reset ${slot}: ${message(error)}`, "error");
+    resumeMachine();
+    controls();
+  }
 });
 
 downloadButton.addEventListener("click", () => {
@@ -2610,18 +2662,44 @@ async function resumeInterruptedStartFresh() {
     acquireDiskWriter({ name: "triptych-cpu:disk-writer" }),
     acquireDiskWriter({ name: "triptych-supplied:disk-writer" }),
   ]);
+  let directLeases = [];
   try {
     if (leases.some((lease) => !lease.owned))
       throw new Error(
         "Close every other Triptych tab, then reload to finish the browser reset.",
       );
+    directLeases = await acquireAllDirectBLeases();
     await Promise.all([
       eraseDatabase("triptych-cpu"),
       eraseDatabase("triptych-supplied"),
+      eraseDatabase(DIRECT_B_DATABASE),
     ]);
     localStorage.removeItem(startFreshMarker);
   } finally {
+    await Promise.all([
+      ...leases.map((lease) => lease.release()),
+      ...directLeases.map((lease) => lease.release()),
+    ]);
+  }
+}
+
+/** Acquire every direct-demo B lock before deleting its shared database. */
+async function acquireAllDirectBLeases() {
+  const leases = [];
+  try {
+    for (let number = 1; number <= DIRECT_B_SLOT_COUNT; number += 1) {
+      const lease = await acquireDiskWriter({ name: directBLockName(number) });
+      leases.push(lease);
+      if (lease.owned) continue;
+      if (lease.error) throw lease.error;
+      throw new Error(
+        "Close every other Triptych tab, then try Start fresh again. Saved data was not erased.",
+      );
+    }
+    return leases;
+  } catch (error) {
     await Promise.all(leases.map((lease) => lease.release()));
+    throw error;
   }
 }
 
@@ -2669,6 +2747,7 @@ document
     )
       return;
     let otherWriter;
+    let directLeases = [];
     let tornDown = false;
     try {
       if (!writer?.owned || libraryBusy || workspace?.state !== "running")
@@ -2684,6 +2763,7 @@ document
         throw new Error(
           "Close every other Triptych tab, then try Start fresh again. Saved data was not erased.",
         );
+      directLeases = await acquireAllDirectBLeases();
       libraryStatus.textContent = "Loading the latest Triptych software…";
       await refreshPublishedApplication();
       localStorage.setItem(startFreshMarker, "yes");
@@ -2699,14 +2779,19 @@ document
       await Promise.all([
         eraseDatabase("triptych-cpu"),
         eraseDatabase("triptych-supplied"),
+        eraseDatabase(DIRECT_B_DATABASE),
       ]);
       localStorage.removeItem(startFreshMarker);
       await writer.release();
       writer = undefined;
       await otherWriter.release();
       otherWriter = undefined;
+      await Promise.all(directLeases.map((lease) => lease.release()));
+      directLeases = [];
       location.replace(`${location.pathname}?fresh=${Date.now()}`);
     } catch (error) {
+      await Promise.all(directLeases.map((lease) => lease.release()));
+      directLeases = [];
       await otherWriter?.release();
       if (!tornDown) libraryError(error);
       else {
@@ -3003,17 +3088,9 @@ async function startDirectLaunch(route) {
     id: selected.id,
     baseUrl: document.baseURI,
   });
-  const blankDisk = () => {
-    const disk = CpmDisk.create_two_mib();
-    try {
-      return disk.export_source();
-    } finally {
-      disk.free();
-    }
-  };
   directB = await openDirectBSlot({
     selection: selected.b,
-    createBlank: blankDisk,
+    createBlank: createDirectBlankDisk,
     onChanged: ({ slot }) => {
       if (directSession)
         setStatus(
@@ -3035,6 +3112,9 @@ async function startDirectLaunch(route) {
       `${address.pathname}${address.search}${address.hash}`,
     );
   }
+  const newSlotAddress = new URL(location.href);
+  newSlotAddress.searchParams.set("b", "auto");
+  directBNewLink.href = `${newSlotAddress.pathname}${newSlotAddress.search}${newSlotAddress.hash}`;
   const slots = Array.from({ length: launch.configuredCount }, () => null);
   slots[0] = {
     instanceId: crypto.randomUUID(),

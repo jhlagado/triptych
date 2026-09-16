@@ -25,6 +25,17 @@ function slotNumber(value) {
   return Number(match[1]);
 }
 
+/** Return the browser-lock name for one persistent direct-demo slot. */
+export function directBLockName(number) {
+  requireValue(
+    Number.isSafeInteger(number) &&
+      number >= 1 &&
+      number <= DIRECT_B_SLOT_COUNT,
+    "invalid B slot number",
+  );
+  return `triptych-direct-b:v1:B${number}`;
+}
+
 /** Parse the deliberately small URL vocabulary used by direct launches. */
 export function parseDirectBSelection(value) {
   if (value === undefined || value === null || value === "") return "B1";
@@ -169,7 +180,7 @@ async function chooseLease(selection, locks) {
   for (const number of candidates) {
     const lease = await acquireDiskWriter({
       locks,
-      name: `triptych-direct-b:v1:B${number}`,
+      name: directBLockName(number),
     });
     if (lease.owned) return { number, lease };
     if (selection !== "auto") return { number, lease };
@@ -181,7 +192,7 @@ async function chooseLease(selection, locks) {
     number: 1,
     lease: await acquireDiskWriter({
       locks,
-      name: "triptych-direct-b:v1:B1",
+      name: directBLockName(1),
     }),
   };
 }
@@ -271,6 +282,7 @@ export async function openDirectBSlot({
     }
 
     let generation = record.generation;
+    let currentBytes = Uint8Array.from(record.bytes);
     let queue = Promise.resolve();
     const publish = (value) => {
       const candidate = copyBytes(value);
@@ -303,6 +315,52 @@ export async function openDirectBSlot({
         );
         const saved = validateRecord(next, chosen.number);
         generation = saved.generation;
+        currentBytes = Uint8Array.from(saved.bytes);
+        persisted = true;
+        channel?.postMessage({
+          kind: "saved",
+          sender: tabId,
+          slot: chosen.number,
+          generation,
+        });
+        return { slot: `B${chosen.number}`, generation };
+      });
+      queue = operation.catch(() => {});
+      return operation;
+    };
+
+    const reset = (value) => {
+      const blank = copyBytes(value);
+      requireValue(blank.length === DIRECT_B_BYTES, "invalid reset size");
+      const operation = queue.then(async () => {
+        requireValue(chosen.lease.owned, "this B slot is read-only");
+        const next = await transact(
+          database,
+          "readwrite",
+          (transaction, done, guard) => {
+            const store = transaction.objectStore(STORE);
+            const request = store.get(chosen.number);
+            request.onsuccess = guard(() => {
+              const current = validateRecord(request.result, chosen.number);
+              requireValue(
+                current?.generation === generation,
+                "slot changed in another tab; reload before resetting",
+              );
+              const after = {
+                slot: chosen.number,
+                name: current.name,
+                instanceId: current.instanceId,
+                generation: generation + 1,
+                bytes: blank,
+              };
+              store.put(after);
+              done(after);
+            });
+          },
+        );
+        const saved = validateRecord(next, chosen.number);
+        generation = saved.generation;
+        currentBytes = Uint8Array.from(saved.bytes);
         persisted = true;
         channel?.postMessage({
           kind: "saved",
@@ -321,7 +379,9 @@ export async function openDirectBSlot({
       slotNumber: chosen.number,
       name: record.name,
       instanceId: record.instanceId,
-      bytes: Uint8Array.from(record.bytes),
+      get bytes() {
+        return Uint8Array.from(currentBytes);
+      },
       get generation() {
         return generation;
       },
@@ -332,6 +392,7 @@ export async function openDirectBSlot({
         return chosen.lease.owned;
       },
       save: publish,
+      reset,
       async close() {
         channel?.close();
         database.close();
