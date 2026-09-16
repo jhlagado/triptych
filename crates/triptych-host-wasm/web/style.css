@@ -82,6 +82,34 @@ h1 {
   padding: 0 0.65rem;
   min-height: 2.5rem;
 }
+
+.direct-b-action {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.5rem;
+  padding: 0 0.65rem;
+  border: 1px solid #38533f;
+  border-radius: 0.4rem;
+  background: #1a241d;
+  color: inherit;
+  text-decoration: none;
+}
+
+.direct-b-action:hover {
+  border-color: #79b987;
+  background: #233127;
+}
+
+body.direct-launch #direct-b-reset {
+  border-color: #a65151;
+  background: #3a1717;
+  color: #ffdada;
+}
+
+body.direct-launch #direct-b-reset:hover:not(:disabled) {
+  border-color: #dc7777;
+  background: #512020;
+}
 #status[data-state="running"] {
   display: none;
 }

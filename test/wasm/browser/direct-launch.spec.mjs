@@ -91,6 +91,32 @@ test("the Advent link boots drive A with a persistent B1", async ({ page }) => {
   expect(afterReload).toContain("PHROGZ");
 });
 
+test("direct demos offer a safe B reset and a new-slot link", async ({
+  page,
+}) => {
+  await page.goto("/?disk=advent");
+  await prompt(page);
+  await expect(page.locator("#direct-b-reset")).toBeVisible();
+  await expect(page.locator("#direct-b-reset")).toBeEnabled();
+  await expect(page.locator("#direct-b-new")).toBeVisible();
+  expect(
+    new URL(
+      await page.locator("#direct-b-new").getAttribute("href"),
+      page.url(),
+    ).search,
+  ).toBe("?disk=advent&b=auto");
+
+  await command(page, "B:", "B>");
+  await command(page, "SAVE 1 RESET.COM", "B>");
+  expect(await command(page, "DIR", "B>")).toContain("RESET");
+
+  page.once("dialog", (dialog) => dialog.accept());
+  await page.locator("#direct-b-reset").click();
+  await prompt(page);
+  await command(page, "B:", "B>");
+  expect(await command(page, "DIR", "B>")).toContain("NO FILE");
+});
+
 async function directGeneration(page, slot) {
   return page.evaluate(async (slot) => {
     const database = await new Promise((resolve, reject) => {

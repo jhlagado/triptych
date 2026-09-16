@@ -271,6 +271,7 @@ export async function openDirectBSlot({
     }
 
     let generation = record.generation;
+    let currentBytes = Uint8Array.from(record.bytes);
     let queue = Promise.resolve();
     const publish = (value) => {
       const candidate = copyBytes(value);
@@ -303,6 +304,52 @@ export async function openDirectBSlot({
         );
         const saved = validateRecord(next, chosen.number);
         generation = saved.generation;
+        currentBytes = Uint8Array.from(saved.bytes);
+        persisted = true;
+        channel?.postMessage({
+          kind: "saved",
+          sender: tabId,
+          slot: chosen.number,
+          generation,
+        });
+        return { slot: `B${chosen.number}`, generation };
+      });
+      queue = operation.catch(() => {});
+      return operation;
+    };
+
+    const reset = (value) => {
+      const blank = copyBytes(value);
+      requireValue(blank.length === DIRECT_B_BYTES, "invalid reset size");
+      const operation = queue.then(async () => {
+        requireValue(chosen.lease.owned, "this B slot is read-only");
+        const next = await transact(
+          database,
+          "readwrite",
+          (transaction, done, guard) => {
+            const store = transaction.objectStore(STORE);
+            const request = store.get(chosen.number);
+            request.onsuccess = guard(() => {
+              const current = validateRecord(request.result, chosen.number);
+              requireValue(
+                current?.generation === generation,
+                "slot changed in another tab; reload before resetting",
+              );
+              const after = {
+                slot: chosen.number,
+                name: current.name,
+                instanceId: current.instanceId,
+                generation: generation + 1,
+                bytes: blank,
+              };
+              store.put(after);
+              done(after);
+            });
+          },
+        );
+        const saved = validateRecord(next, chosen.number);
+        generation = saved.generation;
+        currentBytes = Uint8Array.from(saved.bytes);
         persisted = true;
         channel?.postMessage({
           kind: "saved",
@@ -321,7 +368,9 @@ export async function openDirectBSlot({
       slotNumber: chosen.number,
       name: record.name,
       instanceId: record.instanceId,
-      bytes: Uint8Array.from(record.bytes),
+      get bytes() {
+        return Uint8Array.from(currentBytes);
+      },
       get generation() {
         return generation;
       },
@@ -332,6 +381,7 @@ export async function openDirectBSlot({
         return chosen.lease.owned;
       },
       save: publish,
+      reset,
       async close() {
         channel?.close();
         database.close();
