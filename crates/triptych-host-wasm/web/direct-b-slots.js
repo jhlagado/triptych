@@ -25,6 +25,17 @@ function slotNumber(value) {
   return Number(match[1]);
 }
 
+/** Return the browser-lock name for one persistent direct-demo slot. */
+export function directBLockName(number) {
+  requireValue(
+    Number.isSafeInteger(number) &&
+      number >= 1 &&
+      number <= DIRECT_B_SLOT_COUNT,
+    "invalid B slot number",
+  );
+  return `triptych-direct-b:v1:B${number}`;
+}
+
 /** Parse the deliberately small URL vocabulary used by direct launches. */
 export function parseDirectBSelection(value) {
   if (value === undefined || value === null || value === "") return "B1";
@@ -169,7 +180,7 @@ async function chooseLease(selection, locks) {
   for (const number of candidates) {
     const lease = await acquireDiskWriter({
       locks,
-      name: `triptych-direct-b:v1:B${number}`,
+      name: directBLockName(number),
     });
     if (lease.owned) return { number, lease };
     if (selection !== "auto") return { number, lease };
@@ -181,7 +192,7 @@ async function chooseLease(selection, locks) {
     number: 1,
     lease: await acquireDiskWriter({
       locks,
-      name: "triptych-direct-b:v1:B1",
+      name: directBLockName(1),
     }),
   };
 }

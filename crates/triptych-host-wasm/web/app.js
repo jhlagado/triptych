@@ -9,7 +9,13 @@ import {
 } from "./terminal.js";
 import { acquireDiskWriter } from "./disk-workspace.js";
 import { loadDirectLaunch } from "./direct-launch.js";
-import { openDirectBSlot, parseDirectBSelection } from "./direct-b-slots.js";
+import {
+  DIRECT_B_DATABASE,
+  DIRECT_B_SLOT_COUNT,
+  directBLockName,
+  openDirectBSlot,
+  parseDirectBSelection,
+} from "./direct-b-slots.js";
 import {
   openDiskBoxAppStore,
   createDiskBoxArchiveWorkspace,
@@ -2656,18 +2662,44 @@ async function resumeInterruptedStartFresh() {
     acquireDiskWriter({ name: "triptych-cpu:disk-writer" }),
     acquireDiskWriter({ name: "triptych-supplied:disk-writer" }),
   ]);
+  let directLeases = [];
   try {
     if (leases.some((lease) => !lease.owned))
       throw new Error(
         "Close every other Triptych tab, then reload to finish the browser reset.",
       );
+    directLeases = await acquireAllDirectBLeases();
     await Promise.all([
       eraseDatabase("triptych-cpu"),
       eraseDatabase("triptych-supplied"),
+      eraseDatabase(DIRECT_B_DATABASE),
     ]);
     localStorage.removeItem(startFreshMarker);
   } finally {
+    await Promise.all([
+      ...leases.map((lease) => lease.release()),
+      ...directLeases.map((lease) => lease.release()),
+    ]);
+  }
+}
+
+/** Acquire every direct-demo B lock before deleting its shared database. */
+async function acquireAllDirectBLeases() {
+  const leases = [];
+  try {
+    for (let number = 1; number <= DIRECT_B_SLOT_COUNT; number += 1) {
+      const lease = await acquireDiskWriter({ name: directBLockName(number) });
+      leases.push(lease);
+      if (lease.owned) continue;
+      if (lease.error) throw lease.error;
+      throw new Error(
+        "Close every other Triptych tab, then try Start fresh again. Saved data was not erased.",
+      );
+    }
+    return leases;
+  } catch (error) {
     await Promise.all(leases.map((lease) => lease.release()));
+    throw error;
   }
 }
 
@@ -2715,6 +2747,7 @@ document
     )
       return;
     let otherWriter;
+    let directLeases = [];
     let tornDown = false;
     try {
       if (!writer?.owned || libraryBusy || workspace?.state !== "running")
@@ -2730,6 +2763,7 @@ document
         throw new Error(
           "Close every other Triptych tab, then try Start fresh again. Saved data was not erased.",
         );
+      directLeases = await acquireAllDirectBLeases();
       libraryStatus.textContent = "Loading the latest Triptych software…";
       await refreshPublishedApplication();
       localStorage.setItem(startFreshMarker, "yes");
@@ -2745,14 +2779,19 @@ document
       await Promise.all([
         eraseDatabase("triptych-cpu"),
         eraseDatabase("triptych-supplied"),
+        eraseDatabase(DIRECT_B_DATABASE),
       ]);
       localStorage.removeItem(startFreshMarker);
       await writer.release();
       writer = undefined;
       await otherWriter.release();
       otherWriter = undefined;
+      await Promise.all(directLeases.map((lease) => lease.release()));
+      directLeases = [];
       location.replace(`${location.pathname}?fresh=${Date.now()}`);
     } catch (error) {
+      await Promise.all(directLeases.map((lease) => lease.release()));
+      directLeases = [];
       await otherWriter?.release();
       if (!tornDown) libraryError(error);
       else {
