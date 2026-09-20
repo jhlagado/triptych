@@ -488,6 +488,33 @@ try {
       `${JSON.stringify(retainedLibrary.manifest, null, 2)}\n`,
       { flag: "wx" },
     );
+    // Version the module graph as one unit so a Pages update cannot combine
+    // a cached caller with a newer storage or loading module.
+    const moduleNames = (await readdir(stagedOutput))
+      .filter((name) => name.endsWith(".js"))
+      .sort();
+    const moduleSources = new Map();
+    const moduleHash = createHash("sha256");
+    for (const name of moduleNames) {
+      const source = await readFile(join(stagedOutput, name), "utf8");
+      moduleSources.set(name, source);
+      moduleHash.update(name).update(source);
+    }
+    const moduleVersion = moduleHash.digest("hex").slice(0, 16);
+    for (const [name, source] of moduleSources) {
+      const versioned = source.replace(
+        /((?:from\s*|import\s*\()\s*["'])(\.\/[^"'?]+\.js)(["'])/g,
+        (_, prefix, path, quote) =>
+          `${prefix}${path}?v=${moduleVersion}${quote}`,
+      );
+      await writeFile(join(stagedOutput, name), versioned);
+    }
+    const indexPath = join(stagedOutput, "index.html");
+    const indexSource = await readFile(indexPath, "utf8");
+    await writeFile(
+      indexPath,
+      indexSource.replace('src="app.js"', `src="app.js?v=${moduleVersion}"`),
+    );
     const assets = [];
     for (const path of (await readdir(stagedOutput)).sort()) {
       const bytes = await readFile(join(stagedOutput, path));
