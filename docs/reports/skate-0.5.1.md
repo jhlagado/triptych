@@ -4,7 +4,7 @@ Skate is a small Scheme compiler that runs on the Z80 under CP/M and produces
 native executable programs. The disk library package contains the compiler,
 its runtime provider, EDIT and three examples with source and compiled programs.
 
-Open [Skate](https://jhlagado.github.io/triptych/?disk=skate) to boot directly,
+Open [Skate](https://jhlagado.github.io/Skate/) to boot directly,
 without an installation or setup confirmation. Its
 protected A disk supplies the reference copy. The personal B disk starts with
 all ten files, ready for editing and compilation. Type `B:` and then

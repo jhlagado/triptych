@@ -17,7 +17,7 @@ function exactFields(value, fields, label) {
   );
 }
 
-async function fetchImage(reference, base, fetch, crypto) {
+export async function fetchDirectImage(reference, base, fetch, crypto) {
   const url = new URL(reference.asset, base);
   requireValue(url.origin === base.origin, "image is outside the app origin");
   const response = await fetch(url.href, {
@@ -145,7 +145,7 @@ export async function loadDirectLaunch({
   const base = new URL(".", baseUrl);
   requireValue(["http:", "https:"].includes(base.protocol), "invalid app URL");
   const [image, system] = await Promise.all([
-    fetchImage(launch.image, base, fetch, crypto),
+    fetchDirectImage(launch.image, base, fetch, crypto),
     fetchTwoMibSystem({
       deployment,
       configuredCount: count,

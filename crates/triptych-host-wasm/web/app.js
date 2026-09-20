@@ -9,6 +9,7 @@ import {
 } from "./terminal.js";
 import { acquireDiskWriter } from "./disk-workspace.js";
 import { loadDirectLaunch } from "./direct-launch.js";
+import { loadExternalLaunch } from "./external-launch.js";
 import {
   DIRECT_B_DATABASE,
   DIRECT_B_SLOT_COUNT,
@@ -80,7 +81,9 @@ const mobileControls = document.querySelector(".mobile-terminal-controls");
 const initialRoute = new URL(location.href).searchParams;
 const directLaunchId = initialRoute.has("disk")
   ? initialRoute.get("disk")
-  : undefined;
+  : initialRoute.has("system")
+    ? "external"
+    : undefined;
 if (directLaunchId !== undefined) {
   document.body.classList.add("direct-launch");
   document.querySelector("#open-library").hidden = true;
@@ -3073,6 +3076,18 @@ async function adoptHistoricalDiskBox(stored) {
 }
 
 function selectedDirectLaunch(route) {
+  if (route.has("system")) {
+    if (
+      route.getAll("system").length !== 1 ||
+      route.getAll("b").length > 1 ||
+      [...route.keys()].some((key) => !["system", "b"].includes(key))
+    )
+      throw new Error("Use one system URL with an optional B slot.");
+    return {
+      url: route.get("system"),
+      b: parseDirectBSelection(route.get("b") ?? "auto"),
+    };
+  }
   if (!route.has("disk")) return undefined;
   if (
     route.getAll("disk").length !== 1 ||
@@ -3092,15 +3107,22 @@ async function startDirectLaunch(route) {
   const selected = selectedDirectLaunch(route);
   await init();
   await loadDeployment();
-  const launch = await loadDirectLaunch({
-    deployment,
-    id: selected.id,
-    baseUrl: document.baseURI,
-  });
+  const launch = selected.url
+    ? await loadExternalLaunch({
+        url: selected.url,
+        deployment,
+        baseUrl: document.baseURI,
+      })
+    : await loadDirectLaunch({
+        deployment,
+        id: selected.id,
+        baseUrl: document.baseURI,
+      });
   directB = await openDirectBSlot({
     selection: selected.b,
     createBlank: () => {
-      if (launch.id !== "skate") return createDirectBlankDisk();
+      if (launch.id !== "skate" && !launch.seedWorkDisk)
+        return createDirectBlankDisk();
       // A new personal disk starts with the examples and compiler. Its system
       // tracks remain empty; the protected A image supplies the residents.
       const bytes = launch.image.slice();
@@ -3120,7 +3142,7 @@ async function startDirectLaunch(route) {
     // carries the chosen slot explicitly instead of silently allocating a
     // different one.
     const address = new URL(location.href);
-    address.searchParams.set("disk", selected.id);
+    if (selected.id) address.searchParams.set("disk", selected.id);
     address.searchParams.set("b", directB.slot);
     history.replaceState(
       null,
@@ -3185,7 +3207,7 @@ if (typeof window !== "undefined")
 
 try {
   const route = new URL(location.href).searchParams;
-  if (route.has("disk")) {
+  if (route.has("disk") || route.has("system")) {
     await startDirectLaunch(route);
   } else {
     await resumeInterruptedStartFresh();
