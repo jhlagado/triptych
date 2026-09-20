@@ -54,7 +54,10 @@ for (const viewport of [
     await expect(
       page.getByRole("heading", { name: "My data disks" }),
     ).toBeVisible();
-    await expect(page.locator(".quick-launch-card")).toHaveCount(2);
+    await expect(page.locator(".quick-launch-card")).toHaveCount(3);
+    await expect(
+      page.locator('.quick-launch-card[href^="?system="]'),
+    ).toContainText("Skate 0.5.1");
     await expect(
       page.locator('.quick-launch-card[href="?disk=advent"]'),
     ).toBeVisible();

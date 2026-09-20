@@ -42,6 +42,7 @@ async function run({
           target.pathname.endsWith("system.json")
             ? JSON.stringify(metadata)
             : disk,
+          { headers: { "content-length": "123" } },
         );
       }
       assert.equal(target.hostname, "machine.example");
