@@ -194,7 +194,7 @@ test("a flushed disk remains downloadable after a controlled WASM fault", async 
   browser,
   page,
 }, testInfo) => {
-  await page.route("**/app.js", async (route) => {
+  await page.route(/\/app\.js(?:\?.*)?$/, async (route) => {
     const response = await route.fetch();
     const source = await response.text();
     const marker = "  try {\n    const deadline = performance.now() + 6;";
