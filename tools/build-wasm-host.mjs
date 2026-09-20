@@ -198,6 +198,9 @@ try {
       ),
       copyFile(join(sourceDirectory, "app.js"), join(stagedOutput, "app.js")),
       ...[
+        "favicon.svg",
+        "favicon.png",
+        "apple-touch-icon.png",
         "disk-workspace.js",
         "disk-profile.js",
         "two-mib-system.js",

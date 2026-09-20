@@ -1,5 +1,10 @@
 # Triptych
 
+The next WASM priority is the [disk library and launch-link roadmap](docs/plans/disk-library-and-launch-links.md):
+published read-only images, a persistent personal disk box, safe disk swaps and
+shareable machine setups. Four drives are the proposed default, with up to
+sixteen supported. This work is planned, not yet deployed.
+
 The [browser quick start](docs/browser-quick-start.md) covers a complete
 ATOM/Edit/NUC session, browser saving, backup and restore.
 
