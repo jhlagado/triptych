@@ -3082,7 +3082,9 @@ function selectedDirectLaunch(route) {
     throw new Error("Use one software link with an optional B slot.");
   return {
     id: route.get("disk"),
-    b: parseDirectBSelection(route.get("b")),
+    b: parseDirectBSelection(
+      route.get("b") ?? (route.get("disk") === "skate" ? "auto" : null),
+    ),
   };
 }
 
@@ -3097,7 +3099,14 @@ async function startDirectLaunch(route) {
   });
   directB = await openDirectBSlot({
     selection: selected.b,
-    createBlank: createDirectBlankDisk,
+    createBlank: () => {
+      if (launch.id !== "skate") return createDirectBlankDisk();
+      // A new personal disk starts with the examples and compiler. Its system
+      // tracks remain empty; the protected A image supplies the residents.
+      const bytes = launch.image.slice();
+      bytes.fill(0, 0, 16384);
+      return bytes;
+    },
     onChanged: ({ slot }) => {
       if (directSession)
         setStatus(
@@ -3151,7 +3160,7 @@ async function startDirectLaunch(route) {
   directInstruction =
     launch.id === "advent"
       ? "Colossal Cave is in drive A. Type ADVENT."
-      : `Games are in drive A. ${launch.instruction}.`;
+      : `${launch.name} is in drive A. ${launch.instruction}.`;
   directInstruction += directB.writable
     ? ` ${directB.slot} is persistent and writable.`
     : ` ${directB.slot} is read-only because another tab owns it.`;

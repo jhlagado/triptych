@@ -264,6 +264,22 @@ try {
       CpmDisk,
     });
     directLaunch.descriptor.launches.push(gamesLaunch.descriptor);
+    const skateImage = previousLibrary.manifest.images.find(
+      (image) => image.id === "skate-0.5.1",
+    );
+    if (skateImage)
+      directLaunch.descriptor.launches.push({
+        id: "skate",
+        name: "Skate 0.5.1",
+        instruction:
+          "Type B: to edit and compile; RECEIPT, ROUTE and ACCOUNT run immediately",
+        profile: skateImage.systemProfile,
+        image: {
+          asset: skateImage.asset,
+          bytes: skateImage.byteLength,
+          sha256: skateImage.sha256,
+        },
+      });
     // Identical image bytes keep their first publication's source reference.
     // A later machine build may have a new revision without changing that disk.
     // Other metadata changes under the same immutable identity are errors.
