@@ -123,6 +123,21 @@
       "bytes": 2097152,
       "path": "library-games-2m-25618a8351f639e2b00b856a5b64220da75231ddfc396dad15f8ea9b4f13607c.img",
       "sha256": "25618a8351f639e2b00b856a5b64220da75231ddfc396dad15f8ea9b4f13607c"
+    },
+    {
+      "bytes": 2097152,
+      "path": "library-skate-0.5.1-c5d731923edc19ed31864cda4a51b8a85b3ab636bebda3498b65499f9f1a98ad.img",
+      "sha256": "c5d731923edc19ed31864cda4a51b8a85b3ab636bebda3498b65499f9f1a98ad"
+    },
+    {
+      "bytes": 2097152,
+      "path": "library-skate-work-0.5.1-c664f7121261a14f07185601d2b55dca25f33f5ca12422e8c644cbfff21ef1b6.img",
+      "sha256": "c664f7121261a14f07185601d2b55dca25f33f5ca12422e8c644cbfff21ef1b6"
+    },
+    {
+      "bytes": 630,
+      "path": "library-skate-provenance-0c7086095e5f6320eb5c0550184c56b28a32109e1da580c565ec2f265a35ef3d.json",
+      "sha256": "0c7086095e5f6320eb5c0550184c56b28a32109e1da580c565ec2f265a35ef3d"
     }
   ],
   "defaults": [
@@ -137,6 +152,10 @@
     {
       "id": "colossal-cave-350",
       "revision": "517cdcb9a33888a56e01a95a93700d0a8852f2b0d6a60905b7e03f2653a6c6e7"
+    },
+    {
+      "id": "skate",
+      "revision": "26ab95deb027855a3cbd593119fc8976736d521af7aa2b2a79b41e288d0aeb8d"
     }
   ],
   "images": [
@@ -187,6 +206,18 @@
       "sha256": "25618a8351f639e2b00b856a5b64220da75231ddfc396dad15f8ea9b4f13607c",
       "source": "https://github.com/jhlagado/triptych/tree/8b31218c864e5fb7e68b39e14418f93570dac187",
       "systemProfile": null
+    },
+    {
+      "asset": "library-skate-0.5.1-c5d731923edc19ed31864cda4a51b8a85b3ab636bebda3498b65499f9f1a98ad.img",
+      "byteLength": 2097152,
+      "geometry": "triptych-cpm-2m-v1",
+      "id": "skate-0.5.1",
+      "license": "Skate and EDIT distributed by project-owner authorisation; CP/M component provenance retained in the admission record.",
+      "name": "Skate 0.5.1 — Scheme compiler and examples",
+      "revision": "c5d731923edc19ed31864cda4a51b8a85b3ab636bebda3498b65499f9f1a98ad",
+      "sha256": "c5d731923edc19ed31864cda4a51b8a85b3ab636bebda3498b65499f9f1a98ad",
+      "source": "https://github.com/jhlagado/skate",
+      "systemProfile": "triptych-cpu-v0.1-2m-n04"
     }
   ],
   "recipes": [
@@ -475,6 +506,36 @@
           },
           "kind": "published"
         },
+        null
+      ]
+    },
+    {
+      "admission": "14c3536d518b11bf7a97b01f4d54900c9d8e052bd1e3ce9428578eab03d3ccc7",
+      "bootstrap": "library-retained-54c6bfd356b4b42f8c51f3b85777a9d2be7aa680945335783c4dd7a6dae8921e.bin",
+      "configuredCount": 4,
+      "id": "skate",
+      "name": "Skate 0.5.1 — Scheme and personal work disk",
+      "provenance": "library-skate-provenance-0c7086095e5f6320eb5c0550184c56b28a32109e1da580c565ec2f265a35ef3d.json",
+      "revision": "26ab95deb027855a3cbd593119fc8976736d521af7aa2b2a79b41e288d0aeb8d",
+      "slots": [
+        {
+          "image": {
+            "id": "skate-0.5.1",
+            "revision": "c5d731923edc19ed31864cda4a51b8a85b3ab636bebda3498b65499f9f1a98ad"
+          },
+          "kind": "published"
+        },
+        {
+          "geometry": "triptych-cpm-2m-v1",
+          "kind": "writable-role",
+          "name": "Skate work",
+          "role": "work",
+          "seed": {
+            "asset": "library-skate-work-0.5.1-c664f7121261a14f07185601d2b55dca25f33f5ca12422e8c644cbfff21ef1b6.img",
+            "systemProfile": null
+          }
+        },
+        null,
         null
       ]
     }

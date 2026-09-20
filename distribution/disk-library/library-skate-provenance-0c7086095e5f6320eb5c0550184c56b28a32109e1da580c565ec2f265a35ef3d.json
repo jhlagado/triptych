@@ -1,0 +1,20 @@
+{
+  "schema": "skate-disk-release-v1",
+  "version": "0.5.1",
+  "source": "https://github.com/jhlagado/skate",
+  "sourceImageSha256": "6fed903c61d2e9b8ed96348a0915fe4a4545f8856dfa55754f67c6c11e3116e0",
+  "admission": "14c3536d518b11bf7a97b01f4d54900c9d8e052bd1e3ce9428578eab03d3ccc7",
+  "files": [
+    "ACCOUNT.COM",
+    "ACCOUNT.SK8",
+    "EDIT.COM",
+    "README.TXT",
+    "RECEIPT.COM",
+    "RECEIPT.SK8",
+    "ROUTE.COM",
+    "ROUTE.SK8",
+    "SKATE.COM",
+    "SKATE.RT"
+  ],
+  "verification": "Compile and run all three examples on writable B with protected A; source and binary checks performed by the Skate release proof."
+}

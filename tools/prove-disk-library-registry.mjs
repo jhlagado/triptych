@@ -88,6 +88,23 @@ const expectedRecipes = new Map([
     },
   ],
 ]);
+expectedRecipes.set("skate", {
+  roles: ["work"],
+  slots: ["published", "writable-role", null, null],
+  system: "skate-0.5.1",
+  files: [
+    "ACCOUNT.COM",
+    "ACCOUNT.SK8",
+    "EDIT.COM",
+    "README.TXT",
+    "RECEIPT.COM",
+    "RECEIPT.SK8",
+    "ROUTE.COM",
+    "ROUTE.SK8",
+    "SKATE.COM",
+    "SKATE.RT",
+  ],
+});
 const defaultIds = registry.metadata.defaults.map((row) => row.id);
 for (const required of ["starter", "library"])
   assert(defaultIds.includes(required), `required ${required} default missing`);
@@ -132,8 +149,12 @@ for (const reference of registry.metadata.defaults) {
     recipe.descriptor.slots.map((slot) => slot?.kind ?? null),
     expected.slots,
   );
-  assert.equal(recipe.descriptor.slots[0].image.id, "system-2m-n04");
-  assert.equal(recipe.descriptor.slots[2].image.id, expected.data);
+  assert.equal(
+    recipe.descriptor.slots[0].image.id,
+    expected.system ?? "system-2m-n04",
+  );
+  if (expected.data)
+    assert.equal(recipe.descriptor.slots[2].image.id, expected.data);
   const profile = recipe.admission.twoMibProfiles.find(
     (row) => row.configuredCount === 4,
   );
@@ -187,8 +208,8 @@ for (const reference of registry.metadata.defaults) {
     assert.equal(hash(bytes), role.seed.sha256);
     assert.deepEqual(
       files(bytes),
-      [],
-      "new writable role must be a valid empty CP/M disk",
+      expected.files ?? [],
+      "new writable role must contain its documented starting files",
     );
   }
   const images = [];
@@ -205,7 +226,8 @@ for (const reference of registry.metadata.defaults) {
         hash(bytes.subarray(0, profile.system.bytes)),
         profile.system.sha256,
       );
-      assert(names.includes("ATOM.COM"));
+      if (expected.files) assert.deepEqual(names, expected.files);
+      else assert(names.includes("ATOM.COM"));
     } else if (slot.image.id === "games-2m") {
       for (const name of ["CAVERNS.COM", "HYPERDRV.COM", "HYPERD2.COM"])
         assert(names.includes(name));
@@ -236,7 +258,7 @@ for (const reference of registry.metadata.defaults) {
       files: names.length,
     });
   }
-  assert.equal(images.length, 2);
+  assert.equal(images.length, expected.data ? 2 : 1);
   // Verify the retained logical-name bindings as actual emitted bytes too.
   for (const binding of Object.values(recipe.assetBindings)) {
     const bytes = new Uint8Array(
