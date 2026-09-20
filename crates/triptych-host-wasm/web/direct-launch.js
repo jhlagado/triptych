@@ -33,13 +33,8 @@ export async function fetchDirectImage(reference, base, fetch, crypto) {
         response.body?.getReader,
       "image could not be loaded",
     );
-    const length = response.headers.get("content-length");
-    const encoding = response.headers
-      .get("content-encoding")
-      ?.trim()
-      .toLowerCase();
-    if (length !== null && (!encoding || encoding === "identity"))
-      requireValue(Number(length) === reference.bytes, "image length differs");
+    // Cross-origin hosts may expose compressed Content-Length without exposing
+    // Content-Encoding. Bound and verify the decoded stream itself below.
     reader = response.body.getReader();
     const bytes = new Uint8Array(reference.bytes);
     let offset = 0;
