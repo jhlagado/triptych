@@ -60,6 +60,7 @@ test("external image loads with Triptych bootstrap and a work-disk seed", async 
   assert.equal(launch.configuredCount, 4);
   assert.equal(launch.seedWorkDisk, true);
   assert.equal(launch.bootstrap.length, 256);
+  assert.equal(launch.storageNamespace, `triptych-external-b-${image.sha256}`);
 });
 test("corrupt download fails its checksum", async () => {
   const disk = original.slice();
@@ -84,5 +85,19 @@ test("external metadata is bounded and cannot redirect image loading", async () 
   await assert.rejects(
     run({ metadata: { padding: "x".repeat(17000) } }),
     /exceeds 16 KiB/,
+  );
+});
+
+test("external work disks use distinct writer locks", async () => {
+  const { directBLockName } =
+    await import("../../crates/triptych-host-wasm/web/direct-b-slots.js");
+  const launch = await run();
+  assert.notEqual(
+    directBLockName(1, launch.storageNamespace),
+    directBLockName(1),
+  );
+  assert.notEqual(
+    directBLockName(1, launch.storageNamespace),
+    directBLockName(1, "another-release"),
   );
 });

@@ -113,6 +113,7 @@ export async function loadExternalLaunch({
   );
   return {
     id: "external",
+    storageNamespace: `triptych-external-b-${image.sha256}`,
     name: descriptor.name,
     instruction: descriptor.instruction,
     profile: descriptor.profile,

@@ -32,13 +32,15 @@ checks downloaded content, not publisher authenticity. Fetches to the publisher
 omit credentials, reject redirects and require browser CORS permission when
 origins differ. GitHub Pages can host these files.
 
-A is the immutable published image. `copy-image` seeds a new personal B disk
+Each external image has a separate saved-disk namespace identified by its SHA-256.
+Its database, writer locks and change notifications are separate from the built-in
+demos and other external images. A is the immutable published image. `copy-image` seeds a new personal B disk
 with the image's files and zeroed system tracks; `blank` starts with an empty
 data disk. With no `b` parameter, the existing direct-launch system selects a
-free B slot and records it in the URL. Bookmark that resulting URL to reopen
+writable B slot and records it in the URL. Bookmark that resulting URL to reopen
 the same disk. An explicit `b=B1` through `b=B8` reuses the selected slot without
-replacing existing data. If all eight slots are occupied, select an existing
-slot explicitly or manage the saved disks. Existing writer locks still apply.
+replacing existing data. If all eight slots have active writers, B1 opens read-only. Existing writer
+locks still apply.
 
 Keep published version paths immutable. A new application version needs a new
 image and descriptor, but no Triptych rebuild while its machine profile remains

@@ -3120,6 +3120,7 @@ async function startDirectLaunch(route) {
       });
   directB = await openDirectBSlot({
     selection: selected.b,
+    name: launch.storageNamespace ?? DIRECT_B_DATABASE,
     createBlank: () => {
       if (launch.id !== "skate" && !launch.seedWorkDisk)
         return createDirectBlankDisk();

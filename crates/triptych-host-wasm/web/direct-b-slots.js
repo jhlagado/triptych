@@ -26,14 +26,16 @@ function slotNumber(value) {
 }
 
 /** Return the browser-lock name for one persistent direct-demo slot. */
-export function directBLockName(number) {
+export function directBLockName(number, namespace = DIRECT_B_DATABASE) {
   requireValue(
     Number.isSafeInteger(number) &&
       number >= 1 &&
       number <= DIRECT_B_SLOT_COUNT,
     "invalid B slot number",
   );
-  return `triptych-direct-b:v1:B${number}`;
+  return namespace === DIRECT_B_DATABASE
+    ? `triptych-direct-b:v1:B${number}`
+    : `${namespace}:B${number}`;
 }
 
 /** Parse the deliberately small URL vocabulary used by direct launches. */
@@ -172,7 +174,7 @@ function writeInitial(database, record) {
   });
 }
 
-async function chooseLease(selection, locks) {
+async function chooseLease(selection, locks, namespace) {
   const candidates =
     selection === "auto"
       ? Array.from({ length: DIRECT_B_SLOT_COUNT }, (_, index) => index + 1)
@@ -180,7 +182,7 @@ async function chooseLease(selection, locks) {
   for (const number of candidates) {
     const lease = await acquireDiskWriter({
       locks,
-      name: directBLockName(number),
+      name: directBLockName(number, namespace),
     });
     if (lease.owned) return { number, lease };
     if (selection !== "auto") return { number, lease };
@@ -192,7 +194,7 @@ async function chooseLease(selection, locks) {
     number: 1,
     lease: await acquireDiskWriter({
       locks,
-      name: directBLockName(1),
+      name: directBLockName(1, namespace),
     }),
   };
 }
@@ -219,7 +221,7 @@ export async function openDirectBSlot({
     typeof createBlank === "function",
     "blank-disk factory required",
   );
-  const chosen = await chooseLease(parsed, locks);
+  const chosen = await chooseLease(parsed, locks, name);
   let database;
   let channel;
   try {
@@ -255,7 +257,7 @@ export async function openDirectBSlot({
     const tabId = randomIdentity(crypto);
     channel =
       typeof globalThis.BroadcastChannel === "function"
-        ? new BroadcastChannel("triptych-direct-b-v1")
+        ? new BroadcastChannel(name)
         : undefined;
     if (channel) {
       channel.onmessage = (event) => {
