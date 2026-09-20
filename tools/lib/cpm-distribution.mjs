@@ -49,6 +49,7 @@ export async function buildCpmDistribution(
       "atom",
       "nucleus",
       "edit",
+      "copy",
       "caverns80",
       "hyperdrive",
       "hyperdrive2",
@@ -99,6 +100,36 @@ export async function buildCpmDistribution(
       );
       assert.equal(assembled.base, 0xfa00);
       assert.equal(assembled.bytes.length, 1024);
+      bytes = assembled.bytes;
+    } else if (component.id === "copy") {
+      assert.equal(component.recipe, "atom-binary");
+      assert.deepEqual(component.source, {
+        kind: "triptych",
+        path: "apps/copy/copy.asm",
+      });
+      assert.deepEqual(component.target, { origin: 0x0100, capacity: 0xe300 });
+      assert.deepEqual(component.install, {
+        kind: "file",
+        name: "COPY.COM",
+        padByte: 26,
+      });
+      const assembled = await assembleAtomFile(
+        join(repositoryRoot, component.source.path),
+      );
+      assert.equal(assembled.base, 0x0100);
+      const copyManifest = {
+        format: "copy-build-manifest-v1",
+        artifact: "COPY.COM",
+        bytes: assembled.bytes.length,
+        sha256: hash(assembled.bytes),
+        assembler: { name: "atom-z80", revision: lock.atom.revision },
+        loadAddress: 0x0100,
+        entryAddress: 0x0100,
+        source: component.source.path,
+        contract: "docs/specifications/copy-com-v1.md",
+        sourceFormat: "native-atom",
+      };
+      validateDistributionManifest(component, copyManifest, lock.atom.revision);
       bytes = assembled.bytes;
     } else {
       assert.equal(component.id, "atom");

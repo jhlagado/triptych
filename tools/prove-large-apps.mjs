@@ -305,7 +305,13 @@ for (const session of sessions) {
     );
     assert.match(edited, /writeOutputByte\('Y'\)/);
     assert.doesNotMatch(edited, /writeOutputByte\('O'\)/);
-    for (const name of ["ATOM.COM", "NUC.COM", "EDIT.COM", "HELLO.ASM"])
+    for (const name of [
+      "ATOM.COM",
+      "NUC.COM",
+      "EDIT.COM",
+      "COPY.COM",
+      "HELLO.ASM",
+    ])
       withDisk(original, (prior) =>
         assert.deepEqual(
           current.read_file(name),

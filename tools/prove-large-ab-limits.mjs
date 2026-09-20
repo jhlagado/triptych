@@ -260,7 +260,12 @@ for (const name of suite?.mutableFiles ?? []) {
     "mutable fixtures require per-checkpoint assertions",
   );
 }
-const floors = { "ATOM.COM": 0xd800, "NUC.COM": 0xd500, "EDIT.COM": 0xd800 };
+const floors = {
+  "ATOM.COM": 0xd800,
+  "NUC.COM": 0xd500,
+  "EDIT.COM": 0xd800,
+  "COPY.COM": 0x0400,
+};
 const cpu = new TriptychCpu(system.bootstrap);
 inputs.forEach((bytes, drive) => {
   if (bytes) cpu.install_drive(drive, bytes, true);

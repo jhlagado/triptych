@@ -185,7 +185,7 @@ reloads CCP and BDOS before accepting another command.
 - disk-full, directory-full, absent-drive, read-only, and failed BIOS I/O cases
   reject deterministically without unrelated mutation;
 - the retained CCP boots and implements its built-in commands;
-- `ATOM.COM`, `NUC.COM`, `EDIT.COM`, and generated COM programs work;
+- `ATOM.COM`, `NUC.COM`, `EDIT.COM`, `COPY.COM`, and generated COM programs work;
 - successful guest writes survive a fresh native host process;
 - native and WASM hosts produce equivalent guest-visible results;
 - ANSI applications produce the expected 80-by-24 cell, attribute, cursor,

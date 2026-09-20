@@ -20,6 +20,7 @@ const TOOL_FLOORS = {
   "ATOM.COM": 0xd800,
   "NUC.COM": 0xd500,
   "EDIT.COM": 0xd800,
+  "COPY.COM": 0x0400,
 };
 const PRIVATE_STACK_GAMES = new Set([
   "CAVERNS.COM",
@@ -201,7 +202,8 @@ function scenarios() {
 /** Qualify caller-supplied, provenance-checked E300/EB00/F900 artifacts.
  * This function never locates source checkouts, selects releases, rebuilds hosts,
  * or installs component pins. The caller owns those boundaries.
- * components include ATOM.COM, NUC.COM, EDIT.COM and the three game COM files.
+ * components include ATOM.COM, NUC.COM, EDIT.COM, COPY.COM and the three game
+ * COM files.
  * resident: {ccpBytes, ccpWritableStart, ccpStackGuardStart, ccpStackGuardEnd,
  * bdosBytes, bdosWritableStart, bdosStackBase, bdosStackTop,
  * biosImmutableRanges: [{start, end, bytes}]} (addresses are absolute).

@@ -348,7 +348,7 @@ try {
     assert.equal(supplied.drives[letter].sha256, expected.sha256);
     assert.equal(supplied.drives[letter].name, expected.name);
   }
-  for (const name of ["ATOM.COM", "NUC.COM", "EDIT.COM"])
+  for (const name of ["ATOM.COM", "NUC.COM", "EDIT.COM", "COPY.COM"])
     assert.ok(supplied.drives.A.files[name], `${name}: supplied on A`);
   assert.deepEqual(Object.keys(supplied.drives.B.files).sort(), [
     "CAVERNS.COM",
@@ -1221,6 +1221,7 @@ try {
     "ATOM.COM",
     "NUC.COM",
     "EDIT.COM",
+    "COPY.COM",
     "CAVERNS.COM",
     "HYPERDRV.COM",
     "HYPERD2.COM",
@@ -1250,6 +1251,7 @@ try {
     "ATOM.COM",
     "NUC.COM",
     "EDIT.COM",
+    "COPY.COM",
     "HELLO.ASM",
     "INPUT.NU",
   ])

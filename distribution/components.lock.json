@@ -187,6 +187,28 @@
       }
     },
     {
+      "id": "copy",
+      "role": "application",
+      "source": {
+        "kind": "triptych",
+        "path": "apps/copy/copy.asm"
+      },
+      "recipe": "atom-binary",
+      "target": {
+        "origin": 256,
+        "capacity": 58112
+      },
+      "install": {
+        "kind": "file",
+        "name": "COPY.COM",
+        "padByte": 26
+      },
+      "licence": {
+        "spdx": "GPL-3.0-or-later",
+        "provenance": "NOTICE.md"
+      }
+    },
+    {
       "id": "caverns80",
       "role": "application",
       "source": {

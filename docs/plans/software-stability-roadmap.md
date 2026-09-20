@@ -243,7 +243,7 @@ release boundary. Triptych BIOS is selected by the Triptych build revision.
 
 Replace reliance on inherited demo application binaries with a declared
 distribution manifest. Pin source revisions and build inputs for CCP, BDOS,
-BIOS, ATOM.COM, NUC.COM and EDIT.COM; record binary digests, memory limits and
+BIOS, ATOM.COM, NUC.COM, EDIT.COM and COPY.COM; record binary digests, memory limits and
 licences. Keep reviewed historical fixtures separately identified.
 
 Build a deterministic disk from those artifacts and versioned sample sources.

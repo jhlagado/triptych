@@ -165,7 +165,7 @@ and recovery**, select A under **Drive to view or edit**, and download
 `HELLO.ASM` and `INPUT.NU` from the file listing. Save and exit any guest program,
 acknowledge this in Files, then choose **Enter disk management**. Select B,
 use **Stage file imports** for those two downloads, and click **Stage update**
-for `ATOM.COM`, `NUC.COM` and `EDIT.COM`. **Apply and restart**, then close Files.
+for `ATOM.COM`, `NUC.COM`, `EDIT.COM` and `COPY.COM`. **Apply and restart**, then close Files.
 This copies files into B without changing protected A.
 
 On the prepared work disk, enter each command followed by Enter:

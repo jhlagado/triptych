@@ -41,7 +41,7 @@ export async function buildTwoMibLifetimeSystem(root, distribution, count) {
   if (bios.labels.DPHEND < bios.base + 1024)
     immutable.push(range(bios.labels.DPHEND, bios.base + 1024));
   const components = distribution.manifest.components
-    .filter(({ id }) => ["atom", "nucleus", "edit"].includes(id))
+    .filter(({ id }) => ["atom", "nucleus", "edit", "copy"].includes(id))
     .map((component) => {
       assert(component.bytes > 0 && component.bytes <= ccp.base - 256);
       return {
@@ -52,7 +52,7 @@ export async function buildTwoMibLifetimeSystem(root, distribution, count) {
     });
   assert.deepEqual(
     components.map(({ name }) => name),
-    ["ATOM.COM", "NUC.COM", "EDIT.COM"],
+    ["ATOM.COM", "NUC.COM", "EDIT.COM", "COPY.COM"],
   );
   return {
     bytes: built.system,

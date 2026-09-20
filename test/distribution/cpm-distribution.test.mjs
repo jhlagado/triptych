@@ -42,6 +42,9 @@ describe("pinned fresh CP/M distribution", () => {
       first.manifest.components.find(({ id }) => id === "hyperdrive2").install
         .name,
     ).toBe("HYPERD2.COM");
+    expect(
+      first.manifest.components.find(({ id }) => id === "copy").install.name,
+    ).toBe("COPY.COM");
     expect(first.disk.slice(256256)).toEqual(new Uint8Array(256));
     expect(
       Buffer.from(readCpm22File(first.disk, "INPUT.NU")).toString("ascii"),

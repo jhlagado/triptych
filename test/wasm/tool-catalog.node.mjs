@@ -22,6 +22,7 @@ function fixture() {
     ["atom", "ATOM.COM", 129],
     ["nucleus", "NUC.COM", 16385],
     ["edit", "EDIT.COM", 128],
+    ["copy", "COPY.COM", 128],
     ["caverns80", "CAVERNS.COM", 22526],
     ["hyperdrive", "HYPERDRV.COM", 15153],
     ["hyperdrive2", "HYPERD2.COM", 13543],
@@ -32,12 +33,15 @@ function fixture() {
       id,
       bytes: bytes.length,
       sha256: hash(bytes),
-      source: {
-        kind: "git",
-        repository: `https://github.com/jhlagado/${id}.git`,
-        revision: String(index + 1).repeat(40),
-        path: `${id}.asm`,
-      },
+      source:
+        id === "copy"
+          ? { kind: "triptych", path: "apps/copy/copy.asm" }
+          : {
+              kind: "git",
+              repository: `https://github.com/jhlagado/${id}.git`,
+              revision: String(index + 1).repeat(40),
+              path: `${id}.asm`,
+            },
       target: { origin: 256, capacity: 0xe300 },
       install: { kind: "file", name, padByte: 26 },
     };
@@ -65,13 +69,21 @@ function fixture() {
   return { disk, manifest, catalog, assets, calls, options };
 }
 
-test("catalog extracts six exact padded applications, including multiple extents", () => {
+test("catalog extracts seven exact padded applications, including multiple extents", () => {
   const { catalog, assets, disk } = fixture();
   assert.deepEqual(
     catalog.tools.map((tool) => tool.id),
-    ["atom", "nucleus", "edit", "caverns80", "hyperdrive", "hyperdrive2"],
+    [
+      "atom",
+      "nucleus",
+      "edit",
+      "copy",
+      "caverns80",
+      "hyperdrive",
+      "hyperdrive2",
+    ],
   );
-  assert.equal(assets.size, 6);
+  assert.equal(assets.size, 7);
   for (const tool of catalog.tools) {
     assert.deepEqual(assets.get(tool.asset), readCpm22File(disk, tool.name));
     assert.equal(hash(assets.get(tool.asset)), tool.padded.sha256);
@@ -79,7 +91,7 @@ test("catalog extracts six exact padded applications, including multiple extents
   }
   assert.deepEqual(
     catalog.tools.map((tool) => tool.padded.bytes),
-    [256, 16512, 128, 22528, 15232, 13568],
+    [256, 16512, 128, 128, 22528, 15232, 13568],
   );
   const before = disk.slice();
   assets.values().next().value.fill(0);
@@ -290,6 +302,7 @@ test("identification uses full records; unknown is distinct from missing and err
     [
       "different-unknown",
       "missing",
+      "matching",
       "matching",
       "matching",
       "matching",

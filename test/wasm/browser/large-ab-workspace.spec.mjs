@@ -182,6 +182,7 @@ test("A/B migration, B tool workflows, complete export and removal/restore prese
     "ATOM.COM",
     "NUC.COM",
     "EDIT.COM",
+    "COPY.COM",
     "CAVERNS.COM",
     "HYPERDRV.COM",
     "HYPERD2.COM",

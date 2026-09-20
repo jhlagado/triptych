@@ -42,6 +42,28 @@ try {
   assert.match(output, /HELLO.COM written/);
   send("HELLO\r");
   assert.match(output, /Hello from ATOM/);
+  send("COPY HELLO.ASM HELLO2.ASM\r");
+  assert.match(output, /1 file copied/);
+  let copiedDisk = machine.export_drive(0);
+  assert.deepEqual(
+    readCpm22File(copiedDisk, "HELLO2.ASM"),
+    readCpm22File(copiedDisk, "HELLO.ASM"),
+    "COPY preserves every source record",
+  );
+  send("COPY NUC.COM NUC2.COM\r");
+  assert.match(output, /1 file copied/);
+  copiedDisk = machine.export_drive(0);
+  assert.deepEqual(
+    readCpm22File(copiedDisk, "NUC2.COM"),
+    readCpm22File(copiedDisk, "NUC.COM"),
+    "COPY preserves binary data across extent boundaries",
+  );
+  send("DIR\r");
+  assert.match(output, /HELLO2/);
+  send("COPY HELLO.ASM HELLO2.ASM\r");
+  assert.match(output, /destination exists/);
+  send("COPY MISSING.ASM NEW2.ASM\r");
+  assert.match(output, /source not found/);
   send("NUC\r");
   send("OUTPUT\r");
   assert.match(output, /OK/);
@@ -70,6 +92,7 @@ try {
         checks: [
           "boot",
           "ATOM compile/run",
+          "COPY source-to-destination",
           "NUC compile/run",
           "Edit/save",
           "fresh-machine reopen/compile/run",

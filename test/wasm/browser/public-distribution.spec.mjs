@@ -126,7 +126,13 @@ test("historical published A/B images adopt exactly; both games save and reload 
   expect(initial.drives.A.bytes).toBe(8388608);
   expect(initial.drives.B.bytes).toBe(8388608);
   expect(initial.drives.A.files).toEqual(
-    expect.arrayContaining(["ATOM.COM", "NUC.COM", "EDIT.COM", "INPUT.NU"]),
+    expect.arrayContaining([
+      "ATOM.COM",
+      "NUC.COM",
+      "EDIT.COM",
+      "COPY.COM",
+      "INPUT.NU",
+    ]),
   );
   expect(initial.drives.A.files).not.toContain("CAVERNS.COM");
   expect(initial.drives.A.files).not.toContain("HYPERDRV.COM");
@@ -307,7 +313,7 @@ test("fresh public default uses protected A/C and private B/D without published 
   const initial = await state(page);
   expect(initial.profile).toBe("triptych-cpu-v0.1-2m-n04");
   expect(initial.drives.A.files).toEqual(
-    expect.arrayContaining(["ATOM.COM", "EDIT.COM", "NUC.COM"]),
+    expect.arrayContaining(["ATOM.COM", "EDIT.COM", "NUC.COM", "COPY.COM"]),
   );
   expect(initial.drives.C.files).toEqual([
     "CAVERNS.COM",

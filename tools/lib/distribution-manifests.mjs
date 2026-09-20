@@ -69,12 +69,6 @@ export function validateDistributionManifest(
     "unsupported resident profile",
   );
   const offset = twoMib ? twoMib.ccp - 0xe400 : offsets[targetProfile];
-  assert.equal(
-    component.recipe,
-    "verified-release",
-    "distribution release recipe",
-  );
-  assert.equal(component.source.kind, "git", "distribution source kind");
   assert.match(
     atomRevision,
     /^(?:[0-9a-f]{40}|[0-9a-f]{64})$/,
@@ -86,6 +80,57 @@ export function validateDistributionManifest(
       !Array.isArray(manifest),
     "distribution manifest must be an object",
   );
+
+  if (component.id === "copy") {
+    assert.equal(component.recipe, "atom-binary", "COPY build recipe");
+    assert.deepEqual(
+      component.source,
+      { kind: "triptych", path: "apps/copy/copy.asm" },
+      "COPY source",
+    );
+    assert.equal(component.role, "application", "COPY role");
+    assert.equal(component.target.origin, 0x0100, "COPY target origin");
+    assert.ok(
+      Number.isSafeInteger(component.target.capacity) &&
+        component.target.capacity > 0 &&
+        component.target.capacity <= 0xe300 + offset,
+      "COPY capacity must fit the TPA",
+    );
+    assert.deepEqual(
+      component.install,
+      { kind: "file", name: "COPY.COM", padByte: 0x1a },
+      "COPY installation",
+    );
+    assert.equal(manifest.format, "copy-build-manifest-v1", "COPY format");
+    assert.equal(manifest.artifact, "COPY.COM", "COPY artifact");
+    assert.equal(manifest.loadAddress, 0x0100, "COPY load address");
+    assert.equal(manifest.entryAddress, 0x0100, "COPY entry address");
+    assert.equal(manifest.source, component.source.path, "COPY source path");
+    assert.equal(
+      manifest.contract,
+      "docs/specifications/copy-com-v1.md",
+      "COPY contract",
+    );
+    assert.equal(manifest.sourceFormat, "native-atom", "COPY source format");
+    assert.ok(
+      Number.isSafeInteger(manifest.bytes) && manifest.bytes > 0,
+      "COPY manifest bytes",
+    );
+    assert.match(manifest.sha256, /^[0-9a-f]{64}$/, "COPY manifest SHA-256");
+    assert.deepEqual(
+      manifest.assembler,
+      { name: "atom-z80", revision: atomRevision },
+      "COPY assembler",
+    );
+    return manifest;
+  }
+
+  assert.equal(
+    component.recipe,
+    "verified-release",
+    "distribution release recipe",
+  );
+  assert.equal(component.source.kind, "git", "distribution source kind");
 
   if (Object.hasOwn(OS, component.id)) {
     const expected = {

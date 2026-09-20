@@ -144,7 +144,7 @@ export function buildPublicDriveDistribution({
     );
     return file;
   });
-  for (const name of ["ATOM.COM", "NUC.COM", "EDIT.COM"])
+  for (const name of ["ATOM.COM", "NUC.COM", "EDIT.COM", "COPY.COM"])
     assert(
       files.some((file) => file.name === name),
       `${name} system tool`,
@@ -335,7 +335,7 @@ export function buildDiskLibraryDistribution({
     assert.equal(matches[0].install.name, name);
     return files.find((file) => file.name === name);
   });
-  for (const name of ["ATOM.COM", "NUC.COM", "EDIT.COM"])
+  for (const name of ["ATOM.COM", "NUC.COM", "EDIT.COM", "COPY.COM"])
     assert(fileNames.has(name), `${name} tool required`);
   const samples = manifest.components
     .filter(

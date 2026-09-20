@@ -23,6 +23,29 @@ const manifests = Object.fromEntries(
 );
 
 function fixture(id) {
+  if (id === "copy") {
+    const manifest = {
+      format: "copy-build-manifest-v1",
+      artifact: "COPY.COM",
+      bytes: 128,
+      sha256: "c".repeat(64),
+      assembler: { name: "atom-z80", revision: atomRevision },
+      loadAddress: 0x0100,
+      entryAddress: 0x0100,
+      source: "apps/copy/copy.asm",
+      contract: "docs/specifications/copy-com-v1.md",
+      sourceFormat: "native-atom",
+    };
+    const component = {
+      id: "copy",
+      recipe: "atom-binary",
+      role: "application",
+      source: { kind: "triptych", path: "apps/copy/copy.asm" },
+      target: { origin: 0x0100, capacity: 0xe300 },
+      install: { kind: "file", name: "COPY.COM", padByte: 26 },
+    };
+    return { component, manifest, entry: manifest };
+  }
   const resident = id === "ccp" || id === "bdos";
   const manifest = structuredClone(manifests[resident ? "os" : id]);
   const entry = resident
@@ -162,11 +185,21 @@ describe("distribution manifest target checks", () => {
     "bdos",
     "nucleus",
     "edit",
+    "copy",
     "caverns80",
     "hyperdrive",
     "hyperdrive2",
   ])("accepts published %s metadata without mutation", (id) => {
     const f = fixture(id);
+    const before = structuredClone(f);
+    expect(
+      validateDistributionManifest(f.component, f.manifest, atomRevision),
+    ).toEqual(f.manifest);
+    expect(f).toEqual(before);
+  });
+
+  it("accepts the ATOM-built COPY metadata without mutation", () => {
+    const f = fixture("copy");
     const before = structuredClone(f);
     expect(
       validateDistributionManifest(f.component, f.manifest, atomRevision),
@@ -331,6 +364,39 @@ describe("distribution manifest target checks", () => {
       }
     },
   );
+
+  it.each([
+    (f) => {
+      f.manifest.format = "wrong";
+    },
+    (f) => {
+      f.manifest.artifact = "OTHER.COM";
+    },
+    (f) => {
+      f.manifest.source = "other.asm";
+    },
+    (f) => {
+      f.manifest.contract = "other.md";
+    },
+    (f) => {
+      f.manifest.bytes = 0;
+    },
+    (f) => {
+      f.manifest.assembler.name = "other";
+    },
+    (f) => {
+      f.component.install.name = "OTHER.COM";
+    },
+    (f) => {
+      f.component.source.kind = "git";
+    },
+  ])("rejects tampered COPY metadata", (mutate) => {
+    const f = fixture("copy");
+    mutate(f);
+    expect(() =>
+      validateDistributionManifest(f.component, f.manifest, atomRevision),
+    ).toThrow();
+  });
 
   it.each(["caverns80", "hyperdrive", "hyperdrive2"])(
     "requires %s native source and complete bounded static memory",

@@ -74,6 +74,7 @@ describe("published two-MiB library from qualified source fixtures", () => {
             "ATOM.COM",
             "NUC.COM",
             "EDIT.COM",
+            "COPY.COM",
             "HELLO.ASM",
             "INPUT.NU",
             "LARGE.ASM",
@@ -205,7 +206,7 @@ describe("fresh public system and games drives", () => {
           readCpm22File(distribution.disk, name),
           name,
         );
-      for (const name of ["ATOM.COM", "NUC.COM", "EDIT.COM"])
+      for (const name of ["ATOM.COM", "NUC.COM", "EDIT.COM", "COPY.COM"])
         assert(a.file_names().includes(name));
       const readme = Buffer.from(b.read_file("README.TXT")).toString("ascii");
       assert.match(readme, /\r\nB:\r\n/);

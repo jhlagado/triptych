@@ -2,6 +2,7 @@ const TOOLS = {
   atom: "ATOM.COM",
   nucleus: "NUC.COM",
   edit: "EDIT.COM",
+  copy: "COPY.COM",
   caverns80: "CAVERNS.COM",
   hyperdrive: "HYPERDRV.COM",
   hyperdrive2: "HYPERD2.COM",
@@ -22,19 +23,24 @@ function digest(value) {
 }
 
 function sourceMatches(source, expected, id) {
+  if (
+    !object(source) ||
+    !object(expected) ||
+    source.kind !== expected.kind ||
+    typeof source.path !== "string" ||
+    source.path.length === 0 ||
+    source.path !== expected.path
+  ) {
+    return false;
+  }
+  if (source.kind === "triptych") return true;
   return (
-    object(source) &&
-    object(expected) &&
     source.kind === "git" &&
-    source.kind === expected.kind &&
     source.repository === `https://github.com/jhlagado/${id}.git` &&
     source.repository === expected.repository &&
     typeof source.revision === "string" &&
     REVISION.test(source.revision) &&
-    source.revision === expected.revision &&
-    typeof source.path === "string" &&
-    source.path.length > 0 &&
-    source.path === expected.path
+    source.revision === expected.revision
   );
 }
 
@@ -127,12 +133,16 @@ export function validateToolCatalog(catalog, expectedDistribution) {
     return Object.freeze({
       id: tool.id,
       name: tool.name,
-      source: Object.freeze({
-        kind: tool.source.kind,
-        repository: tool.source.repository,
-        revision: tool.source.revision,
-        path: tool.source.path,
-      }),
+      source: Object.freeze(
+        tool.source.kind === "triptych"
+          ? { kind: "triptych", path: tool.source.path }
+          : {
+              kind: tool.source.kind,
+              repository: tool.source.repository,
+              revision: tool.source.revision,
+              path: tool.source.path,
+            },
+      ),
       target: Object.freeze({ ...tool.target }),
       raw: Object.freeze({ ...tool.raw }),
       padded: Object.freeze({ ...tool.padded }),

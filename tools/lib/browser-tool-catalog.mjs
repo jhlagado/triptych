@@ -8,6 +8,7 @@ const IDS = [
   "atom",
   "nucleus",
   "edit",
+  "copy",
   "caverns80",
   "hyperdrive",
   "hyperdrive2",
