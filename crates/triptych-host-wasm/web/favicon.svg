@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <title>Triptych — three-part computer</title>
+  <rect width="64" height="64" rx="14" fill="#08170f"/>
+  <rect x="8" y="20" width="12" height="28" rx="2" fill="#64b982"/>
+  <rect x="26" y="12" width="12" height="40" rx="2" fill="#a0efad"/>
+  <rect x="44" y="20" width="12" height="28" rx="2" fill="#64b982"/>
+</svg>
