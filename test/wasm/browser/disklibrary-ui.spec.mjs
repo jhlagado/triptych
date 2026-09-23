@@ -238,7 +238,9 @@ test("real games restore changed inventory from private D across browser reload 
   const files = () =>
     page.evaluate(async () => {
       const { openDiskBoxStore } = await import("./disk-box-store.js");
-      const { CpmDisk } = await import("./triptych_host_wasm.js");
+      const { default: init, CpmDisk } =
+        await import("./triptych_host_wasm.js");
+      await init();
       const store = await openDiskBoxStore({ name: "triptych-cpu" });
       try {
         const loaded = await store.load(),

@@ -163,7 +163,9 @@ async function state(page, diskId) {
         tx.onabort = () => reject(tx.error);
       });
       if (diskId) {
-        const { CpmDisk } = await import("/triptych_host_wasm.js");
+        const { default: init, CpmDisk } =
+          await import("/triptych_host_wasm.js");
+        await init();
         const disk = new CpmDisk(value.bytes);
         try {
           value.file = Array.from(disk.read_file("KEEP.TXT"));

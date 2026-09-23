@@ -60,7 +60,8 @@ async function send(page, text) {
 async function state(page, name = "triptych-cpu") {
   return page.evaluate(async (name) => {
     const { openDiskBoxAppStore } = await import("./disk-box-app-store.js");
-    const { CpmDisk } = await import("./triptych_host_wasm.js");
+    const { default: init, CpmDisk } = await import("./triptych_host_wasm.js");
+    await init();
     const store = await openDiskBoxAppStore({
       name,
       lease: { isOwner: () => false },

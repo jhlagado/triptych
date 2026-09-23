@@ -37,7 +37,8 @@ async function manage(page) {
 async function state(page) {
   return page.evaluate(async () => {
     const { openDiskBoxAppStore } = await import("/disk-box-app-store.js");
-    const { CpmDisk } = await import("/triptych_host_wasm.js");
+    const { default: init, CpmDisk } = await import("/triptych_host_wasm.js");
+    await init();
     const hash = async (bytes) =>
       Array.from(
         new Uint8Array(await crypto.subtle.digest("SHA-256", bytes)),

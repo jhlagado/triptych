@@ -106,7 +106,8 @@ async function metadata(page) {
 async function gamesFiles(page) {
   return page.evaluate(async () => {
     const { openDiskBoxAppStore } = await import("/disk-box-app-store.js");
-    const { CpmDisk } = await import("/triptych_host_wasm.js");
+    const { default: init, CpmDisk } = await import("/triptych_host_wasm.js");
+    await init();
     const store = await openDiskBoxAppStore({
       lease: { isOwner: () => false },
     });

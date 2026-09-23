@@ -29,7 +29,7 @@ test("served-module qualification rejects a missing transitive dependency", asyn
   request,
   baseURL,
 }) => {
-  await page.route("**/drive-set-v4.js", (route) => route.abort());
+  await page.route("**/drive-set-v4.js**", (route) => route.abort());
   await expect(
     checkServedTwoMibAssets(page, `${baseURL}/`, await manifest(request)),
   ).rejects.toThrow();

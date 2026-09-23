@@ -455,7 +455,7 @@ for (const newerAction of ["disk", "file"]) {
 test("closing while management entry saves cancels the eventual session and resumes input", async ({
   page,
 }) => {
-  await page.route("**/disk-box-app-store.js", async (route) => {
+  await page.route("**/disk-box-app-store.js**", async (route) => {
     const response = await route.fetch();
     const source = await response.text();
     const marker = "publish(token, crypto.randomUUID(), snapshot, true),";

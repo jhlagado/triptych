@@ -69,7 +69,9 @@ test("autosave and recovery download exclude writes after the last guest flush",
   expect(saved.subarray(0, 128)).toEqual(Buffer.alloc(128, 65));
 
   const host = await page.evaluate(async (bootBytes) => {
-    const { TriptychCpu } = await import("/triptych_host_wasm.js");
+    const { default: init, TriptychCpu } =
+      await import("/triptych_host_wasm.js");
+    await init();
     const boot = Uint8Array.from(bootBytes);
     const machine = new TriptychCpu(boot);
     try {

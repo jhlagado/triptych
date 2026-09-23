@@ -190,7 +190,13 @@ test("creating after historical adoption retains the adopted setup and starts on
 
   await page.goto(`/?configuration=${missingId}`);
   await page.evaluate(async () => {
-    const { TriptychCpu } = await import("/triptych_host_wasm.js");
+    const wasmUrl = performance
+      .getEntriesByType("resource")
+      .map((entry) => entry.name)
+      .find((name) => /\/triptych_host_wasm\.js\?v=/.test(name));
+    if (!wasmUrl) throw new Error("versioned Triptych WASM module not loaded");
+    const { default: init, TriptychCpu } = await import(wasmUrl);
+    await init();
     const original = TriptychCpu.prototype.free;
     window.__triptychTestFreeCount = 0;
     TriptychCpu.prototype.free = function (...args) {

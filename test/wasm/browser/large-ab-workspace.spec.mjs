@@ -14,7 +14,8 @@ const digest = (bytes) => createHash("sha256").update(bytes).digest("hex");
 async function readState(page) {
   return page.evaluate(async () => {
     const { openDiskBoxAppStore } = await import("/disk-box-app-store.js");
-    const { CpmDisk } = await import("/triptych_host_wasm.js");
+    const { default: init, CpmDisk } = await import("/triptych_host_wasm.js");
+    await init();
     const hash = async (bytes) =>
       Array.from(
         new Uint8Array(await crypto.subtle.digest("SHA-256", bytes)),
@@ -149,7 +150,8 @@ test("A/B migration, B tool workflows, complete export and removal/restore prese
   // through the selected-drive UI. These are file copies, not OS adaptation.
   const sources = await page.evaluate(async () => {
     const { openDiskBoxAppStore } = await import("/disk-box-app-store.js");
-    const { CpmDisk } = await import("/triptych_host_wasm.js");
+    const { default: init, CpmDisk } = await import("/triptych_host_wasm.js");
+    await init();
     const store = await openDiskBoxAppStore({
       lease: { isOwner: () => false },
     });

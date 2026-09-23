@@ -255,7 +255,8 @@ for (const action of ["tool", "file", "image"]) {
     const before = await rawState(page);
     const expectedB = await page.evaluate(async () => {
       const { openDiskBoxAppStore } = await import("/disk-box-app-store.js");
-      const { CpmDisk } = await import("/triptych_host_wasm.js");
+      const { default: init, CpmDisk } = await import("/triptych_host_wasm.js");
+      await init();
       const store = await openDiskBoxAppStore({
         lease: { isOwner: () => false },
       });
