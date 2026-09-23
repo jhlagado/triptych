@@ -28,7 +28,7 @@ fn generated_skate_program_runs_through_the_native_triptych_serial_gateway() {
     let mut state: CpuState = runtime.cpu_state();
     state.sp = STACK;
     runtime.set_cpu_state(state);
-    runtime.queue_input([b'Q']);
+    runtime.queue_input(*b"Q");
 
     let mut halted = false;
     for steps in 0..2_000_000 {
