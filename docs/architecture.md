@@ -26,6 +26,7 @@ sequence.
 The specifications define the stable side of the experiment:
 
 - [CPU profile](specifications/cpu-v0.1.md)
+- [Z80 execution host surface](specifications/z80-execution-host-v0.md)
 - [video processor](specifications/video-v0.1.md)
 - [sound processor](specifications/sound-v0.1.md)
 
