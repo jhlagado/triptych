@@ -1,0 +1,74 @@
+{
+  "format": "triptych.cpu.conformance.fixture.v1",
+  "id": "atom-stage1-halt",
+  "description": "Executes the three-byte Stage 1 Atom output profile: load 42H and halt.",
+  "source": {
+    "logicalIdentity": "stage1.asm",
+    "sha256": "2ed7f2564f4ce518adf1eff027c69012f43e4ed1b1b330296bd606a8d0dcc0c8"
+  },
+  "initial": {
+    "bootRom": {
+      "size": 256,
+      "fill": 0,
+      "patches": [
+        {
+          "address": 0,
+          "bytes": [195, 0, 64]
+        }
+      ]
+    },
+    "ram": {
+      "size": 65536,
+      "fill": 0,
+      "patches": [
+        {
+          "address": 16384,
+          "bytes": [62, 42, 118]
+        }
+      ]
+    },
+    "drives": [],
+    "serialInput": [],
+    "cpu": {}
+  },
+  "run": {
+    "maxSteps": 8,
+    "maxTStates": 64,
+    "interrupts": []
+  },
+  "observe": {
+    "cpu": ["a", "halted", "pc"],
+    "ram": [
+      {
+        "address": 16384,
+        "length": 3
+      }
+    ]
+  },
+  "expected": {
+    "result": {
+      "format": "triptych.cpu.conformance.result.v1",
+      "fixture": "atom-stage1-halt",
+      "stop": "halt",
+      "steps": 3,
+      "tStates": 21,
+      "cpu": {
+        "a": 42,
+        "halted": true,
+        "pc": 16387
+      },
+      "bootRomEnabled": true,
+      "ramSha256": "47d659ee23dadaf73ef66c3fe04ff1e6e98d63cad35dee6cf6ac32160ea30d37",
+      "ram": [
+        {
+          "address": 16384,
+          "bytes": [62, 42, 118]
+        }
+      ],
+      "driveSha256": [],
+      "serialOutput": [],
+      "io": []
+    },
+    "digest": "ce55d2fcabf6a6362f7cb1155196504bda540b9b99f4c8fac44deba2952ed2cc"
+  }
+}

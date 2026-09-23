@@ -1,0 +1,43 @@
+{
+  "schema": "z80-portable-conformance-v1",
+  "profile": "triptych-cpu-v0.1",
+  "source": {
+    "logicalIdentity": "stage1.asm",
+    "sha256": "2ed7f2564f4ce518adf1eff027c69012f43e4ed1b1b330296bd606a8d0dcc0c8"
+  },
+  "artifact": {
+    "kind": "flat-binary",
+    "base": 16384,
+    "end": 16387,
+    "bytes": [
+      62,
+      42,
+      118
+    ],
+    "sha256": "83eb97a92203f33ccc0839186abcad1a0cc05b857ac46ad30bbb074ef08a1adf"
+  },
+  "diagnostic": null,
+  "execution": {
+    "status": "halted",
+    "stop": "halt",
+    "steps": 3,
+    "tStates": 21,
+    "cpu": {
+      "a": 42,
+      "halted": true,
+      "pc": 16387
+    },
+    "bootRomEnabled": true,
+    "ramSha256": "47d659ee23dadaf73ef66c3fe04ff1e6e98d63cad35dee6cf6ac32160ea30d37"
+  },
+  "provenance": {
+    "assembler": "atom",
+    "atomVersion": "0.3.0",
+    "executionSubstrate": "triptych-rust-cpu",
+    "compatibleHosts": [
+      "triptych-native",
+      "triptych-wasm"
+    ],
+    "fixture": "triptych.cpu.conformance.fixture.v1#atom-stage1-halt"
+  }
+}

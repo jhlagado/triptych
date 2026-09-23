@@ -10,6 +10,78 @@ use triptych_cpu_core::{IoDirection, IoOperation};
 
 pub(crate) static FIXTURES: &[Fixture] = &[
     Fixture {
+        id: "atom-stage1-halt",
+        source_sha256: [
+            0xd9, 0xfe, 0x13, 0xee, 0x78, 0xf0, 0x0f, 0xb5, 0xf8, 0x19, 0x92, 0xaa, 0x4e, 0x0f,
+            0xb7, 0x49, 0xfd, 0x99, 0xd6, 0x57, 0xb7, 0x27, 0xf1, 0xd0, 0x93, 0xb9, 0x2f, 0x72,
+            0x47, 0xcb, 0xff, 0x0b,
+        ],
+        boot_rom: ByteImage {
+            size: 256,
+            fill: 0,
+            patches: &[BytePatch {
+                address: 0,
+                bytes: &[195, 0, 64],
+            }],
+        },
+        ram: ByteImage {
+            size: 65536,
+            fill: 0,
+            patches: &[BytePatch {
+                address: 16384,
+                bytes: &[62, 42, 118],
+            }],
+        },
+        drive: None,
+        serial_input: &[],
+        initial_cpu: &[],
+        max_steps: 8,
+        max_tstates: 64,
+        interrupts_after_step: &[],
+        observe_cpu: &[CpuField::A, CpuField::Halted, CpuField::Pc],
+        observe_ram: &[RamRange {
+            address: 16384,
+            length: 3,
+        }],
+        expected: ExpectedResult {
+            stop: Stop::Halt,
+            steps: 3,
+            tstates: 21,
+            cpu: &[
+                CpuExpectation {
+                    field: CpuField::A,
+                    value: 42,
+                },
+                CpuExpectation {
+                    field: CpuField::Halted,
+                    value: 1,
+                },
+                CpuExpectation {
+                    field: CpuField::Pc,
+                    value: 16387,
+                },
+            ],
+            boot_rom_enabled: true,
+            ram_sha256: [
+                0x47, 0xd6, 0x59, 0xee, 0x23, 0xda, 0xda, 0xf7, 0x3e, 0xf6, 0x6c, 0x3f, 0xe0, 0x4f,
+                0xf1, 0xe6, 0xe9, 0x8d, 0x63, 0xca, 0xd3, 0x5d, 0xee, 0x6c, 0xf6, 0xac, 0x32, 0x16,
+                0x0e, 0xa3, 0x0d, 0x37,
+            ],
+            ram: &[RamExpectation {
+                address: 16384,
+                bytes: &[62, 42, 118],
+            }],
+            drive_sha256: &[],
+            serial_output: &[],
+            io: &[],
+            digest: [
+                0xce, 0x55, 0xd2, 0xfc, 0xab, 0xf6, 0xa6, 0x36, 0x2f, 0x7c, 0xb1, 0x15, 0x51, 0x96,
+                0x50, 0x4b, 0xda, 0x54, 0x0b, 0x9b, 0x99, 0xf4, 0xc8, 0xfa, 0xc4, 0x4d, 0xeb, 0xa2,
+                0x95, 0x2e, 0xd2, 0xcc,
+            ],
+        },
+    },
+    Fixture {
         id: "boot-overlay-serial",
         source_sha256: [
             0x62, 0x5a, 0x33, 0x6f, 0x9e, 0xde, 0x16, 0x85, 0xea, 0x94, 0x6b, 0xb1, 0xd2, 0xbf,
