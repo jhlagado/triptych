@@ -487,18 +487,51 @@ impl TriptychCpu {
         self.machine.boot_rom_enabled()
     }
 
+    /// Disable the reset-time boot overlay before starting a directly loaded
+    /// execution image.  This is only valid before the first instruction.
+    pub fn disable_boot_rom_for_execution(&mut self) -> Result<(), JsError> {
+        if self.has_run {
+            return Err(JsError::new(
+                "the execution boot overlay can only be disabled before running",
+            ));
+        }
+        self.require_media_unfrozen()?;
+        self.machine.disable_boot_rom();
+        Ok(())
+    }
+
     pub fn cpu_state(&self) -> WasmCpuState {
         WasmCpuState(self.machine.cpu_state())
     }
 
-    /// Test-only architectural state patch applied immediately before reset.
-    #[cfg(feature = "conformance")]
-    pub fn set_conformance_cpu_field(&mut self, field: &str, value: u32) -> Result<(), JsError> {
+    /// Set one architectural CPU field at a host execution boundary.
+    ///
+    /// This is intended for a host adapter that services a port write between
+    /// two instructions.  It never changes memory or device state and rejects
+    /// malformed byte, word, boolean or flag values.
+    pub fn set_execution_cpu_field(&mut self, field: &str, value: u32) -> Result<(), JsError> {
         self.require_media_unfrozen()?;
         let mut state = self.machine.cpu_state();
         set_cpu_field(&mut state, field, value)?;
-        self.machine.install_conformance_cpu_state(state);
+        self.machine.install_execution_cpu_state(state);
         Ok(())
+    }
+
+    /// Test-only compatibility alias for the conformance build.
+    #[cfg(feature = "conformance")]
+    pub fn set_conformance_cpu_field(&mut self, field: &str, value: u32) -> Result<(), JsError> {
+        self.set_execution_cpu_field(field, value)
+    }
+
+    /// Address of the fixed 64 KiB RAM allocation for a zero-copy WASM view.
+    /// The view remains valid for this instance because the backing allocation
+    /// never moves; hosts must not retain it after dropping the CPU.
+    pub fn ram_pointer(&self) -> usize {
+        self.ram.as_ptr() as usize
+    }
+
+    pub fn ram_length(&self) -> u32 {
+        RAM_BYTES as u32
     }
 
     pub fn last_steps(&self) -> u64 {
@@ -856,6 +889,51 @@ mod system_guard_tests;
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn bare_execution_surface_loads_image_sets_state_and_reports_io() {
+        let mut cpu = TriptychCpu::new(&[0; BOOT_ROM_BYTES]).unwrap();
+        cpu.write_ram(0x0100, &[0x3e, 0x42, 0xd3, 0x00, 0x76])
+            .unwrap();
+        cpu.disable_boot_rom_for_execution().unwrap();
+        cpu.set_io_trace_enabled(true);
+        cpu.set_execution_cpu_field("pc", 0x0100).unwrap();
+        cpu.set_execution_cpu_field("sp", 0xff00).unwrap();
+        cpu.set_execution_cpu_field("a", 0x99).unwrap();
+        assert_eq!(cpu.ram_length(), RAM_BYTES as u32);
+        assert_ne!(cpu.ram_pointer(), 0);
+        assert!(!cpu.boot_rom_enabled());
+
+        while !cpu.machine.cpu_state().halted {
+            assert_ne!(cpu.step(false), 0);
+        }
+
+        assert_eq!(cpu.take_serial_output(), [0x42]);
+        assert_eq!(
+            cpu.take_io_trace(),
+            [pack_io(IoOperation {
+                direction: IoDirection::Write,
+                port: 0x4200,
+                value: 0x42,
+            })]
+        );
+        assert_eq!(cpu.machine.cpu_state().a, 0x42);
+        assert_eq!(cpu.machine.cpu_state().pc, 0x0105);
+    }
+
+    #[test]
+    fn execution_cpu_fields_are_available_without_conformance_feature() {
+        let mut cpu = TriptychCpu::new(&[0; BOOT_ROM_BYTES]).unwrap();
+        cpu.set_execution_cpu_field("f.c", 1).unwrap();
+        cpu.set_execution_cpu_field("f.z", 0).unwrap();
+        cpu.set_execution_cpu_field("a", 0x55).unwrap();
+        cpu.set_execution_cpu_field("sp", 0x1234).unwrap();
+        let state = cpu.machine.cpu_state();
+        assert!(state.f.c);
+        assert!(!state.f.z);
+        assert_eq!(state.a, 0x55);
+        assert_eq!(state.sp, 0x1234);
+    }
 
     #[test]
     fn readonly_media_owns_only_backing_and_exports_independent_checkpoints() {
@@ -1416,7 +1494,6 @@ macro_rules! flag_getters {
 
 flag_getters!(s, z, y, h, x, p, n, c);
 
-#[cfg(feature = "conformance")]
 fn set_cpu_field(state: &mut CpuState, field: &str, value: u32) -> Result<(), JsError> {
     let byte = || u8::try_from(value).map_err(|_| JsError::new("CPU byte exceeds 255"));
     let word = || u16::try_from(value).map_err(|_| JsError::new("CPU word exceeds 65535"));
@@ -1460,7 +1537,6 @@ fn set_cpu_field(state: &mut CpuState, field: &str, value: u32) -> Result<(), Js
     Ok(())
 }
 
-#[cfg(feature = "conformance")]
 fn set_flag(flags: &mut CpuFlags, name: &str, value: bool) -> Result<(), JsError> {
     match name {
         "s" => flags.s = value,

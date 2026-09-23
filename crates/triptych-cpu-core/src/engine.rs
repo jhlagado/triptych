@@ -92,7 +92,11 @@ impl Adapter {
         }
     }
 
-    #[cfg(feature = "conformance")]
+    /// Install the externally visible CPU state at an execution boundary.
+    ///
+    /// Hosts use this to initialise a loaded bare Z80 image and to apply the
+    /// result of a synchronous host service between instructions.  It changes
+    /// architectural fields only; private engine bookkeeping remains internal.
     pub(crate) fn install_architectural_state(&mut self, state: CpuState) {
         let registers = &mut self.cpu.regs;
         registers.a = state.a;
@@ -137,7 +141,6 @@ fn flags(value: u8) -> CpuFlags {
     }
 }
 
-#[cfg(feature = "conformance")]
 fn encode_flags(flags: CpuFlags) -> u8 {
     (u8::from(flags.s) << 7)
         | (u8::from(flags.z) << 6)

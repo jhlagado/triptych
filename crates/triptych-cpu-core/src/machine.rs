@@ -112,6 +112,22 @@ impl Machine {
         self.boot_rom_enabled
     }
 
+    /// Remove the reset-time boot overlay before a host starts a bare image.
+    ///
+    /// This is deliberately separate from `reset`: a machine reset restores
+    /// the documented boot state, while a bare execution profile may load an
+    /// image directly into RAM and begin at its declared entry point.
+    pub fn disable_boot_rom(&mut self) {
+        self.boot_rom_enabled = false;
+    }
+
+    /// Install architectural CPU fields at a host-controlled execution
+    /// boundary.  The machine profile still owns memory and I/O semantics;
+    /// this method does not reset devices or modify RAM.
+    pub fn install_execution_cpu_state(&mut self, state: CpuState) {
+        self.engine.install_architectural_state(state);
+    }
+
     pub fn disk_state(&self) -> DiskState {
         self.disk.state()
     }
@@ -144,7 +160,7 @@ impl Machine {
     /// Private engine latches are deliberately not part of this test boundary.
     #[cfg(feature = "conformance")]
     pub fn install_conformance_cpu_state(&mut self, state: CpuState) {
-        self.engine.install_architectural_state(state);
+        self.install_execution_cpu_state(state);
     }
 }
 
