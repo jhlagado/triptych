@@ -1,0 +1,27 @@
+{
+  "format": "triptych.generated-z80-fixture.v1",
+  "id": "skate-provider-trace",
+  "source": {
+    "repository": "skate",
+    "revision": "1e18a7ac606685c09991dff0d775960110df3651",
+    "path": "examples/applications/provider-trace.sk8",
+    "assembler": "ATOM"
+  },
+  "artifact": {
+    "path": "test/fixtures/skate-provider-trace.com",
+    "sha256": "8755b74847de73a856ff8a196fc51a922955f601977f9c384efabd9e45d17593",
+    "bytes": 13824,
+    "loadAddress": 256
+  },
+  "vectors": {
+    "output": 8868,
+    "input": 8871
+  },
+  "stubs": {
+    "output": [211, 0, 201],
+    "input": [219, 0, 201]
+  },
+  "input": [81],
+  "expectedOutput": [81, 13, 10],
+  "hostTargets": ["macos-native", "wasm"]
+}
