@@ -24,6 +24,10 @@ const RECOVERY_WARM_BOOT: u8 = 1;
 const RECOVERY_COLD_RESET: u8 = 2;
 const MAX_SERIAL_INPUT_BYTES: usize = 16 * 1024;
 const MEDIA_SLOTS: u8 = 16;
+// A Z80 instruction normally emits at most one port operation. Keep a bounded
+// retained trace capacity so a host's zero-copy RAM view is not detached by a
+// first trace allocation after execution begins.
+const EXECUTION_TRACE_CAPACITY: usize = 128;
 
 #[wasm_bindgen]
 pub struct TriptychCpu {
@@ -558,10 +562,10 @@ impl TriptychCpu {
         if self.execution_frozen() {
             return Vec::new();
         }
-        std::mem::take(&mut self.observer.operations)
-            .into_iter()
-            .map(pack_io)
-            .collect()
+        let operations = &mut self.observer.operations;
+        let trace = operations.iter().copied().map(pack_io).collect();
+        operations.clear();
+        trace
     }
 }
 
@@ -859,16 +863,28 @@ impl SectorStore for WasmSectorStore {
     }
 }
 
-#[derive(Default)]
 struct WasmObserver {
     enabled: bool,
     operations: Vec<IoOperation>,
+}
+
+impl Default for WasmObserver {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            operations: Vec::with_capacity(EXECUTION_TRACE_CAPACITY),
+        }
+    }
 }
 
 impl WasmObserver {
     fn set_enabled(&mut self, enabled: bool) {
         self.enabled = enabled;
         self.operations.clear();
+        if enabled {
+            self.operations
+                .reserve(EXECUTION_TRACE_CAPACITY.saturating_sub(self.operations.capacity()));
+        }
     }
 }
 
