@@ -77,4 +77,3 @@ halts, checks the full port (`A << 8 | n`) and exercises register/flag setup.
 It is a substrate proof, not yet a claim that Nucleus or Atom has been
 qualified on the Rust host. Those adapters must add their own source,
 diagnostic and artifact records.
-
