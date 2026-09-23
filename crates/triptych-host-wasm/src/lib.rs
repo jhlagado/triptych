@@ -5,6 +5,7 @@ pub use files::CpmDisk;
 
 use std::collections::VecDeque;
 
+use js_sys::Uint8Array;
 use triptych_cpu_core::{
     Console, CpuFlags, CpuState, Devices, DiskState, DriveInfo, InterruptRequest, IoDirection,
     IoObserver, IoOperation, Machine, MachineMemory, RunBudget, RunReason, SectorStore,
@@ -485,6 +486,17 @@ impl TriptychCpu {
 
     pub fn ram_image(&self) -> Vec<u8> {
         self.ram.to_vec()
+    }
+
+    /// Return a zero-copy view of this machine's fixed 64 KiB RAM allocation.
+    ///
+    /// The view is valid until this CPU is dropped. Hosts must not retain it
+    /// after that point, and must use the execution boundary methods rather
+    /// than replacing the backing allocation.
+    pub fn ram_view(&self) -> Uint8Array {
+        // SAFETY: `ram` is a fixed boxed allocation owned by this CPU and is
+        // never moved or resized while the returned view is live.
+        unsafe { Uint8Array::view(&self.ram[..]) }
     }
 
     pub fn boot_rom_enabled(&self) -> bool {
