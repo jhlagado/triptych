@@ -4,7 +4,168 @@ use std::io::{self, Read, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
 use std::sync::mpsc::{self, Receiver};
 
-use triptych_cpu_core::{Console, DriveInfo, SectorStore, StorageFault, SECTOR_BYTES};
+use triptych_cpu_core::{
+    Console, CpuState, Devices, DriveInfo, InterruptRequest, IoObserver, IoOperation, Machine,
+    MachineMemory, SectorStore, StepResult, StorageFault, BOOT_ROM_BYTES, RAM_BYTES, SECTOR_BYTES,
+};
+
+/// A deterministic, CP/M-free native execution host for small Z80 images.
+///
+/// This is the macOS/Linux counterpart to the WASM host's bare execution
+/// surface. It deliberately supplies only a buffered console, an empty disk
+/// provider and an ordered I/O trace; CP/M policy belongs to the normal
+/// Triptych machine launcher.
+pub struct NativeExecutionRuntime {
+    machine: Machine,
+    ram: Box<[u8; RAM_BYTES]>,
+    boot_rom: [u8; BOOT_ROM_BYTES],
+    console: BufferedConsole,
+    sectors: EmptySectorStore,
+    observer: TraceObserver,
+}
+
+impl NativeExecutionRuntime {
+    /// Load a flat image at `entry` and begin with the boot overlay disabled.
+    pub fn new(image: &[u8], entry: u16) -> io::Result<Self> {
+        let start = usize::from(entry);
+        let end = start
+            .checked_add(image.len())
+            .filter(|end| *end <= RAM_BYTES)
+            .ok_or_else(|| {
+                io::Error::new(
+                    io::ErrorKind::InvalidInput,
+                    "execution image exceeds the 64 KiB guest address space",
+                )
+            })?;
+        let mut runtime = Self {
+            machine: Machine::new(),
+            ram: Box::new([0; RAM_BYTES]),
+            boot_rom: [0; BOOT_ROM_BYTES],
+            console: BufferedConsole::default(),
+            sectors: EmptySectorStore,
+            observer: TraceObserver::default(),
+        };
+        runtime.ram[start..end].copy_from_slice(image);
+        runtime.machine.disable_boot_rom();
+        let mut state = runtime.machine.cpu_state();
+        state.pc = entry;
+        runtime.machine.install_execution_cpu_state(state);
+        Ok(runtime)
+    }
+
+    pub fn memory(&self) -> &[u8; RAM_BYTES] {
+        &self.ram
+    }
+
+    pub fn memory_mut(&mut self) -> &mut [u8; RAM_BYTES] {
+        &mut self.ram
+    }
+
+    pub fn cpu_state(&self) -> CpuState {
+        self.machine.cpu_state()
+    }
+
+    /// Apply host-owned register or flag results between instructions.
+    pub fn set_cpu_state(&mut self, state: CpuState) {
+        self.machine.install_execution_cpu_state(state);
+    }
+
+    pub fn is_halted(&self) -> bool {
+        self.machine.cpu_state().halted
+    }
+
+    pub fn step(&mut self) -> StepResult {
+        let mut memory = MachineMemory::new(&mut self.ram, &self.boot_rom);
+        let mut devices =
+            Devices::new(&mut self.console, &mut self.sectors).with_observer(&mut self.observer);
+        self.machine
+            .step(&mut memory, &mut devices, InterruptRequest::None)
+    }
+
+    pub fn queue_input(&mut self, bytes: impl IntoIterator<Item = u8>) {
+        self.console.input.extend(bytes);
+    }
+
+    pub fn take_output(&mut self) -> Vec<u8> {
+        std::mem::take(&mut self.console.output)
+    }
+
+    pub fn set_io_trace_enabled(&mut self, enabled: bool) {
+        self.observer.enabled = enabled;
+        if !enabled {
+            self.observer.operations.clear();
+        }
+    }
+
+    pub fn take_io_trace(&mut self) -> Vec<IoOperation> {
+        std::mem::take(&mut self.observer.operations)
+    }
+}
+
+#[derive(Default)]
+struct BufferedConsole {
+    input: VecDeque<u8>,
+    output: Vec<u8>,
+}
+
+impl Console for BufferedConsole {
+    fn receive(&mut self) -> Option<u8> {
+        self.input.pop_front()
+    }
+
+    fn transmit(&mut self, byte: u8) {
+        self.output.push(byte);
+    }
+
+    fn reset(&mut self) {
+        self.input.clear();
+        self.output.clear();
+    }
+}
+
+struct EmptySectorStore;
+
+impl SectorStore for EmptySectorStore {
+    fn drive_info(&self, _drive: u8) -> Option<DriveInfo> {
+        None
+    }
+
+    fn read_sector(
+        &mut self,
+        _drive: u8,
+        _lba: u32,
+        _output: &mut [u8; SECTOR_BYTES],
+    ) -> Result<(), StorageFault> {
+        Err(StorageFault)
+    }
+
+    fn write_sector(
+        &mut self,
+        _drive: u8,
+        _lba: u32,
+        _input: &[u8; SECTOR_BYTES],
+    ) -> Result<(), StorageFault> {
+        Err(StorageFault)
+    }
+
+    fn flush(&mut self, _drive: u8) -> Result<(), StorageFault> {
+        Err(StorageFault)
+    }
+}
+
+#[derive(Default)]
+struct TraceObserver {
+    enabled: bool,
+    operations: Vec<IoOperation>,
+}
+
+impl IoObserver for TraceObserver {
+    fn observe(&mut self, operation: IoOperation) {
+        if self.enabled {
+            self.operations.push(operation);
+        }
+    }
+}
 
 pub struct TerminalConsole {
     scripted_input: VecDeque<u8>,
