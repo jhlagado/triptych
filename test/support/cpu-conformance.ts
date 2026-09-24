@@ -8,7 +8,7 @@ import type {
   CreateZ80HostRuntime,
   Z80IoHandlers,
 } from "../../src/shared/z80.js";
-import { createDebug80TestHarness } from "./debug80-runtime.js";
+import { createZ80TestHarness } from "./z80-runtime.js";
 
 const FIXTURE_FORMAT = "triptych.cpu.conformance.fixture.v1";
 const RESULT_FORMAT = "triptych.cpu.conformance.result.v1";
@@ -458,7 +458,7 @@ export function runCpuConformanceFixture(
   const interrupts = new Map(
     fixture.run.interrupts.map((interrupt) => [interrupt.afterStep, interrupt]),
   );
-  const harness = createDebug80TestHarness({
+  const harness = createZ80TestHarness({
     tick: () => {
       completedStep += 1;
       const interrupt = interrupts.get(completedStep);
