@@ -4,7 +4,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { assembleAtomBinary as assemble } from "./lib/assemble-atom.mjs";
-import { createZ80Runtime } from "@jhlagado/debug80-runtime/z80/runtime";
+import { createZ80Runtime } from "@jhlagado/z80-runtime/z80/runtime";
 import { installCpm22File, readCpm22File } from "./lib/cpm22-disk.mjs";
 import { createEsp32SbcRuntime } from "../dist/cpu/runtime.js";
 

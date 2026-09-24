@@ -15,8 +15,8 @@ import {
   frequencyForPhaseIncrement,
   phaseIncrementForFrequency,
 } from "../../src/sound/index.js";
-import type { HexProgram } from "@jhlagado/debug80-runtime/z80/loaders";
-import { createZ80Runtime } from "@jhlagado/debug80-runtime/z80/runtime";
+import type { HexProgram } from "@jhlagado/z80-runtime/z80/loaders";
+import { createZ80Runtime } from "@jhlagado/z80-runtime/z80/runtime";
 
 function writeRegister(
   sound: ReturnType<typeof createEsp32SoundDevice>,

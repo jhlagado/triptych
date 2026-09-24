@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 
-import type { CpuStateSnapshot } from "@jhlagado/debug80-runtime/z80/runtime";
+import type { CpuStateSnapshot } from "@jhlagado/z80-runtime/z80/runtime";
 
 import { createEsp32SbcRuntime } from "../../src/cpu/runtime.js";
 import type {
