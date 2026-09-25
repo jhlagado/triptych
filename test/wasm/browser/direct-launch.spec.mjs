@@ -1,4 +1,23 @@
 import { expect, test } from "@playwright/test";
+import { createHash } from "node:crypto";
+import { readFile } from "node:fs/promises";
+
+const externalRoot = new URL(
+  "../../../distribution/disk-library/",
+  import.meta.url,
+);
+const externalRegistry = JSON.parse(
+  await readFile(new URL("disk-library-registry.json", externalRoot), "utf8"),
+);
+const externalImage = externalRegistry.images.find(
+  (image) => image.id === "skate-0.5.1",
+);
+const externalImageBytes = await readFile(
+  new URL(externalImage.asset, externalRoot),
+);
+const externalImageHash = createHash("sha256")
+  .update(externalImageBytes)
+  .digest("hex");
 
 async function prompt(page, suffix = "A>") {
   await expect
@@ -117,24 +136,31 @@ test("direct demos offer a safe B reset and a new-slot link", async ({
   expect(await command(page, "DIR", "B>")).toContain("NO FILE");
 });
 
-async function directGeneration(page, slot) {
-  return page.evaluate(async (slot) => {
-    const database = await new Promise((resolve, reject) => {
-      const request = indexedDB.open("triptych-direct-b-v1");
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
-    });
-    try {
-      return await new Promise((resolve, reject) => {
-        const transaction = database.transaction("slots", "readonly");
-        const request = transaction.objectStore("slots").get(slot);
-        request.onsuccess = () => resolve(request.result?.generation ?? 0);
+async function directGeneration(
+  page,
+  slot,
+  databaseName = "triptych-direct-b-v1",
+) {
+  return page.evaluate(
+    async ({ slot, databaseName }) => {
+      const database = await new Promise((resolve, reject) => {
+        const request = indexedDB.open(databaseName);
+        request.onsuccess = () => resolve(request.result);
         request.onerror = () => reject(request.error);
       });
-    } finally {
-      database.close();
-    }
-  }, slot);
+      try {
+        return await new Promise((resolve, reject) => {
+          const transaction = database.transaction("slots", "readonly");
+          const request = transaction.objectStore("slots").get(slot);
+          request.onsuccess = () => resolve(request.result?.generation ?? 0);
+          request.onerror = () => reject(request.error);
+        });
+      } finally {
+        database.close();
+      }
+    },
+    { slot, databaseName },
+  );
 }
 
 test("direct demos share B1 and auto allocation selects a persistent B2", async ({
@@ -198,4 +224,82 @@ test("an unknown direct disk fails without opening browser storage", async ({
   expect(await triptychDatabases(page)).toEqual([]);
   await expect(page.locator("#open-library")).toBeHidden();
   await expect(page.locator("#files")).toBeHidden();
+});
+
+test("an external system URL mounts and persists every requested work drive", async ({
+  page,
+}) => {
+  const descriptor = {
+    schema: "triptych-external-system-v1",
+    name: "External four-drive test system",
+    instruction: "Type B:",
+    profile: externalImage.systemProfile,
+    image: {
+      asset: "skate.img",
+      bytes: externalImageBytes.length,
+      sha256: externalImageHash,
+    },
+    workDisk: "copy-image",
+    workDrives: ["B", "C", "D"],
+  };
+  await page.route("https://publisher.example/release/**", async (route) => {
+    const url = new URL(route.request().url());
+    if (url.pathname.endsWith("/system.json")) {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        headers: { "access-control-allow-origin": "*" },
+        body: JSON.stringify(descriptor),
+      });
+      return;
+    }
+    if (url.pathname.endsWith("/skate.img")) {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/octet-stream",
+        headers: { "access-control-allow-origin": "*" },
+        body: externalImageBytes,
+      });
+      return;
+    }
+    await route.abort();
+  });
+
+  await page.goto(
+    `/?system=${encodeURIComponent("https://publisher.example/release/system.json")}`,
+  );
+  await prompt(page);
+  await expect(page.locator("#status")).toContainText(
+    "B1 is persistent and writable.",
+  );
+  await expect(page.locator("#status")).toContainText(
+    "C1 is persistent and writable.",
+  );
+  await expect(page.locator("#status")).toContainText(
+    "D1 is persistent and writable.",
+  );
+  expect(new URL(page.url()).searchParams.get("c")).toBe("C1");
+  expect(new URL(page.url()).searchParams.get("d")).toBe("D1");
+
+  await command(page, "C:", "C>");
+  await command(page, "SAVE 1 CTEST.COM", "C>");
+  expect(await command(page, "DIR", "C>")).toContain("CTEST");
+  const namespace = `triptych-external-b-${externalImageHash}`;
+  await expect
+    .poll(() => directGeneration(page, 1, `${namespace}:C`))
+    .toBeGreaterThan(1);
+
+  await command(page, "D:", "D>");
+  await command(page, "SAVE 1 DTEST.COM", "D>");
+  expect(await command(page, "DIR", "D>")).toContain("DTEST");
+  await expect
+    .poll(() => directGeneration(page, 1, `${namespace}:D`))
+    .toBeGreaterThan(1);
+
+  await page.reload();
+  await prompt(page);
+  await command(page, "C:", "C>");
+  expect(await command(page, "DIR", "C>")).toContain("CTEST");
+  await command(page, "D:", "D>");
+  expect(await command(page, "DIR", "D>")).toContain("DTEST");
 });

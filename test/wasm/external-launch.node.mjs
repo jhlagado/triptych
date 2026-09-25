@@ -59,8 +59,15 @@ test("external image loads with Triptych bootstrap and a work-disk seed", async 
   assert.deepEqual(launch.image, original);
   assert.equal(launch.configuredCount, 4);
   assert.equal(launch.seedWorkDisk, true);
+  assert.deepEqual(launch.workDrives, ["B"]);
   assert.equal(launch.bootstrap.length, 256);
   assert.equal(launch.storageNamespace, `triptych-external-b-${image.sha256}`);
+});
+test("external descriptors can request persistent work disks on B through D", async () => {
+  const metadata = structuredClone(descriptor);
+  metadata.workDrives = ["B", "C", "D"];
+  const launch = await run({ metadata });
+  assert.deepEqual(launch.workDrives, ["B", "C", "D"]);
 });
 test("corrupt download fails its checksum", async () => {
   const disk = original.slice();
@@ -82,6 +89,17 @@ test("external metadata is bounded and cannot redirect image loading", async () 
   const metadata = structuredClone(descriptor);
   metadata.image.asset = "../elsewhere.img";
   await assert.rejects(run({ metadata }), /invalid image/);
+  for (const workDrives of [
+    [],
+    ["C"],
+    ["B", "B"],
+    ["B", "A"],
+    ["B", "D", "E"],
+  ]) {
+    const invalidDrives = structuredClone(descriptor);
+    invalidDrives.workDrives = workDrives;
+    await assert.rejects(run({ metadata: invalidDrives }), /writable drives/);
+  }
   await assert.rejects(
     run({ metadata: { padding: "x".repeat(17000) } }),
     /exceeds 16 KiB/,
@@ -89,7 +107,7 @@ test("external metadata is bounded and cannot redirect image loading", async () 
 });
 
 test("external work disks use distinct writer locks", async () => {
-  const { directBLockName } =
+  const { directBLockName, directDriveLockName, parseDirectDriveSelection } =
     await import("../../crates/triptych-host-wasm/web/direct-b-slots.js");
   const launch = await run();
   assert.notEqual(
@@ -99,5 +117,19 @@ test("external work disks use distinct writer locks", async () => {
   assert.notEqual(
     directBLockName(1, launch.storageNamespace),
     directBLockName(1, "another-release"),
+  );
+  assert.equal(
+    directDriveLockName("C", 1, launch.storageNamespace),
+    `${launch.storageNamespace}:C1`,
+  );
+  assert.notEqual(
+    directDriveLockName("C", 1, launch.storageNamespace),
+    directDriveLockName("D", 1, launch.storageNamespace),
+  );
+  assert.equal(parseDirectDriveSelection("D", "d4"), "D4");
+  assert.equal(parseDirectDriveSelection("C", "auto"), "auto");
+  assert.throws(
+    () => parseDirectDriveSelection("C", "D1"),
+    /slot from C1 to C8/,
   );
 });

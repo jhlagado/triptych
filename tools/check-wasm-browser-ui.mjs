@@ -41,7 +41,7 @@ const [
   indexSource,
   persistenceSource,
   storeSource,
-  directBSource,
+  directDiskSource,
 ] = await Promise.all([
   readFile(resolve(webDirectory, "app.js"), "utf8"),
   readFile(resolve(webDirectory, "index.html"), "utf8"),
@@ -53,15 +53,15 @@ assert.ok(applicationSource.includes('"ccp.bin"'));
 assert.ok(applicationSource.includes("disk.set(ccp, CCP_SYSTEM_OFFSET)"));
 assert.ok(applicationSource.includes("runtime.flushCounts()"));
 assert.ok(applicationSource.includes("workspace.saveCheckpoint"));
-assert.ok(applicationSource.includes("openDirectBSlot"));
+assert.ok(applicationSource.includes("openDirectDriveSlot"));
 assert.ok(persistenceSource.includes("createDiskWorkspace"));
 assert.ok(storeSource.includes('const STORE = "disk-revisions"'));
 assert.ok(
-  directBSource.includes(
+  directDiskSource.includes(
     'export const DIRECT_B_DATABASE = "triptych-direct-b-v1"',
   ),
 );
-assert.ok(directBSource.includes("const reset = (value)"));
+assert.ok(directDiskSource.includes("const reset = (value)"));
 assert.ok(indexSource.includes('id="save-status"'));
 assert.ok(indexSource.includes('id="direct-b-reset"'));
 assert.ok(indexSource.includes('id="direct-b-new"'));

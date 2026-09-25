@@ -91,6 +91,21 @@ export async function loadExternalLaunch({
     "unsupported work disk seed",
   );
   const count = Number(descriptor.profile.slice(-2));
+  const workDrives = descriptor.workDrives ?? ["B"];
+  requireValue(
+    Array.isArray(workDrives) &&
+      workDrives.length >= 1 &&
+      workDrives.length <= Math.min(count - 1, 3) &&
+      workDrives.includes("B") &&
+      new Set(workDrives).size === workDrives.length &&
+      workDrives.every(
+        (drive) =>
+          typeof drive === "string" &&
+          /^[BCD]$/.test(drive) &&
+          drive.charCodeAt(0) - 65 < count,
+      ),
+    "invalid writable drives",
+  );
   const [disk, system] = await Promise.all([
     fetchDirectImage(image, new URL(".", source), anonymousFetch, crypto),
     fetchTwoMibSystem({
@@ -121,5 +136,6 @@ export async function loadExternalLaunch({
     image: disk,
     bootstrap: system.bootstrap,
     seedWorkDisk: descriptor.workDisk === "copy-image",
+    workDrives,
   };
 }
