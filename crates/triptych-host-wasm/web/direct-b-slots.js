@@ -5,47 +5,76 @@ export const DIRECT_B_SLOT_COUNT = 8;
 export const DIRECT_B_BYTES = 2_097_152;
 
 const STORE = "slots";
-const SLOT = /^B([1-8])$/i;
+const SLOT = /^([BCD])([1-8])$/i;
 const UUID =
   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function requireValue(condition, message) {
-  if (!condition) throw new Error(`Direct B storage: ${message}.`);
+  if (!condition) throw new Error(`Direct disk storage: ${message}.`);
 }
 
 function copyBytes(value) {
   if (value instanceof Uint8Array) return Uint8Array.from(value);
   if (value instanceof ArrayBuffer) return new Uint8Array(value.slice(0));
-  throw new Error("Direct B storage: invalid disk bytes.");
+  throw new Error("Direct disk storage: invalid disk bytes.");
 }
 
-function slotNumber(value) {
+function driveLetter(value) {
+  requireValue(typeof value === "string", "invalid drive");
+  const drive = value.toUpperCase();
+  requireValue(["B", "C", "D"].includes(drive), "use drive B, C or D");
+  return drive;
+}
+
+function slotNumber(value, drive) {
   const match = SLOT.exec(value);
-  requireValue(match, "invalid B slot");
-  return Number(match[1]);
+  requireValue(
+    match && match[1].toUpperCase() === drive,
+    `invalid ${drive} slot`,
+  );
+  return Number(match[2]);
 }
 
 /** Return the browser-lock name for one persistent direct-demo slot. */
-export function directBLockName(number, namespace = DIRECT_B_DATABASE) {
+export function directDriveLockName(
+  drive,
+  number,
+  namespace = DIRECT_B_DATABASE,
+) {
+  const letter = driveLetter(drive);
   requireValue(
     Number.isSafeInteger(number) &&
       number >= 1 &&
       number <= DIRECT_B_SLOT_COUNT,
-    "invalid B slot number",
+    `invalid ${letter} slot number`,
   );
-  return namespace === DIRECT_B_DATABASE
+  return namespace === DIRECT_B_DATABASE && letter === "B"
     ? `triptych-direct-b:v1:B${number}`
-    : `${namespace}:B${number}`;
+    : `${namespace}:${letter}${number}`;
+}
+
+/** Keep the original B-slot helper stable for existing callers. */
+export function directBLockName(number, namespace = DIRECT_B_DATABASE) {
+  return directDriveLockName("B", number, namespace);
 }
 
 /** Parse the deliberately small URL vocabulary used by direct launches. */
-export function parseDirectBSelection(value) {
-  if (value === undefined || value === null || value === "") return "B1";
-  requireValue(typeof value === "string", "invalid B selection");
+export function parseDirectDriveSelection(drive, value) {
+  const letter = driveLetter(drive);
+  if (value === undefined || value === null || value === "")
+    return `${letter}1`;
+  requireValue(typeof value === "string", `invalid ${letter} selection`);
   if (value.toLowerCase() === "auto") return "auto";
   const match = SLOT.exec(value);
-  requireValue(match, "use auto or a slot from B1 to B8");
-  return `B${match[1]}`;
+  requireValue(
+    match && match[1].toUpperCase() === letter,
+    `use auto or a slot from ${letter}1 to ${letter}8`,
+  );
+  return `${letter}${match[2]}`;
+}
+
+export function parseDirectBSelection(value) {
+  return parseDirectDriveSelection("B", value);
 }
 
 function validateRecord(value, expectedSlot) {
@@ -174,15 +203,15 @@ function writeInitial(database, record) {
   });
 }
 
-async function chooseLease(selection, locks, namespace) {
+async function chooseLease(drive, selection, locks, namespace) {
   const candidates =
     selection === "auto"
       ? Array.from({ length: DIRECT_B_SLOT_COUNT }, (_, index) => index + 1)
-      : [slotNumber(selection)];
+      : [slotNumber(selection, drive)];
   for (const number of candidates) {
     const lease = await acquireDiskWriter({
       locks,
-      name: directBLockName(number, namespace),
+      name: directDriveLockName(drive, number, namespace),
     });
     if (lease.owned) return { number, lease };
     if (selection !== "auto") return { number, lease };
@@ -194,7 +223,7 @@ async function chooseLease(selection, locks, namespace) {
     number: 1,
     lease: await acquireDiskWriter({
       locks,
-      name: directBLockName(1, namespace),
+      name: directDriveLockName(drive, 1, namespace),
     }),
   };
 }
@@ -204,9 +233,10 @@ function randomIdentity(crypto) {
   throw new Error("Direct B storage: secure tab identity unavailable.");
 }
 
-/** Open one persistent browser-local B slot for a direct software launch. */
-export async function openDirectBSlot({
-  selection = "B1",
+/** Open one persistent browser-local B, C or D slot for a direct launch. */
+export async function openDirectDriveSlot({
+  drive = "B",
+  selection,
   indexedDB = globalThis.indexedDB,
   locks = globalThis.navigator?.locks,
   crypto = globalThis.crypto,
@@ -215,13 +245,14 @@ export async function openDirectBSlot({
   onChanged = () => {},
   name = DIRECT_B_DATABASE,
 } = {}) {
-  const parsed = parseDirectBSelection(selection);
+  const letter = driveLetter(drive);
+  const parsed = parseDirectDriveSelection(letter, selection ?? `${letter}1`);
   requireValue(indexedDB, "browser storage unavailable");
   requireValue(
     typeof createBlank === "function",
     "blank-disk factory required",
   );
-  const chosen = await chooseLease(parsed, locks, name);
+  const chosen = await chooseLease(letter, parsed, locks, name);
   let database;
   let channel;
   try {
@@ -236,7 +267,7 @@ export async function openDirectBSlot({
       );
       const candidate = {
         slot: chosen.number,
-        name: `B${chosen.number}`,
+        name: `${letter}${chosen.number}`,
         instanceId: randomIdentity(crypto),
         generation: 1,
         bytes,
@@ -272,7 +303,7 @@ export async function openDirectBSlot({
           return;
         try {
           onChanged({
-            slot: `B${chosen.number}`,
+            slot: `${letter}${chosen.number}`,
             generation: value.generation,
           });
         } catch (error) {
@@ -290,7 +321,7 @@ export async function openDirectBSlot({
       const candidate = copyBytes(value);
       requireValue(candidate.length === DIRECT_B_BYTES, "invalid save size");
       const operation = queue.then(async () => {
-        requireValue(chosen.lease.owned, "this B slot is read-only");
+        requireValue(chosen.lease.owned, `this ${letter} slot is read-only`);
         const next = await transact(
           database,
           "readwrite",
@@ -325,7 +356,7 @@ export async function openDirectBSlot({
           slot: chosen.number,
           generation,
         });
-        return { slot: `B${chosen.number}`, generation };
+        return { slot: `${letter}${chosen.number}`, generation };
       });
       queue = operation.catch(() => {});
       return operation;
@@ -335,7 +366,7 @@ export async function openDirectBSlot({
       const blank = copyBytes(value);
       requireValue(blank.length === DIRECT_B_BYTES, "invalid reset size");
       const operation = queue.then(async () => {
-        requireValue(chosen.lease.owned, "this B slot is read-only");
+        requireValue(chosen.lease.owned, `this ${letter} slot is read-only`);
         const next = await transact(
           database,
           "readwrite",
@@ -370,14 +401,14 @@ export async function openDirectBSlot({
           slot: chosen.number,
           generation,
         });
-        return { slot: `B${chosen.number}`, generation };
+        return { slot: `${letter}${chosen.number}`, generation };
       });
       queue = operation.catch(() => {});
       return operation;
     };
 
     return {
-      slot: `B${chosen.number}`,
+      slot: `${letter}${chosen.number}`,
       slotNumber: chosen.number,
       name: record.name,
       instanceId: record.instanceId,
@@ -407,4 +438,9 @@ export async function openDirectBSlot({
     await chosen.lease.release();
     throw error;
   }
+}
+
+/** Backward-compatible entry point for direct launches that use B only. */
+export function openDirectBSlot(options = {}) {
+  return openDirectDriveSlot({ ...options, drive: "B" });
 }

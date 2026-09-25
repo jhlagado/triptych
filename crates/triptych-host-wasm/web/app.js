@@ -14,8 +14,9 @@ import {
   DIRECT_B_DATABASE,
   DIRECT_B_SLOT_COUNT,
   directBLockName,
-  openDirectBSlot,
+  openDirectDriveSlot,
   parseDirectBSelection,
+  parseDirectDriveSelection,
 } from "./direct-b-slots.js";
 import {
   openDiskBoxAppStore,
@@ -200,6 +201,7 @@ let libraryRegistry;
 let requestedRecipe;
 let directSession = false;
 let directB;
+let directDrives = new Map();
 let directInstruction = "";
 let recipePreviewGeneration = 0;
 
@@ -441,7 +443,7 @@ function controls() {
 function saveFailed(error) {
   if (directSession) {
     setStatus(
-      `B disk could not be saved: ${message(error)}. Download or reload only after recovery.`,
+      `A work disk could not be saved: ${message(error)}. Reload only after recovery.`,
       "error",
     );
     return;
@@ -458,15 +460,17 @@ function saveFailed(error) {
 // this synchronous call; no guest slice can run between their exports.
 async function saveCheckpoint() {
   if (directSession) {
-    if (!directB?.writable || !runtime) return;
+    if (!runtime || ![...directDrives.values()].some((disk) => disk.writable))
+      return;
     const request = ++saveRequest;
     try {
       const snapshot = captureCheckpoint();
-      // The selected browser slot (B1…B8) is attached to CP/M drive B. Its
-      // ordinal is not the zero-based machine-array index.
-      const image = snapshot.slots?.[1];
-      if (!image) throw new Error(`${directB.slot} is not attached.`);
-      await directB.save(image.bytes);
+      for (const [drive, disk] of directDrives) {
+        if (!disk.writable) continue;
+        const image = snapshot.slots?.[driveIndex(drive)];
+        if (!image) throw new Error(`${disk.slot} is not attached.`);
+        await disk.save(image.bytes);
+      }
       if (request === saveRequest) setStatus(directInstruction, "running");
     } catch (error) {
       if (request === saveRequest) saveFailed(error);
@@ -985,9 +989,10 @@ directBResetButton.addEventListener("click", async () => {
   setStatus(`Resetting ${slot}…`, "idle");
   try {
     await directB.reset(createDirectBlankDisk());
-    const handle = directB;
+    for (const disk of directDrives.values())
+      await disk.close().catch(() => {});
+    directDrives.clear();
     directB = undefined;
-    await handle.close().catch(() => {});
     location.reload();
   } catch (error) {
     setStatus(`Could not reset ${slot}: ${message(error)}`, "error");
@@ -3080,12 +3085,20 @@ function selectedDirectLaunch(route) {
     if (
       route.getAll("system").length !== 1 ||
       route.getAll("b").length > 1 ||
-      [...route.keys()].some((key) => !["system", "b"].includes(key))
+      route.getAll("c").length > 1 ||
+      route.getAll("d").length > 1 ||
+      [...route.keys()].some((key) => !["system", "b", "c", "d"].includes(key))
     )
-      throw new Error("Use one system URL with an optional B slot.");
+      throw new Error("Use one system URL with optional B, C and D slots.");
+    const drives = { B: parseDirectBSelection(route.get("b") ?? "auto") };
+    if (route.has("c"))
+      drives.C = parseDirectDriveSelection("C", route.get("c"));
+    if (route.has("d"))
+      drives.D = parseDirectDriveSelection("D", route.get("d"));
     return {
       url: route.get("system"),
-      b: parseDirectBSelection(route.get("b") ?? "auto"),
+      b: drives.B,
+      drives,
     };
   }
   if (!route.has("disk")) return undefined;
@@ -3118,33 +3131,58 @@ async function startDirectLaunch(route) {
         id: selected.id,
         baseUrl: document.baseURI,
       });
-  directB = await openDirectBSlot({
-    selection: selected.b,
-    name: launch.storageNamespace ?? DIRECT_B_DATABASE,
-    createBlank: () => {
-      if (launch.id !== "skate" && !launch.seedWorkDisk)
-        return createDirectBlankDisk();
-      // A new personal disk starts with the examples and compiler. Its system
-      // tracks remain empty; the protected A image supplies the residents.
-      const bytes = launch.image.slice();
-      bytes.fill(0, 0, 16384);
-      return bytes;
-    },
-    onChanged: ({ slot }) => {
-      if (directSession)
-        setStatus(
-          `${directInstruction} ${slot} changed in another tab; reset or reload to view it.`,
-          "idle",
-        );
-    },
-  });
-  if (selected.b === "auto") {
-    // Resolve an automatic choice in the address bar. A duplicated tab then
-    // carries the chosen slot explicitly instead of silently allocating a
-    // different one.
+  const workDrives = launch.workDrives ?? ["B"];
+  for (const drive of Object.keys(selected.drives ?? {}))
+    if (!workDrives.includes(drive))
+      throw new Error(`Drive ${drive}: is not writable for this system link.`);
+  directDrives = new Map();
+  for (const drive of workDrives) {
+    const selection =
+      drive === "B" ? selected.b : (selected.drives?.[drive] ?? "auto");
+    const namespace = launch.storageNamespace ?? DIRECT_B_DATABASE;
+    const disk = await openDirectDriveSlot({
+      drive,
+      selection,
+      name: drive === "B" ? namespace : `${namespace}:${drive}`,
+      createBlank: () => {
+        if (drive !== "B" || !(launch.id === "skate" || launch.seedWorkDisk))
+          return createDirectBlankDisk();
+        // Seed B with the publisher's work files but retain the admitted
+        // Triptych residents from the read-only image mounted in A.
+        const bytes = launch.image.slice();
+        bytes.fill(0, 0, 16384);
+        return bytes;
+      },
+      onChanged: ({ slot }) => {
+        if (directSession)
+          setStatus(
+            `${directInstruction} ${slot} changed in another tab; reset or reload to view it.`,
+            "idle",
+          );
+      },
+    });
+    directDrives.set(drive, disk);
+  }
+  directB = directDrives.get("B");
+  if (
+    workDrives.some(
+      (drive) =>
+        (drive === "B" ? selected.b : (selected.drives?.[drive] ?? "auto")) ===
+        "auto",
+    )
+  ) {
+    // Resolve automatic choices in the address bar. Duplicating a tab then
+    // reuses the same disks read-only instead of silently allocating new ones.
     const address = new URL(location.href);
     if (selected.id) address.searchParams.set("disk", selected.id);
-    address.searchParams.set("b", directB.slot);
+    for (const drive of workDrives) {
+      const request = drive === "B" ? selected.b : selected.drives?.[drive];
+      if (request === "auto" || request === undefined)
+        address.searchParams.set(
+          drive.toLowerCase(),
+          directDrives.get(drive).slot,
+        );
+    }
     history.replaceState(
       null,
       "",
@@ -3152,7 +3190,10 @@ async function startDirectLaunch(route) {
     );
   }
   const newSlotAddress = new URL(location.href);
-  newSlotAddress.searchParams.set("b", "auto");
+  for (const drive of workDrives)
+    newSlotAddress.searchParams.set(drive.toLowerCase(), "auto");
+  directBNewLink.textContent =
+    workDrives.length > 1 ? "New work disks" : "New B slot";
   directBNewLink.href = `${newSlotAddress.pathname}${newSlotAddress.search}${newSlotAddress.hash}`;
   const slots = Array.from({ length: launch.configuredCount }, () => null);
   slots[0] = {
@@ -3160,11 +3201,12 @@ async function startDirectLaunch(route) {
     name: launch.name,
     bytes: launch.image,
   };
-  slots[1] = {
-    instanceId: directB.instanceId,
-    name: directB.name,
-    bytes: directB.bytes,
-  };
+  for (const [drive, disk] of directDrives)
+    slots[driveIndex(drive)] = {
+      instanceId: disk.instanceId,
+      name: disk.name,
+      bytes: disk.bytes,
+    };
   const snapshot = {
     schema: "triptych-drive-set-v4",
     configuredCount: launch.configuredCount,
@@ -3175,7 +3217,10 @@ async function startDirectLaunch(route) {
     snapshot,
     TriptychCpu,
     writable: true,
-    slotWritable: slots.map((_, index) => index === 1 && directB.writable),
+    slotWritable: slots.map((_, index) => {
+      const drive = String.fromCharCode(65 + index);
+      return directDrives.get(drive)?.writable ?? false;
+    }),
     deployment,
     guardSystemDisk: true,
   });
@@ -3184,9 +3229,13 @@ async function startDirectLaunch(route) {
     launch.id === "advent"
       ? "Colossal Cave is in drive A. Type ADVENT."
       : `${launch.name} is in drive A. ${launch.instruction}.`;
-  directInstruction += directB.writable
-    ? ` ${directB.slot} is persistent and writable.`
-    : ` ${directB.slot} is read-only because another tab owns it.`;
+  directInstruction += [...directDrives.values()]
+    .map((disk) =>
+      disk.writable
+        ? ` ${disk.slot} is persistent and writable.`
+        : ` ${disk.slot} is read-only because another tab owns it.`,
+    )
+    .join("");
   document.body.classList.add("direct-launch");
   document.title = `${launch.name} — Triptych`;
   document.querySelector("main > header h1").textContent = launch.name;
@@ -3203,7 +3252,7 @@ async function startDirectLaunch(route) {
 
 if (typeof window !== "undefined")
   window.addEventListener("pagehide", () => {
-    void directB?.close().catch(() => {});
+    for (const disk of directDrives.values()) void disk.close().catch(() => {});
   });
 
 try {
@@ -3350,10 +3399,11 @@ try {
     console.warn("Prepared startup cleanup failed", cleanupError);
   }
   try {
-    await directB?.close();
+    for (const disk of directDrives.values()) await disk.close();
   } catch (cleanupError) {
-    console.warn("Direct B cleanup failed", cleanupError);
+    console.warn("Direct disk cleanup failed", cleanupError);
   }
+  directDrives.clear();
   directB = undefined;
   startupRuntime = undefined;
   if (
