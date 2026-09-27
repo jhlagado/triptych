@@ -114,7 +114,7 @@ test("personal image import, rename, download and cross-slot reload preserve exa
 
   const initial = await diskBoxState(page);
   const initialIds = initial.manifest.personalDisks.map((disk) => disk.id);
-  expect(initialIds).toHaveLength(2);
+  expect(initialIds).toHaveLength(3);
 
   await page.locator("#library-name").fill("Imported stage three");
   await page.locator("#library-ready").check();
@@ -138,7 +138,7 @@ test("personal image import, rename, download and cross-slot reload preserve exa
     geometry: "triptych-cpm-2m-v1",
     content: { byteLength: seed.length, sha256: hash(seed) },
   });
-  expect(importedState.manifest.personalDisks).toHaveLength(3);
+  expect(importedState.manifest.personalDisks).toHaveLength(4);
 
   const renamed = "Renamed stage three";
   await page.locator("#library-ready").check();
