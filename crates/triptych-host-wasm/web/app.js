@@ -923,9 +923,11 @@ function resumeMachine() {
   );
   const generation = ++runGeneration;
   // Run the first bounded slice synchronously so callers can observe a real
-  // boot prompt before accepting input.  Subsequent slices remain scheduled
-  // on animation frames, preserving the normal UI budget.
-  runMachine(generation);
+  // boot prompt before accepting input.  Some historical activation paths
+  // call resume before the workspace is connected; retain the old deferred
+  // hand-off for that case so the machine does not stall on its first slice.
+  if (canRunMachine()) runMachine(generation);
+  else requestAnimationFrame(() => runMachine(generation));
 }
 
 terminalElement.addEventListener("keydown", (event) => {
