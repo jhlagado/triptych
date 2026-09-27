@@ -165,6 +165,7 @@ export async function loadDirectLaunch({
     instruction: launch.instruction,
     profile: launch.profile,
     configuredCount: count,
+    imageSha256: launch.image.sha256,
     image,
     bootstrap: system.bootstrap,
   };

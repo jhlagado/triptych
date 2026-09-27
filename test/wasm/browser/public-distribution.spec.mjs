@@ -284,7 +284,7 @@ test("missing protected games image never publishes a partial starter disk box",
   expect(raw).toEqual({ head: undefined, blobs: [] });
 });
 
-test("fresh public default uses protected A/C and private B/D without published database copies", async ({
+test("fresh public default uses writable A/B/D and protected C without copying C", async ({
   page,
 }) => {
   await page.goto("/");
@@ -295,7 +295,7 @@ test("fresh public default uses protected A/C and private B/D without published 
   );
   expect(config.configuredCount).toBe(4);
   expect(config.slots.map((slot) => slot.kind)).toEqual([
-    "published",
+    "personal",
     "personal",
     "published",
     "personal",
@@ -329,6 +329,5 @@ test("fresh public default uses protected A/C and private B/D without published 
       store.close();
     }
   });
-  for (const slot of config.slots.filter((slot) => slot.kind === "published"))
-    expect(hashes).not.toContain(slot.image.sha256);
+  expect(hashes).not.toContain(config.slots[2].image.sha256);
 });

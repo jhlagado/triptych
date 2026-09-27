@@ -3,9 +3,12 @@ import { acquireDiskWriter } from "./disk-workspace.js";
 export const DIRECT_B_DATABASE = "triptych-direct-b-v1";
 export const DIRECT_B_SLOT_COUNT = 8;
 export const DIRECT_B_BYTES = 2_097_152;
+// Direct launch A uses the same two-MiB media geometry as the historical
+// B-slot store. Keep the old export stable for callers that still use B.
+export const DIRECT_DRIVE_BYTES = DIRECT_B_BYTES;
 
 const STORE = "slots";
-const SLOT = /^([BCD])([1-8])$/i;
+const SLOT = /^([ABCD])([1-8])$/i;
 const UUID =
   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -22,7 +25,7 @@ function copyBytes(value) {
 function driveLetter(value) {
   requireValue(typeof value === "string", "invalid drive");
   const drive = value.toUpperCase();
-  requireValue(["B", "C", "D"].includes(drive), "use drive B, C or D");
+  requireValue(["A", "B", "C", "D"].includes(drive), "use drive A, B, C or D");
   return drive;
 }
 
@@ -233,7 +236,7 @@ function randomIdentity(crypto) {
   throw new Error("Direct B storage: secure tab identity unavailable.");
 }
 
-/** Open one persistent browser-local B, C or D slot for a direct launch. */
+/** Open one persistent browser-local A, B, C or D slot for a direct launch. */
 export async function openDirectDriveSlot({
   drive = "B",
   selection,

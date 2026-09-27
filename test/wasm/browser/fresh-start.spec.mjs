@@ -22,7 +22,20 @@ test("Start fresh removes every Triptych database and boots the published system
   await boot(page, "/");
   await expect
     .poll(() => databases(page))
-    .toEqual(["triptych-cpu", "triptych-direct-b-v1", "triptych-supplied"]);
+    .toEqual(
+      expect.arrayContaining([
+        "triptych-cpu",
+        "triptych-direct-b-v1",
+        "triptych-supplied",
+      ]),
+    );
+  await expect
+    .poll(async () =>
+      (await databases(page)).filter((name) =>
+        name.startsWith("triptych-direct-a-"),
+      ),
+    )
+    .toHaveLength(1);
 
   await page.locator("#open-library").click();
   await page.locator("#library-name").fill("Erase proof");

@@ -296,7 +296,7 @@ test("explicit fresh resolution creates one independent starter in only the supp
   const supplied = await state(page, "triptych-supplied");
   expect(supplied.manifest.configurations).toHaveLength(1);
   expect(supplied.manifest.launchInstances).toHaveLength(1);
-  expect(supplied.manifest.personalDisks).toHaveLength(2);
+  expect(supplied.manifest.personalDisks).toHaveLength(3);
   expect(supplied.manifest.selectedConfigurationId).not.toBe(missingId);
   expect(new URL(page.url()).search).toBe(
     `?machine=supplied&configuration=${supplied.manifest.selectedConfigurationId}`,

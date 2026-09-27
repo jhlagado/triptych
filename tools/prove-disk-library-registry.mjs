@@ -66,9 +66,10 @@ const expectedRecipes = new Map([
   [
     "starter",
     {
-      roles: ["saves", "work"],
-      slots: ["published", "writable-role", "published", "writable-role"],
+      roles: ["saves", "system", "work"],
+      slots: ["writable-role", "writable-role", "published", "writable-role"],
       data: "games-2m",
+      published: 1,
     },
   ],
   [
@@ -77,14 +78,16 @@ const expectedRecipes = new Map([
       roles: [],
       slots: ["published", null, "published", null],
       data: "games-2m",
+      published: 2,
     },
   ],
   [
     "colossal-cave-350",
     {
-      roles: ["work"],
-      slots: ["published", "writable-role", "published", null],
+      roles: ["system", "work"],
+      slots: ["writable-role", "writable-role", "published", null],
       data: "colossal-cave-350",
+      published: 1,
     },
   ],
 ]);
@@ -104,6 +107,7 @@ expectedRecipes.set("skate", {
     "SKATE.COM",
     "SKATE.RT",
   ],
+  published: 1,
 });
 const defaultIds = registry.metadata.defaults.map((row) => row.id);
 for (const required of ["starter", "library"])
@@ -149,50 +153,62 @@ for (const reference of registry.metadata.defaults) {
     recipe.descriptor.slots.map((slot) => slot?.kind ?? null),
     expected.slots,
   );
-  assert.equal(
-    recipe.descriptor.slots[0].image.id,
-    expected.system ?? "system-2m-n04",
-  );
+  const systemSlot = recipe.descriptor.slots[0];
+  if (systemSlot.kind === "published")
+    assert.equal(systemSlot.image.id, expected.system ?? "system-2m-n04");
+  else {
+    assert.equal(systemSlot.role, "system");
+    assert.equal(
+      systemSlot.seed.systemProfile,
+      recipe.descriptor.bootstrap.profile,
+    );
+  }
   if (expected.data)
     assert.equal(recipe.descriptor.slots[2].image.id, expected.data);
   const profile = recipe.admission.twoMibProfiles.find(
     (row) => row.configuredCount === 4,
   );
   assert.equal(profile.residentProfile, "triptych-cpu-v0.1-2m-n04");
-  const systemRef = recipe.descriptor.slots[0].image;
-  const admissionQuery = {
-    image: {
-      id: systemRef.id,
-      revision: systemRef.revision,
-      sha256: systemRef.sha256,
-    },
-    configuredCount: 4,
-    bootstrapSha256: recipe.descriptor.bootstrap.sha256,
-  };
-  const matchingAdmissions = new Set(
-    registry.metadata.recipes
-      .filter(
-        (row) =>
-          row.configuredCount === 4 &&
-          row.slots[0]?.kind === "published" &&
-          row.slots[0].image.id === systemRef.id &&
-          row.slots[0].image.revision === systemRef.revision &&
-          registry.metadata.assets.find((asset) => asset.path === row.bootstrap)
-            ?.sha256 === recipe.descriptor.bootstrap.sha256,
-      )
-      .map((row) => row.admission),
-  );
-  assert(matchingAdmissions.has(recipe.admissionId));
-  if (matchingAdmissions.size === 1) {
-    const matched = await resolveDiskLibraryAdmission(registry, admissionQuery);
-    assert.equal(matched.admissionId, recipe.admissionId);
-  } else {
-    // Identical resident bytes may retain different release evidence. The
-    // exact recipe above selects its own admission; recovery must not guess.
-    await assert.rejects(
-      resolveDiskLibraryAdmission(registry, admissionQuery),
-      /missing or ambiguous retained admission/,
+  if (systemSlot.kind === "published") {
+    const systemRef = systemSlot.image;
+    const admissionQuery = {
+      image: {
+        id: systemRef.id,
+        revision: systemRef.revision,
+        sha256: systemRef.sha256,
+      },
+      configuredCount: 4,
+      bootstrapSha256: recipe.descriptor.bootstrap.sha256,
+    };
+    const matchingAdmissions = new Set(
+      registry.metadata.recipes
+        .filter(
+          (row) =>
+            row.configuredCount === 4 &&
+            row.slots[0]?.kind === "published" &&
+            row.slots[0].image.id === systemRef.id &&
+            row.slots[0].image.revision === systemRef.revision &&
+            registry.metadata.assets.find(
+              (asset) => asset.path === row.bootstrap,
+            )?.sha256 === recipe.descriptor.bootstrap.sha256,
+        )
+        .map((row) => row.admission),
     );
+    assert(matchingAdmissions.has(recipe.admissionId));
+    if (matchingAdmissions.size === 1) {
+      const matched = await resolveDiskLibraryAdmission(
+        registry,
+        admissionQuery,
+      );
+      assert.equal(matched.admissionId, recipe.admissionId);
+    } else {
+      // Identical resident bytes may retain different release evidence. The
+      // exact recipe above selects its own admission; recovery must not guess.
+      await assert.rejects(
+        resolveDiskLibraryAdmission(registry, admissionQuery),
+        /missing or ambiguous retained admission/,
+      );
+    }
   }
   const materialized = await recipe.materialize();
   assert.equal(materialized.bootstrapBytes.length, 256);
@@ -208,7 +224,16 @@ for (const reference of registry.metadata.defaults) {
     assert.equal(hash(bytes), role.seed.sha256);
     assert.deepEqual(
       files(bytes),
-      expected.files ?? [],
+      role.role === "system"
+        ? [
+            "ATOM.COM",
+            "EDIT.COM",
+            "HELLO.ASM",
+            "INPUT.NU",
+            "LARGE.ASM",
+            "NUC.COM",
+          ]
+        : (expected.files ?? []),
       "new writable role must contain its documented starting files",
     );
   }
@@ -258,7 +283,7 @@ for (const reference of registry.metadata.defaults) {
       files: names.length,
     });
   }
-  assert.equal(images.length, expected.data ? 2 : 1);
+  assert.equal(images.length, expected.published);
   // Verify the retained logical-name bindings as actual emitted bytes too.
   for (const binding of Object.values(recipe.assetBindings)) {
     const bytes = new Uint8Array(

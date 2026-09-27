@@ -126,8 +126,10 @@ test("captures exact publication evidence and origin-independent starter/library
     library = recipe(result, "library");
   assert.deepEqual(
     starter.slots.map((slot) => slot?.kind),
-    ["published", "writable-role", "published", "writable-role"],
+    ["writable-role", "writable-role", "published", "writable-role"],
   );
+  assert.equal(starter.slots[0].role, "system");
+  assert.equal(starter.slots[0].seed.systemProfile, "triptych-cpu-v0.1-2m-n04");
   assert.deepEqual(
     library.slots.map((slot) => slot?.kind),
     ["published", undefined, "published", undefined],

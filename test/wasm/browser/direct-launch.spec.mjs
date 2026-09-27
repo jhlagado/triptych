@@ -51,6 +51,13 @@ const triptychDatabases = (page) =>
       .filter((name) => name?.startsWith("triptych")),
   );
 
+const directADatabases = (page) =>
+  page.evaluate(async () =>
+    (await indexedDB.databases())
+      .map((database) => database.name)
+      .filter((name) => name?.startsWith("triptych-direct-a-")),
+  );
+
 test("games on A run in a second tab alongside Advent", async ({
   page,
   context,
@@ -73,7 +80,8 @@ test("games on A run in a second tab alongside Advent", async ({
     );
   }
   await command(page, "ADVENT", "WOULD YOU LIKE INSTRUCTIONS?");
-  expect(await triptychDatabases(games)).toEqual(["triptych-direct-b-v1"]);
+  expect(await triptychDatabases(games)).toContain("triptych-direct-b-v1");
+  expect(await directADatabases(games)).toHaveLength(2);
   await expect(games.locator("#status")).toContainText(
     "B1 is read-only because another tab owns it.",
   );
@@ -86,28 +94,31 @@ test("the Advent link boots drive A with a persistent B1", async ({ page }) => {
   await prompt(page);
   await expect(page).toHaveTitle("Colossal Cave Adventure — Triptych");
   await expect(page.locator("#status")).toHaveText(
-    "Colossal Cave is in drive A. Type ADVENT. B1 is persistent and writable.",
+    "Colossal Cave is in drive A. Type ADVENT. A1 is persistent and writable. B1 is persistent and writable.",
   );
   await expect(page.locator("#open-library")).toBeHidden();
   await expect(page.locator("#files")).toBeHidden();
-  expect(await triptychDatabases(page)).toEqual(["triptych-direct-b-v1"]);
+  expect(await triptychDatabases(page)).toContain("triptych-direct-b-v1");
+  expect(await directADatabases(page)).toHaveLength(1);
 
   const listing = await command(page, "DIR", "A>");
   expect(listing).toContain("ADVENT");
   expect(listing).toContain("PHROGZ");
   expect(listing).not.toContain("ADVENTUR");
-  await command(page, "SAVE 1 DENIED.COM", "Bdos Err On A: Bad Sector");
+  await command(page, "SAVE 1 WRITABLE.COM", "A>");
+  expect(await command(page, "DIR", "A>")).toContain("WRITABLE");
   await page.locator("#reset").click();
   await prompt(page);
   await command(page, "ADVENT", "WOULD YOU LIKE INSTRUCTIONS?");
-  expect(await triptychDatabases(page)).toEqual(["triptych-direct-b-v1"]);
+  expect(await triptychDatabases(page)).toContain("triptych-direct-b-v1");
 
   await page.reload();
   await prompt(page);
-  expect(await triptychDatabases(page)).toEqual(["triptych-direct-b-v1"]);
+  expect(await triptychDatabases(page)).toContain("triptych-direct-b-v1");
   const afterReload = await command(page, "DIR", "A>");
   expect(afterReload).toContain("ADVENT");
   expect(afterReload).toContain("PHROGZ");
+  expect(afterReload).toContain("WRITABLE");
 });
 
 test("direct demos offer a safe B reset and a new-slot link", async ({
@@ -123,7 +134,7 @@ test("direct demos offer a safe B reset and a new-slot link", async ({
       await page.locator("#direct-b-new").getAttribute("href"),
       page.url(),
     ).search,
-  ).toBe("?disk=advent&b=auto");
+  ).toBe("?disk=advent&a=auto&b=auto");
 
   await command(page, "B:", "B>");
   await command(page, "SAVE 1 RESET.COM", "B>");
@@ -134,6 +145,27 @@ test("direct demos offer a safe B reset and a new-slot link", async ({
   await prompt(page);
   await command(page, "B:", "B>");
   expect(await command(page, "DIR", "B>")).toContain("NO FILE");
+});
+
+test("direct demos can restore writable A from the published seed", async ({
+  page,
+}) => {
+  await page.goto("/?disk=advent");
+  await prompt(page);
+  await command(page, "SAVE 1 DISCARD.COM", "A>");
+  expect(await command(page, "DIR", "A>")).toContain("DISCARD");
+  await expect(page.locator("#direct-a-restore")).toBeVisible();
+  await expect(page.locator("#direct-a-restore")).toBeEnabled();
+
+  page.once("dialog", (dialog) => dialog.accept());
+  await page.locator("#direct-a-restore").click();
+  await prompt(page);
+  // The restore reload schedules the first CPU slice on the next animation
+  // frame; let that cold boot finish before sending the first command.
+  await page.waitForTimeout(250);
+  const listing = await command(page, "DIR", "A>");
+  expect(listing).toContain("ADVENT");
+  expect(listing).not.toContain("DISCARD");
 });
 
 async function directGeneration(
@@ -213,7 +245,7 @@ test("direct demos share B1 and auto allocation selects a persistent B2", async 
   await prompt(auto);
   await command(auto, "B:", "B>");
   expect(await command(auto, "DIR", "B>")).toContain("AUTO");
-  expect(await triptychDatabases(page)).toEqual(["triptych-direct-b-v1"]);
+  expect(await triptychDatabases(page)).toContain("triptych-direct-b-v1");
 });
 
 test("an unknown direct disk fails without opening browser storage", async ({

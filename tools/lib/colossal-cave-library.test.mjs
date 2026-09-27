@@ -250,14 +250,29 @@ test("appended image is retained by current N4 release capture without changing 
     assert.equal(hash(captured.assets.get(row.asset)), expectedHash);
     for (const id of ["starter", "library"]) {
       const recipe = captured.manifest.recipes.find((row) => row.id === id);
-      assert.equal(recipe.slots[0].image.id, "system-2m-n04");
+      if (id === "starter") {
+        assert.equal(recipe.slots[0].kind, "writable-role");
+        assert.equal(recipe.slots[0].role, "system");
+        assert.equal(
+          recipe.slots[0].seed.systemProfile,
+          profile.residentProfile,
+        );
+      } else {
+        assert.equal(recipe.slots[0].kind, "published");
+        assert.equal(recipe.slots[0].image.id, "system-2m-n04");
+      }
       assert.equal(recipe.slots[2].image.id, "games-2m");
     }
     const adventure = captured.manifest.recipes.find(
       (row) => row.id === "colossal-cave-350",
     );
     assert.equal(adventure.configuredCount, 4);
-    assert.equal(adventure.slots[0].image.id, "system-2m-n04");
+    assert.equal(adventure.slots[0].kind, "writable-role");
+    assert.equal(adventure.slots[0].role, "system");
+    assert.equal(
+      adventure.slots[0].seed.systemProfile,
+      profile.residentProfile,
+    );
     assert.equal(adventure.slots[1].role, "work");
     assert.equal(adventure.slots[2].image.id, "colossal-cave-350");
     assert.equal(adventure.slots[3], null);

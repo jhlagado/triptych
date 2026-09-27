@@ -343,9 +343,10 @@ export async function loadDiskLibraryRegistry({
       fields(slot.seed, "asset,systemProfile");
       check(
         slot.kind === "writable-role" &&
-          index !== 0 &&
           slot.geometry === "triptych-cpm-2m-v1" &&
-          slot.seed.systemProfile === null,
+          (index === 0
+            ? slot.seed.systemProfile === profile
+            : slot.seed.systemProfile === null),
         "invalid writable role",
       );
       const seed = asset(slot.seed.asset, 2097152);
@@ -357,7 +358,7 @@ export async function loadDiskLibraryRegistry({
         seed: {
           sha256: seed.sha256,
           byteLength: seed.bytes,
-          systemProfile: null,
+          systemProfile: slot.seed.systemProfile,
         },
       };
     });
@@ -490,7 +491,7 @@ export async function resolveDiskLibraryRecipe(registry, selection) {
                 seed: {
                   sha256: state.asset(slot.seed.asset).sha256,
                   byteLength: 2097152,
-                  systemProfile: null,
+                  systemProfile: slot.seed.systemProfile,
                 },
               },
       ),
@@ -530,7 +531,7 @@ export async function resolveDiskLibraryRecipe(registry, selection) {
               url: urlAt(seed.path, state.directory),
               source: new URL(".", state.directory).href,
               license: "Recipient-local seed; see retained provenance",
-              systemProfile: null,
+              systemProfile: slot.seed.systemProfile,
             },
             state.deps,
           ),
