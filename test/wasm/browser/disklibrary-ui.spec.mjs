@@ -341,7 +341,21 @@ test("working A can be restored explicitly from its retained published seed", as
     )
     .toBe(true);
   await page.waitForTimeout(250);
-  const listing = await command(page, "DIR", "A>");
+  // The restored machine can show its prompt before the live-media reconnect
+  // has reached the guest. Retry the first command until the restored system
+  // contents are visible instead of treating that transient prompt as a
+  // completed DIR command. This is intentionally bounded: a real restore
+  // failure still produces a useful test failure after the reconnect window.
+  let listing = "";
+  await expect
+    .poll(
+      async () => {
+        listing = await command(page, "DIR", "A>");
+        return listing.includes("ATOM");
+      },
+      { timeout: 10_000, intervals: [100, 250, 500, 1_000] },
+    )
+    .toBe(true);
   expect(listing).toContain("ATOM");
   expect(listing).not.toContain("DISCARD");
 });
