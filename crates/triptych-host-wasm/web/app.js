@@ -10,6 +10,7 @@ import {
 import { acquireDiskWriter } from "./disk-workspace.js";
 import { loadDirectLaunch } from "./direct-launch.js";
 import { loadExternalLaunch } from "./external-launch.js";
+import { loadWorkspaceLaunch } from "./workspace-launch.js";
 import {
   DIRECT_B_DATABASE,
   DIRECT_B_SLOT_COUNT,
@@ -86,7 +87,9 @@ const directLaunchId = initialRoute.has("disk")
   ? initialRoute.get("disk")
   : initialRoute.has("system")
     ? "external"
-    : undefined;
+    : initialRoute.has("workspace")
+      ? "workspace"
+      : undefined;
 if (directLaunchId !== undefined) {
   document.body.classList.add("direct-launch");
   document.querySelector("#open-library").hidden = true;
@@ -3242,6 +3245,34 @@ async function adoptHistoricalDiskBox(stored) {
 }
 
 function selectedDirectLaunch(route) {
+  if (route.has("workspace")) {
+    if (
+      route.getAll("workspace").length !== 1 ||
+      route.getAll("components").length > 1 ||
+      route.getAll("a").length > 1 ||
+      route.getAll("b").length > 1 ||
+      [...route.keys()].some(
+        (key) => !["workspace", "components", "a", "b"].includes(key),
+      )
+    )
+      throw new Error(
+        "Use one workspace URL with optional components and B slot.",
+      );
+    const components = route.has("components")
+      ? route
+          .get("components")
+          .split(",")
+          .map((value) => value.trim())
+          .filter(Boolean)
+      : undefined;
+    return {
+      workspace: route.get("workspace"),
+      components,
+      a: parseDirectDriveSelection("A", route.get("a") ?? "auto"),
+      b: parseDirectBSelection(route.get("b") ?? "auto"),
+      drives: { B: parseDirectBSelection(route.get("b") ?? "auto") },
+    };
+  }
   if (route.has("system")) {
     if (
       route.getAll("system").length !== 1 ||
@@ -3287,17 +3318,25 @@ async function startDirectLaunch(route) {
   const selected = selectedDirectLaunch(route);
   await init();
   await loadDeployment();
-  const launch = selected.url
-    ? await loadExternalLaunch({
-        url: selected.url,
+  const launch = selected.workspace
+    ? await loadWorkspaceLaunch({
+        url: selected.workspace,
+        componentIds: selected.components,
         deployment,
         baseUrl: document.baseURI,
+        CpmDisk,
       })
-    : await loadDirectLaunch({
-        deployment,
-        id: selected.id,
-        baseUrl: document.baseURI,
-      });
+    : selected.url
+      ? await loadExternalLaunch({
+          url: selected.url,
+          deployment,
+          baseUrl: document.baseURI,
+        })
+      : await loadDirectLaunch({
+          deployment,
+          id: selected.id,
+          baseUrl: document.baseURI,
+        });
   const workDrives = launch.workDrives ?? ["B"];
   for (const drive of Object.keys(selected.drives ?? {}))
     if (!workDrives.includes(drive))
@@ -3446,7 +3485,7 @@ if (typeof window !== "undefined")
 
 try {
   const route = new URL(location.href).searchParams;
-  if (route.has("disk") || route.has("system")) {
+  if (route.has("disk") || route.has("system") || route.has("workspace")) {
     await startDirectLaunch(route);
   } else {
     await resumeInterruptedStartFresh();
