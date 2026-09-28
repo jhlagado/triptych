@@ -141,7 +141,7 @@ test("complete backup downloads recoverable ejected disks without copying protec
   await page.locator("#library-name").fill("Keep while ejected");
   await page.locator("#library-ready").check();
   await page.locator("#library-blank").click();
-  await expect(page.locator("#personal-disk-list li")).toHaveCount(3);
+  await expect(page.locator("#personal-disk-list li")).toHaveCount(4);
   const before = await state(page);
   await openDownloads(page);
   const downloaded = page.waitForEvent("download");
@@ -262,10 +262,9 @@ test("real games restore changed inventory from private D across browser reload 
   await expect.poll(files).toEqual(["CAVERNS.SAV", "HYPERDRV.SAV"]);
   const saved = await state(page),
     config = selected(saved);
-  for (const index of [0, 2]) {
-    expect(config.slots[index]).toEqual(originalConfig.slots[index]);
-    expect(saved.blobs).not.toContain(config.slots[index].image.sha256);
-  }
+  expect(config.slots[0]).toEqual(originalConfig.slots[0]);
+  expect(config.slots[2]).toEqual(originalConfig.slots[2]);
+  expect(saved.blobs).not.toContain(config.slots[2].image.sha256);
   const work = originalConfig.slots[1].diskId;
   expect(saved.manifest.personalDisks.find((disk) => disk.id === work)).toEqual(
     original.manifest.personalDisks.find((disk) => disk.id === work),
@@ -287,7 +286,7 @@ test("real games restore changed inventory from private D across browser reload 
   expect((await state(page)).manifest).toEqual(saved.manifest);
 });
 
-test("fresh public app keeps A/C protected, B/D private and revisits the same immutable recipe instance", async ({
+test("fresh public app keeps A writable and C protected while revisiting the same immutable recipe instance", async ({
   page,
 }) => {
   await boot(page);
@@ -296,17 +295,22 @@ test("fresh public app keeps A/C protected, B/D private and revisits the same im
   expect(initial.version).toBe(5);
   expect(config.configuredCount).toBe(4);
   expect(config.slots.map((slot) => slot.kind)).toEqual([
-    "published",
+    "personal",
     "personal",
     "published",
     "personal",
   ]);
+  expect(config.slots[0].writable).toBe(true);
   expect(config.slots[1].writable).toBe(true);
   expect(config.slots[3].writable).toBe(true);
   expect(config.slots[1].diskId).not.toBe(config.slots[3].diskId);
-  expect(initial.manifest.personalDisks).toHaveLength(2);
-  for (const index of [0, 2])
-    expect(initial.blobs).not.toContain(config.slots[index].image.sha256);
+  expect(initial.manifest.personalDisks).toHaveLength(3);
+  expect(initial.blobs).toContain(
+    initial.manifest.personalDisks.find(
+      (disk) => disk.id === config.slots[0].diskId,
+    ).content.sha256,
+  );
+  expect(initial.blobs).not.toContain(config.slots[2].image.sha256);
   const link = await page.locator("#share-starter").getAttribute("href");
   expect(link).not.toContain(config.slots[1].diskId);
   expect(link).not.toContain(config.id);
@@ -315,6 +319,31 @@ test("fresh public app keeps A/C protected, B/D private and revisits the same im
   const revisited = await state(page);
   expect(revisited.manifest).toEqual(initial.manifest);
   expect(revisited.blobs).toEqual(initial.blobs);
+});
+
+test("working A can be restored explicitly from its retained published seed", async ({
+  page,
+}) => {
+  await boot(page);
+  await page.locator("#close-library").click();
+  await command(page, "SAVE 1 DISCARD.COM", "A>");
+  expect(await command(page, "DIR", "A>")).toContain("DISCARD");
+  await page.locator("#open-library").click();
+  await expect(page.locator("#restore-system-disk")).toHaveText(
+    "Restore A from original image",
+  );
+  await page.locator("#library-ready").check();
+  page.once("dialog", (dialog) => dialog.accept());
+  await page.locator("#restore-system-disk").click();
+  await expect
+    .poll(async () =>
+      (await page.locator("#terminal").textContent()).trimEnd().endsWith("A>"),
+    )
+    .toBe(true);
+  await page.waitForTimeout(250);
+  const listing = await command(page, "DIR", "A>");
+  expect(listing).toContain("ATOM");
+  expect(listing).not.toContain("DISCARD");
 });
 
 test("blank disks remain independent of drive slots and a writable copy does not mutate its published source", async ({
@@ -326,7 +355,7 @@ test("blank disks remain independent of drive slots and a writable copy does not
   await page.locator("#library-name").fill("Independent disk");
   await page.locator("#library-ready").check();
   await page.locator("#library-blank").click();
-  await expect(page.locator("#personal-disk-list li")).toHaveCount(3);
+  await expect(page.locator("#personal-disk-list li")).toHaveCount(4);
   const created = await state(page),
     disk = created.manifest.personalDisks.find(
       (item) => item.name === "Independent disk",
@@ -356,7 +385,7 @@ test("blank disks remain independent of drive slots and a writable copy does not
   await page.locator("#library-name").fill("My games copy");
   await page.locator("#library-ready").check();
   await page.locator("#library-copy").click();
-  await expect(page.locator("#personal-disk-list li")).toHaveCount(4);
+  await expect(page.locator("#personal-disk-list li")).toHaveCount(5);
   const copied = await state(page),
     copy = copied.manifest.personalDisks.find(
       (item) => item.name === "My games copy",
@@ -368,7 +397,7 @@ test("blank disks remain independent of drive slots and a writable copy does not
   await expect(page.locator("#terminal")).toContainText("A>");
   const restored = await state(page);
   expect(selected(restored).slots[1].diskId).toBe(disk.id);
-  expect(restored.manifest.personalDisks).toHaveLength(4);
+  expect(restored.manifest.personalDisks).toHaveLength(5);
 });
 
 test("an unknown recipe revision fails without replacing an existing disk box", async ({

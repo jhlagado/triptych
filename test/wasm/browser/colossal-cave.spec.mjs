@@ -77,7 +77,7 @@ async function mountPublished(page, request) {
   expect(config.configuredCount).toBe(4);
   expect(config.bootstrap.profile).toBe("triptych-cpu-v0.1-2m-n04");
   expect(config.slots.map((slot) => slot.kind)).toEqual([
-    "published",
+    "personal",
     "personal",
     "published",
     "personal",
@@ -174,19 +174,24 @@ test("the published Colossal Cave recipe link boots protected A/C and one privat
   expect(config.configuredCount).toBe(4);
   expect(config.bootstrap.profile).toBe("triptych-cpu-v0.1-2m-n04");
   expect(config.slots.map((slot) => slot?.kind ?? null)).toEqual([
-    "published",
+    "personal",
     "personal",
     "published",
     null,
   ]);
   expect(config.slots[1].writable).toBe(true);
-  expect(initial.manifest.personalDisks).toHaveLength(1);
-  expect(initial.manifest.personalDisks[0].id).toBe(config.slots[1].diskId);
+  expect(config.slots[0].writable).toBe(true);
+  expect(initial.manifest.personalDisks).toHaveLength(2);
+  expect(initial.manifest.personalDisks.map((disk) => disk.id)).toEqual(
+    expect.arrayContaining([config.slots[0].diskId, config.slots[1].diskId]),
+  );
+  expect(initial.manifest.personalDisks.map((disk) => disk.id)).toEqual(
+    expect.arrayContaining([config.slots[1].diskId]),
+  );
   expect(config.slots[2].image.id).toBe(IMAGE_ID);
   expect(config.slots[2].image.revision).toBe(IMAGE_HASH);
   expect(config.slots[2].image.sha256).toBe(IMAGE_HASH);
-  for (const index of [0, 2])
-    expect(initial.blobs).not.toContain(config.slots[index].image.sha256);
+  expect(initial.blobs).not.toContain(config.slots[2].image.sha256);
   await command(page, "C:", "C>");
   await command(page, "ADVENTUR", "WOULD YOU LIKE INSTRUCTIONS?");
   await command(page, "NO", "DOWN A GULLY.");

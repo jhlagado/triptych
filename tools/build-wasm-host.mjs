@@ -363,6 +363,7 @@ try {
         "disk-launch.js",
         "direct-launch.js",
         "external-launch.js",
+        "workspace-launch.js",
         "disk-box-store.js",
         "disk-box-app-store.js",
         "disk-box-recovery.js",

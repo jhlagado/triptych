@@ -35,8 +35,12 @@ candidate build and its tests would be required before pinning. These local
 checks do not prove a public deployment. Acceptance also requires independent
 review, CI and browser tests against the final public site.
 
-Each application needs a tested write-protected workflow. The starter has tools
-and the system on A, personal work on B, games on C and personal saves on D.
+Each application needs a tested write-protected workflow. The standard starter
+has a writable copy of the published tools/system image in A, personal work on
+B, published games on C and personal saves on D. A retains the published A
+image as its recovery seed: reload preserves the working disk, and the user
+must explicitly choose Restore A to replace it. The protected library-only
+recipe still mounts the published system image directly in A.
 Running a game from C does not redirect its writes by itself: select D as the
 current drive before launching the game, as exercised by the game tests. An
 application that requires writes beside its executable needs an explicit

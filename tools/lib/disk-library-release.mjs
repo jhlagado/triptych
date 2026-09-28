@@ -101,6 +101,9 @@ export function captureDiskLibraryRelease({
     "provenance system differs from admission",
   );
   const systemImage = published("system-2m-n04"),
+    systemImageRow = catalogue.images.find(
+      (image) => image.id === "system-2m-n04",
+    ),
     gamesImage = published("games-2m");
   check(
     Array.isArray(provenance.images) &&
@@ -241,6 +244,16 @@ export function captureDiskLibraryRelease({
     geometry: "triptych-cpm-2m-v1",
     seed: { asset: seedAsset, systemProfile: null },
   });
+  const systemRole = () => ({
+    kind: "writable-role",
+    role: "system",
+    name: "System",
+    geometry: "triptych-cpm-2m-v1",
+    seed: {
+      asset: systemImageRow.asset,
+      systemProfile: systemImageRow.systemProfile,
+    },
+  });
   const templates = [false, true].map((libraryOnly) => ({
     id: libraryOnly ? "library" : "starter",
     name: libraryOnly
@@ -250,7 +263,7 @@ export function captureDiskLibraryRelease({
     admission: admissionId,
     bootstrap,
     slots: [
-      systemImage,
+      libraryOnly ? systemImage : systemRole(),
       libraryOnly ? null : role("work"),
       gamesImage,
       libraryOnly ? null : role("saves"),
@@ -264,7 +277,7 @@ export function captureDiskLibraryRelease({
       configuredCount: 4,
       admission: admissionId,
       bootstrap,
-      slots: [systemImage, role("work"), published("colossal-cave-350"), null],
+      slots: [systemRole(), role("work"), published("colossal-cave-350"), null],
       provenance: provenanceAsset,
     });
   for (const template of templates) {

@@ -133,6 +133,7 @@ export async function loadExternalLaunch({
     instruction: descriptor.instruction,
     profile: descriptor.profile,
     configuredCount: count,
+    imageSha256: image.sha256,
     image: disk,
     bootstrap: system.bootstrap,
     seedWorkDisk: descriptor.workDisk === "copy-image",

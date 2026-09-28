@@ -97,7 +97,7 @@ for (const rejectedAsset of ["bootstrap", "seed"]) {
         after.manifest.personalDisks.find((item) => item.id === disk.id),
       ).toEqual(disk);
     expect(after.manifest.personalDisks.length).toBe(
-      before.manifest.personalDisks.length + 2,
+      before.manifest.personalDisks.length + 3,
     );
     await expect(page.locator("#reset")).toBeEnabled();
   });

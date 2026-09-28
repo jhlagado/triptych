@@ -351,11 +351,18 @@ export function validateDiskLibraryRetention({
         );
         check(
           slot.geometry === "triptych-cpm-2m-v1" &&
-            slot.seed.systemProfile === null &&
-            index !== 0,
+            (index === 0
+              ? slot.seed.systemProfile === profile.residentProfile
+              : slot.seed.systemProfile === null),
           "unsupported seed profile",
         );
-        asset(slot.seed.asset, sizes.get(slot.geometry));
+        const seed = asset(slot.seed.asset, sizes.get(slot.geometry));
+        if (index === 0)
+          check(
+            hash(assets.get(seed.path).subarray(0, 16384)) ===
+              profile.system.sha256,
+            "writable A seed differs from admission system",
+          );
       }
     }
   }

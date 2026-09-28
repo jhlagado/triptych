@@ -31,14 +31,30 @@ async function releases(request) {
   const admission = manifest.admissions.find(
     (row) => row.id === recipe.admission,
   );
-  const images = [recipe.slots[0], recipe.slots[2]].map((slot) =>
+  const systemSlot = recipe.slots[0];
+  const systemImage =
+    systemSlot.kind === "published"
+      ? manifest.images.find(
+          (row) =>
+            row.id === systemSlot.image.id &&
+            row.revision === systemSlot.image.revision,
+        )
+      : manifest.images.find((row) => row.asset === systemSlot.seed.asset);
+  const gamesSlot = recipe.slots[2];
+  const blankSeedAsset = recipe.slots.find(
+    (slot) => slot?.kind === "writable-role" && slot.role !== "system",
+  )?.seed.asset;
+  expect(blankSeedAsset).toBeTruthy();
+  const images = [
+    structuredClone(systemImage),
     structuredClone(
       manifest.images.find(
         (row) =>
-          row.id === slot.image.id && row.revision === slot.image.revision,
+          row.id === gamesSlot.image.id &&
+          row.revision === gamesSlot.image.revision,
       ),
     ),
-  );
+  ];
   const provenance = JSON.parse(assets.get(recipe.provenance));
   // A release can publish disks beyond the starter's mounted A/C pair.
   // Retain every image covered by that release while changing only games.
@@ -105,9 +121,7 @@ async function releases(request) {
     provenanceBytes: json(provenance),
     admissionBytes: assets.get(admission.envelope),
     assets: sources,
-    blankSeed: assets.get(
-      recipe.slots.find((slot) => slot?.kind === "writable-role").seed.asset,
-    ),
+    blankSeed: assets.get(blankSeedAsset),
   });
   const old = { manifest, assets };
   const merged = mergeDiskLibraryRetention(old, next, {
@@ -274,7 +288,7 @@ test("old recipe and personal work survive a new games default; new setup remain
   ).toEqual(oldConfiguration);
   expect(upgraded.file).toEqual(saved.file);
   expect(upgraded.manifest.personalDisks.length).toBe(
-    saved.manifest.personalDisks.length + 2,
+    saved.manifest.personalDisks.length + 3,
   );
   expect(selected(upgraded.manifest).slots[1].diskId).not.toBe(workId);
 
@@ -288,7 +302,7 @@ test("old recipe and personal work survive a new games default; new setup remain
     expect(selected(revived.manifest).slots[2].image.sha256).toBe(
       release.oldGames.sha256,
     );
-    expect(revived.manifest.personalDisks).toHaveLength(2);
+    expect(revived.manifest.personalDisks).toHaveLength(3);
     expect(selected(revived.manifest).slots[1].diskId).not.toBe(workId);
   } finally {
     await fresh.close();

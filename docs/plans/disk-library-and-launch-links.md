@@ -17,10 +17,16 @@ features are deployed or a frozen URL/storage specification.
 ## Intended experience
 
 A visitor follows a shared Triptych link and boots a configured CP/M machine.
-Published software disks are mounted read-only from complete sector images.
-Only requested personal writable disks acquire writable browser-database
-entries. A visitor can browse a curated library, insert and eject disks, copy
-files to a personal disk, and return later with saved work intact.
+The standard and application demo links copy their verified published system
+image into a persistent, writable A disk before boot. The published image is
+retained as the recovery seed; reloading preserves the working A disk, while
+an explicit Restore A action replaces it from that seed. Published software
+disks mounted for data or library browsing remain read-only from complete
+sector images. A visitor can browse a curated library, insert and eject disks,
+copy files to a personal disk, and return later with saved work intact.
+
+The protected library-only link is the deliberate exception: it mounts the
+published system image directly in A and creates no writable system disk.
 
 The floppy-disk box supplies bulk storage outside the guest address space.
 Four configured slots, A–D, are the initial default; retain the configurable
@@ -45,8 +51,11 @@ Identical blank disk contents do not imply identical personal disk identity.
 
 ## Shared links and local disk references
 
-A representative recipe has a compatible published system image in A, a
-personal work disk in B, published games in C, and a personal saves disk in D.
+A representative standard recipe has a writable personal copy of a compatible
+published system image in A, a personal work disk in B, published games in C,
+and a personal saves disk in D. The recipe still records the published A image
+as the immutable seed, so recovery does not depend on the current contents of
+the working disk.
 Short catalogue identifiers should resolve to versioned, hash-checked images.
 The eventual URL may expose letter assignments, but its exact syntax remains
 part of the first contract milestone; no example query here is a working link.
@@ -56,8 +65,10 @@ blank or explicitly seeded from a published template. On first use, create
 separate recipient-owned disks and record the role-to-disk bindings. Reloading
 the same recipe reuses those bindings and preserves writes; it must not create
 another set, reset the disks or reinstall their templates. Creating a fresh
-independent instance is a separate action. Recipe revision and role identities
-must be specified before implementing this behaviour.
+independent instance is a separate action. Restoring A is also an explicit
+action and is the only normal operation that discards working A contents.
+Recipe revision and role identities must be specified before implementing this
+behaviour.
 
 A local bookmark can refer to existing personal disk identities. A sender's
 disk number, display name or database ID cannot identify the recipient's disk.
@@ -104,16 +115,19 @@ the exact bootstrap and resident profile. A data disk is not necessarily
 bootable. Direct boot from B is outside the initial release. Swapping a data
 disk into A while a program runs must include a defined system-disk recovery
 path before warm boot; no silent replacement or rewriting of the user's disk.
+The writable-A path follows the same rule: a failed fetch or validation never
+replaces the current disk, and Restore A commits the verified seed atomically
+with a recoverable preceding state.
 
 ## Execution stages
 
-| Stage                       | Deliverable                                                                                                                                 | Acceptance evidence                                                                                                                                                    |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1. Contracts and swap proof | Reconcile the unmerged configurable-drive work with the public A/B release. Define image, personal-disk, recipe and media-change contracts. | ATOM guest fixture requests a second disk and continues without reboot; dirty-cache, partial-transfer, CP/M login/allocation state and warm-boot behaviour are tested. |
-| 2. Protected library mounts | Published catalogue and read-only sector backing, with explicit writable-copy operation.                                                    | A library-only launch boots and runs with no personal writable-image records; guest writes fail and image hashes remain unchanged.                                     |
-| 3. Personal disk box        | Create, name, import, export, mount and eject persistent writable disks.                                                                    | Writes survive ejection, reassignment and reload; alias mounting, stale tabs, quota errors and interrupted saves preserve prior durable data.                          |
-| 4. Launch recipes           | Public links and separately identified local bookmarks; four-drive default with up to sixteen supported.                                    | A fresh browser launches protected A/C and writable B/D; revisiting reuses saved work; missing identities and malformed recipes leave existing machines intact.        |
-| 5. Hosted qualification     | Catalogue assets, launch controls, recovery documentation and CI publication to GitHub Pages.                                               | The actual public URL passes fresh and returning desktop/mobile-browser workflows, write protection, live swaps and downloadable recovery tests.                       |
+| Stage                       | Deliverable                                                                                                                                 | Acceptance evidence                                                                                                                                                                                                        |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1. Contracts and swap proof | Reconcile the unmerged configurable-drive work with the public A/B release. Define image, personal-disk, recipe and media-change contracts. | ATOM guest fixture requests a second disk and continues without reboot; dirty-cache, partial-transfer, CP/M login/allocation state and warm-boot behaviour are tested.                                                     |
+| 2. Protected library mounts | Published catalogue and read-only sector backing, with explicit writable-copy operation.                                                    | A library-only launch boots and runs with no personal writable-image records; guest writes fail and image hashes remain unchanged.                                                                                         |
+| 3. Personal disk box        | Create, name, import, export, mount and eject persistent writable disks.                                                                    | Writes survive ejection, reassignment and reload; alias mounting, stale tabs, quota errors and interrupted saves preserve prior durable data.                                                                              |
+| 4. Launch recipes           | Public links and separately identified local bookmarks; four-drive default with up to sixteen supported.                                    | A fresh standard browser launch creates writable seeded A plus writable B/D and published C; revisiting reuses all writes; Restore A is explicit; missing identities and malformed recipes leave existing machines intact. |
+| 5. Hosted qualification     | Catalogue assets, launch controls, recovery documentation and CI publication to GitHub Pages.                                               | The actual public URL passes fresh and returning desktop/mobile-browser workflows, write protection, live swaps and downloadable recovery tests.                                                                           |
 
 Stage 1 resolves the shared boundaries. Stages 2 and 3 can then proceed in
 parallel, with disjoint implementation ownership. Stage 4 integrates both;
@@ -142,10 +156,11 @@ this evidence from the remaining release requirements. The selected
 publication order and adoption of historical storage.
 
 The disk-box authority, raw recovery downloads, protected catalogue mounts,
-A-system restoration and launch-instance reuse now have local tests. Browser
+writable-A seeding and explicit A restoration now have local tests. Browser
 tests cover game saves, failed preparation, an image outside the starter recipes,
-and an old shared link after a games-library update. The update test changes the
-games image while retaining the same operating-system bytes.
+working-A reloads, explicit seed restoration and an old shared link after a
+games-library update. The update test changes the games image while retaining
+the same operating-system bytes.
 
 The three local-configuration bookmark browser tests pass. Browser release
 builds now reject empty pins and candidate refresh before compilation. Next,
