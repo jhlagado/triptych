@@ -72,6 +72,7 @@
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.{ts,mjs}\" \"tools/**/*.mjs\" \"crates/**/web/**/*.{js,css,html}\" \"docs/**/*.md\" \"firmware/**/*.md\" README.md NOTICE.md",
     "format:check": "prettier --check \"src/**/*.ts\" \"test/**/*.{ts,mjs}\" \"tools/**/*.mjs\" \"crates/**/web/**/*.{js,css,html}\" \"docs/**/*.md\" \"firmware/**/*.md\" README.md NOTICE.md",
     "test": "vitest run",
+    "test:headless": "npm run build:wasm-host && node packages/triptych-headless/scripts/build.mjs --reuse-wasm && npm --prefix packages/triptych-headless test",
     "test:wasm-browser": "npm run build:wasm-browser && node tools/prove-disk-library-registry.mjs && playwright test --config=playwright.config.mjs",
     "test:cpu-conformance": "vitest run test/cpu/conformance.test.ts",
     "check:disk-library": "node --test test/wasm/external-launch.node.mjs test/wasm/requested-recipe.node.mjs tools/lib/colossal-cave-library.test.mjs tools/lib/disk-library-build-guard.test.mjs test/wasm/local-configuration.node.mjs tools/lib/disk-library-pin.test.mjs test/wasm/disk-box-registry-app.node.mjs tools/lib/disk-library-package.test.mjs tools/lib/disk-library-release.test.mjs tools/lib/disk-library-retention.test.mjs test/wasm/disk-library-registry.node.mjs test/wasm/disk-box-app-store.node.mjs test/wasm/disk-box-raw-recovery.node.mjs",

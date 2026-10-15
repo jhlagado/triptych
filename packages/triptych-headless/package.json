@@ -1,0 +1,44 @@
+{
+  "name": "@jhlagado/triptych-headless",
+  "version": "0.1.0",
+  "description": "A headless Triptych CP/M 2.2 machine for Node: make 2 MB disks, boot them, type commands and read files back.",
+  "license": "GPL-3.0-or-later",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jhlagado/triptych.git",
+    "directory": "packages/triptych-headless"
+  },
+  "keywords": [
+    "cp/m",
+    "z80",
+    "emulator",
+    "triptych",
+    "testing"
+  ],
+  "exports": {
+    ".": {
+      "types": "./src/index.d.ts",
+      "import": "./src/index.mjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "src",
+    "dist",
+    "README.md",
+    "LICENSE",
+    "NOTICE.md"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "node --test test/*.test.mjs",
+    "prepublishOnly": "node scripts/build.mjs --check && node --test test/*.test.mjs"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
