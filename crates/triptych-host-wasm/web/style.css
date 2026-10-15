@@ -127,6 +127,31 @@ body.direct-launch #status {
   text-align: left;
 }
 
+.disk-speed-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: #aab8ad;
+  font-size: 0.85rem;
+}
+
+.disk-speed-control select {
+  min-height: 2.5rem;
+  padding: 0 0.4rem;
+  border: 1px solid #38533f;
+  border-radius: 0.4rem;
+  background: #1a241d;
+  color: #dce8de;
+  font: inherit;
+}
+
+#disk-timing-status {
+  margin: 0;
+  color: #e7ce8a;
+  font-size: 0.8rem;
+  text-align: right;
+}
+
 #status,
 #save-status {
   margin: 0;

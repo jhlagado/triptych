@@ -3,20 +3,27 @@ use std::error::Error;
 use std::ffi::OsString;
 use std::fs;
 use std::path::PathBuf;
+use std::time::{Duration, Instant};
 
 use triptych_cpu_core::{
-    Devices, Machine, MachineMemory, RunBudget, RunReason, BOOT_ROM_BYTES, RAM_BYTES,
+    Devices, DiskTimingConfig, DiskTimingMode, DiskTimingProfile, Machine, MachineMemory,
+    RunBudget, RunReason, BOOT_ROM_BYTES, RAM_BYTES,
 };
-use triptych_host_native::{FileSectorStore, TerminalConsole};
+use triptych_host_native::{format_disk_timing_report, FileSectorStore, TerminalConsole};
 
 fn main() {
-    if let Err(error) = run() {
+    let mut machine = Machine::new();
+    let result = run(&mut machine);
+    if let Some(report) = machine.disk_timing_report() {
+        eprint!("\n{}", format_disk_timing_report(&report));
+    }
+    if let Err(error) = result {
         eprintln!("triptych-host-native: {error}");
         std::process::exit(1);
     }
 }
 
-fn run() -> Result<(), Box<dyn Error>> {
+fn run(machine: &mut Machine) -> Result<(), Box<dyn Error>> {
     let arguments = parse_arguments(env::args_os().skip(1))?;
     let rom_path = arguments.rom;
     let drive_paths = arguments.drives;
@@ -35,13 +42,19 @@ fn run() -> Result<(), Box<dyn Error>> {
         sectors.require_image_bytes(expected)?;
     }
     let mut ram = Box::new([0; RAM_BYTES]);
-    let mut machine = Machine::new();
+    machine.configure_disk_timing(arguments.disk_timing);
     let mut console = match arguments.input.as_ref() {
         Some(input) if arguments.input_after.is_none() => TerminalConsole::scripted(input.bytes()),
         Some(_) => TerminalConsole::scripted([]),
         None => TerminalConsole::open(),
     };
-    let budget = RunBudget::from_values(50_000, 500_000).expect("non-zero budget");
+    // Real-time pacing checks the clock every 10 ms of guest time.
+    let slice_tstates = match arguments.realtime_hz {
+        Some(hz) => (u64::from(hz) / 100).max(1),
+        None => 500_000,
+    };
+    let budget = RunBudget::from_values(50_000, slice_tstates).expect("non-zero budget");
+    let started = Instant::now();
     let mut total_steps = 0_u64;
     let mut input_queued = arguments.input_after.is_none();
 
@@ -83,7 +96,14 @@ fn run() -> Result<(), Box<dyn Error>> {
         {
             return Err(format!("step limit reached after {total_steps} instructions").into());
         }
-        std::thread::yield_now();
+        if let Some(hz) = arguments.realtime_hz {
+            let due = Duration::from_secs_f64(machine.elapsed_tstates() as f64 / f64::from(hz));
+            if let Some(ahead) = due.checked_sub(started.elapsed()) {
+                std::thread::sleep(ahead);
+            }
+        } else {
+            std::thread::yield_now();
+        }
     }
 }
 
@@ -95,6 +115,8 @@ struct Arguments {
     input_after: Option<String>,
     stop_after: Option<String>,
     max_steps: Option<u64>,
+    disk_timing: Option<DiskTimingConfig>,
+    realtime_hz: Option<u32>,
 }
 
 fn parse_arguments(arguments: impl Iterator<Item = OsString>) -> Result<Arguments, Box<dyn Error>> {
@@ -106,6 +128,11 @@ fn parse_arguments(arguments: impl Iterator<Item = OsString>) -> Result<Argument
     let mut slots = None;
     let mut selected_drives = Vec::new();
     let mut image_bytes = None;
+    let mut timing_profile = None;
+    let mut timing_mode = None;
+    let mut timing_skew = None;
+    let mut clock_hz = None;
+    let mut realtime = false;
     let mut arguments = arguments;
     while let Some(argument) = arguments.next() {
         match argument.to_str() {
@@ -155,6 +182,41 @@ fn parse_arguments(arguments: impl Iterator<Item = OsString>) -> Result<Argument
             Some("--stop-after") => {
                 stop_after = Some(next_utf8(&mut arguments, "--stop-after")?);
             }
+            Some("--disk-timing") => {
+                let name = next_utf8(&mut arguments, "--disk-timing")?;
+                let profile = DiskTimingProfile::named(&name).ok_or_else(|| {
+                    let names: Vec<_> = DiskTimingProfile::BUILT_IN
+                        .iter()
+                        .map(|profile| profile.name)
+                        .collect();
+                    format!("--disk-timing must be one of {}", names.join(", "))
+                })?;
+                timing_profile = Some(profile);
+            }
+            Some("--disk-timing-mode") => {
+                timing_mode = Some(
+                    match next_utf8(&mut arguments, "--disk-timing-mode")?.as_str() {
+                        "account" => DiskTimingMode::Account,
+                        "stall" => DiskTimingMode::Stall,
+                        _ => return Err("--disk-timing-mode must be account or stall".into()),
+                    },
+                );
+            }
+            Some("--disk-skew") => {
+                let skew = next_decimal(&mut arguments, "--disk-skew")?;
+                if !(1..=255).contains(&skew) {
+                    return Err("--disk-skew must be 1 through 255".into());
+                }
+                timing_skew = Some(skew as u16);
+            }
+            Some("--clock-hz") => {
+                let hz = next_decimal(&mut arguments, "--clock-hz")?;
+                if !(1..=u64::from(u32::MAX)).contains(&hz) {
+                    return Err("--clock-hz must be a positive 32-bit integer".into());
+                }
+                clock_hz = Some(hz as u32);
+            }
+            Some("--realtime") => realtime = true,
             Some("--max-steps") => {
                 max_steps = Some(next_utf8(&mut arguments, "--max-steps")?.parse::<u64>()?);
             }
@@ -205,6 +267,20 @@ fn parse_arguments(arguments: impl Iterator<Item = OsString>) -> Result<Argument
     if input_after.is_some() && input.is_none() {
         return Err("--input-after requires --input-ascii".into());
     }
+    if timing_profile.is_none() && (timing_mode.is_some() || timing_skew.is_some()) {
+        return Err("--disk-timing-mode and --disk-skew require --disk-timing".into());
+    }
+    let clock_hz = clock_hz.unwrap_or(DiskTimingConfig::DEFAULT_CLOCK_HZ);
+    let disk_timing = timing_profile.map(|mut profile| {
+        if let Some(skew) = timing_skew {
+            profile.skew = skew;
+        }
+        DiskTimingConfig {
+            profile,
+            mode: timing_mode.unwrap_or(DiskTimingMode::Account),
+            clock_hz,
+        }
+    });
     Ok(Arguments {
         rom,
         drives,
@@ -213,6 +289,8 @@ fn parse_arguments(arguments: impl Iterator<Item = OsString>) -> Result<Argument
         input_after,
         stop_after,
         max_steps,
+        disk_timing,
+        realtime_hz: realtime.then_some(clock_hz),
     })
 }
 

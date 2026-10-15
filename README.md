@@ -188,6 +188,13 @@ locks exclude cooperating owners, including the CLI, but not arbitrary file
 editors. Use `B:` at the CP/M prompt to select B, or an explicit filename such
 as `TYPE B:README.TXT`.
 
+The native host can also model mechanical floppy drives. `--disk-timing
+8in-sssd` (or `5in-dsdd`, `3in-dsdd`) reports on exit how long the session's
+disk activity would have taken on that drive; `--disk-timing-mode stall` makes
+the guest wait for it, and `--realtime` paces execution to 4 MHz so the waits
+are felt. The browser's **Disk** menu offers the same floppies, paced at 4
+MHz. See the [floppy timing model](docs/specifications/disk-timing-v1.md).
+
 The development archive launcher opens a browser-exported `.tds` machine in a
 new native session, preserving its saved bootstrap, configured slots and media:
 

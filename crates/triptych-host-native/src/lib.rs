@@ -5,8 +5,9 @@ use std::path::{Path, PathBuf};
 use std::sync::mpsc::{self, Receiver};
 
 use triptych_cpu_core::{
-    Console, CpuState, Devices, DriveInfo, InterruptRequest, IoObserver, IoOperation, Machine,
-    MachineMemory, SectorStore, StepResult, StorageFault, BOOT_ROM_BYTES, RAM_BYTES, SECTOR_BYTES,
+    Console, CpuState, Devices, DiskTimingMode, DiskTimingReport, DriveInfo, InterruptRequest,
+    IoObserver, IoOperation, Machine, MachineMemory, SectorStore, StepResult, StorageFault,
+    BOOT_ROM_BYTES, RAM_BYTES, SECTOR_BYTES,
 };
 
 /// A deterministic, CP/M-free native execution host for small Z80 images.
@@ -494,4 +495,86 @@ impl SectorStore for FileSectorStore {
             .sync_all()
             .map_err(|_| StorageFault)
     }
+}
+
+/// Render a floppy timing report as plain text for a terminal or log.
+pub fn format_disk_timing_report(report: &DiskTimingReport) -> String {
+    let profile = report.config.profile;
+    let stats = report.stats;
+    let ms = |tstates: u64| report.tstates_to_micros(tstates) as f64 / 1_000.0;
+    let seconds = |tstates: u64| ms(tstates) / 1_000.0;
+    let share = |tstates: u64| {
+        if report.modelled_tstates == 0 {
+            0.0
+        } else {
+            tstates as f64 * 100.0 / report.modelled_tstates as f64
+        }
+    };
+    let mode = match report.config.mode {
+        DiskTimingMode::Account => "account (guest did not wait)",
+        DiskTimingMode::Stall => "stall (guest waited on BUSY)",
+    };
+    let mut text = String::new();
+    let mut line = |value: String| {
+        text.push_str(&value);
+        text.push('\n');
+    };
+    line(format!(
+        "disk timing: {} at {:.3} MHz, {mode}",
+        profile.name,
+        f64::from(report.config.clock_hz) / 1_000_000.0
+    ));
+    line(format!(
+        "  geometry:       {} rpm, {} x {} bytes per track, {} head(s), {} cylinders, skew {}",
+        profile.rpm,
+        profile.sectors_per_track,
+        profile.sector_bytes,
+        profile.heads,
+        profile.cylinders,
+        profile.skew
+    ));
+    line(format!(
+        "  modelled time:  {:.2} s ({:.2} s CPU incl. idle, {:.2} s disk = {:.1}%)",
+        seconds(report.modelled_tstates),
+        seconds(report.modelled_tstates.saturating_sub(stats.disk_tstates)),
+        seconds(stats.disk_tstates),
+        share(stats.disk_tstates)
+    ));
+    line(format!(
+        "  record I/O:     {} reads ({} from buffer), {} writes",
+        stats.record_reads, stats.buffer_hits, stats.record_writes
+    ));
+    line(format!(
+        "  sector I/O:     {} reads, {} writes",
+        stats.sector_reads, stats.sector_writes
+    ));
+    line(format!(
+        "  head load/spin: {} x, {:.1} ms",
+        stats.ready_waits,
+        ms(stats.ready_tstates)
+    ));
+    line(format!(
+        "  seeks:          {} ({} cylinders stepped), {:.1} ms",
+        stats.seeks,
+        stats.cylinders_stepped,
+        ms(stats.seek_tstates)
+    ));
+    line(format!(
+        "  rotation:       {:.1} ms waiting for sectors",
+        ms(stats.rotation_tstates)
+    ));
+    line(format!(
+        "  transfer:       {:.1} ms",
+        ms(stats.transfer_tstates)
+    ));
+    if stats.max_cylinder >= u32::from(profile.cylinders) {
+        line(format!(
+            "  note: highest cylinder {} exceeds the {}-cylinder medium; the image is larger than this floppy",
+            stats.max_cylinder, profile.cylinders
+        ));
+    }
+    if report.write_pending {
+        line("  note: a deblocked write was still buffered (not flushed)".into());
+    }
+    text
 }

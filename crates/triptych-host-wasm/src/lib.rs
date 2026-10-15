@@ -7,9 +7,10 @@ use std::collections::VecDeque;
 
 use js_sys::Uint8Array;
 use triptych_cpu_core::{
-    Console, CpuFlags, CpuState, Devices, DiskState, DriveInfo, InterruptRequest, IoDirection,
-    IoObserver, IoOperation, Machine, MachineMemory, RunBudget, RunReason, SectorStore,
-    StorageFault, BOOT_ROM_BYTES, RAM_BYTES, SECTOR_BYTES,
+    Console, CpuFlags, CpuState, Devices, DiskState, DiskTimingConfig, DiskTimingMode,
+    DiskTimingProfile, DiskTimingReport, DriveInfo, InterruptRequest, IoDirection, IoObserver,
+    IoOperation, Machine, MachineMemory, RunBudget, RunReason, SectorStore, StorageFault,
+    BOOT_ROM_BYTES, RAM_BYTES, SECTOR_BYTES,
 };
 use wasm_bindgen::prelude::*;
 
@@ -548,6 +549,46 @@ impl TriptychCpu {
 
     pub fn ram_length(&self) -> u32 {
         RAM_BYTES as u32
+    }
+
+    /// Guest T-states executed since construction, as a JavaScript number.
+    /// Exact up to 2^53 T-states (about 71 years at 4 MHz).
+    pub fn elapsed_tstates(&self) -> f64 {
+        self.machine.elapsed_tstates() as f64
+    }
+
+    /// Select a floppy timing profile by name (`8in-sssd`, `5in-dsdd`,
+    /// `3in-dsdd`), or pass an empty string for instant media. `stall` makes
+    /// the controller report BUSY for each modelled delay; otherwise delays
+    /// are only counted. Counters restart. Returns false for an unknown name
+    /// or a zero clock and leaves the current setting unchanged.
+    pub fn configure_disk_timing(&mut self, profile: &str, stall: bool, clock_hz: u32) -> bool {
+        if profile.is_empty() {
+            self.machine.configure_disk_timing(None);
+            return true;
+        }
+        let Some(profile) = DiskTimingProfile::named(profile) else {
+            return false;
+        };
+        if clock_hz == 0 {
+            return false;
+        }
+        let mode = if stall {
+            DiskTimingMode::Stall
+        } else {
+            DiskTimingMode::Account
+        };
+        self.machine.configure_disk_timing(Some(DiskTimingConfig {
+            profile,
+            mode,
+            clock_hz,
+        }));
+        true
+    }
+
+    /// The current floppy timing counters, or undefined when media is instant.
+    pub fn disk_timing_report(&self) -> Option<WasmDiskTimingReport> {
+        self.machine.disk_timing_report().map(WasmDiskTimingReport)
     }
 
     pub fn last_steps(&self) -> u64 {
@@ -1505,6 +1546,91 @@ impl WasmCpuState {
 
     pub fn flags_prime(&self) -> WasmCpuFlags {
         WasmCpuFlags(self.0.f_prime)
+    }
+}
+
+#[wasm_bindgen]
+pub struct WasmDiskTimingReport(DiskTimingReport);
+
+/// Times are milliseconds; counts are JavaScript numbers.
+#[wasm_bindgen]
+impl WasmDiskTimingReport {
+    pub fn profile(&self) -> String {
+        self.0.config.profile.name.into()
+    }
+
+    pub fn stall(&self) -> bool {
+        self.0.config.mode == DiskTimingMode::Stall
+    }
+
+    pub fn clock_hz(&self) -> u32 {
+        self.0.config.clock_hz
+    }
+
+    fn ms(&self, tstates: u64) -> f64 {
+        self.0.tstates_to_micros(tstates) as f64 / 1_000.0
+    }
+
+    pub fn modelled_ms(&self) -> f64 {
+        self.ms(self.0.modelled_tstates)
+    }
+
+    pub fn disk_ms(&self) -> f64 {
+        self.ms(self.0.stats.disk_tstates)
+    }
+
+    pub fn ready_ms(&self) -> f64 {
+        self.ms(self.0.stats.ready_tstates)
+    }
+
+    pub fn seek_ms(&self) -> f64 {
+        self.ms(self.0.stats.seek_tstates)
+    }
+
+    pub fn rotation_ms(&self) -> f64 {
+        self.ms(self.0.stats.rotation_tstates)
+    }
+
+    pub fn transfer_ms(&self) -> f64 {
+        self.ms(self.0.stats.transfer_tstates)
+    }
+
+    pub fn record_reads(&self) -> f64 {
+        self.0.stats.record_reads as f64
+    }
+
+    pub fn record_writes(&self) -> f64 {
+        self.0.stats.record_writes as f64
+    }
+
+    pub fn buffer_hits(&self) -> f64 {
+        self.0.stats.buffer_hits as f64
+    }
+
+    pub fn sector_reads(&self) -> f64 {
+        self.0.stats.sector_reads as f64
+    }
+
+    pub fn sector_writes(&self) -> f64 {
+        self.0.stats.sector_writes as f64
+    }
+
+    pub fn seeks(&self) -> f64 {
+        self.0.stats.seeks as f64
+    }
+
+    pub fn ready_waits(&self) -> f64 {
+        self.0.stats.ready_waits as f64
+    }
+
+    /// Highest cylinder touched. At or above `cylinders`, the activity would
+    /// not fit on the real medium.
+    pub fn max_cylinder(&self) -> u32 {
+        self.0.stats.max_cylinder
+    }
+
+    pub fn cylinders(&self) -> u16 {
+        self.0.config.profile.cylinders
     }
 }
 

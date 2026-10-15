@@ -34,12 +34,24 @@
             >New B slot</a
           >
           <button id="retry-save" type="button" hidden>Retry saving</button>
+          <label
+            class="disk-speed-control"
+            title="Model a mechanical floppy drive: the CPU runs at 4 MHz and waits for every seek, head load and rotation"
+            >Disk
+            <select id="disk-speed">
+              <option value="">Instant</option>
+              <option value="8in-sssd">8″ floppy</option>
+              <option value="5in-dsdd">5¼″ floppy</option>
+              <option value="3in-dsdd">3½″ floppy</option>
+            </select></label
+          >
         </section>
         <div class="status-group">
           <p id="status" role="status" aria-live="polite">
             Loading WebAssembly…
           </p>
           <p id="save-status" role="status" aria-live="polite"></p>
+          <p id="disk-timing-status" hidden></p>
         </div>
       </header>
 

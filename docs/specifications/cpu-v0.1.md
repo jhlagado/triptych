@@ -186,9 +186,11 @@ Status bits are:
 |   6 | controller ready                                      |
 |   7 | reserved                                              |
 
-The host reference completes media operations synchronously, so it does not
-assert busy. ESP32 and physical implementations may assert busy while keeping
-the same command completion and data-request semantics. Software must poll.
+The host reference completes media operations synchronously, so by default it
+does not assert busy. With the optional [floppy timing model](disk-timing-v1.md)
+in stall mode, it asserts busy for each command's modelled duration. ESP32 and
+physical implementations may assert busy while keeping the same command
+completion and data-request semantics. Software must poll.
 
 Error codes are zero for no error, then unavailable drive, out-of-range record,
 bad command, bad transfer state, write protection, and provider I/O failure.

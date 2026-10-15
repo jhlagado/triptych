@@ -3,6 +3,7 @@
 //! Portable, deterministic implementation of the Triptych CPU v0.1 machine.
 
 mod disk;
+mod disk_timing;
 mod engine;
 mod host;
 mod machine;
@@ -12,6 +13,9 @@ mod serial;
 mod state;
 
 pub use disk::DiskState;
+pub use disk_timing::{
+    DiskTimingConfig, DiskTimingMode, DiskTimingProfile, DiskTimingReport, DiskTimingStats,
+};
 pub use host::{
     Console, Devices, DriveInfo, IoDirection, IoObserver, IoOperation, PortTransport, SectorStore,
     StorageFault,

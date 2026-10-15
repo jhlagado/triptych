@@ -2,8 +2,8 @@ use crate::engine::{Adapter, EngineBus};
 use crate::ports;
 use crate::{disk::Controller, serial::Serial};
 use crate::{
-    CpuState, Devices, DiskState, InterruptRequest, IoDirection, IoOperation, MachineMemory,
-    RunBudget, RunExit, RunReason, StepResult,
+    CpuState, Devices, DiskState, DiskTimingConfig, DiskTimingReport, InterruptRequest,
+    IoDirection, IoOperation, MachineMemory, RunBudget, RunExit, RunReason, StepResult,
 };
 
 #[derive(Default)]
@@ -12,6 +12,9 @@ pub struct Machine {
     boot_rom_enabled: bool,
     serial: Serial,
     disk: Controller,
+    /// Guest T-states executed since construction. Never reset, so the disk
+    /// timing model sees one continuous clock across machine resets.
+    clock: u64,
 }
 
 impl Machine {
@@ -21,6 +24,7 @@ impl Machine {
             boot_rom_enabled: true,
             serial: Serial::default(),
             disk: Controller::default(),
+            clock: 0,
         };
         machine.engine.reset();
         machine
@@ -46,6 +50,7 @@ impl Machine {
             boot_rom_enabled: &mut self.boot_rom_enabled,
             serial: &mut self.serial,
             disk: &mut self.disk,
+            clock: self.clock,
             tstates: 0,
         };
         self.engine.step(&mut bus);
@@ -53,6 +58,7 @@ impl Machine {
             InterruptRequest::None => false,
             InterruptRequest::MaskableFf => self.engine.interrupt_maskable_ff(&mut bus),
         };
+        self.clock += u64::from(bus.tstates);
         StepResult {
             tstates: bus.tstates,
             halted: self.engine.halted(),
@@ -132,6 +138,23 @@ impl Machine {
         self.disk.state()
     }
 
+    /// Guest T-states executed since this machine was constructed.
+    pub fn elapsed_tstates(&self) -> u64 {
+        self.clock
+    }
+
+    /// Enable, replace or remove the floppy timing model. Counters restart.
+    /// Without a model, every disk command completes at once and BUSY is
+    /// never reported.
+    pub fn configure_disk_timing(&mut self, config: Option<DiskTimingConfig>) {
+        self.disk.set_clock(self.clock);
+        self.disk.configure_timing(config);
+    }
+
+    pub fn disk_timing_report(&self) -> Option<DiskTimingReport> {
+        self.disk.timing_report(self.clock)
+    }
+
     /// Prepare a synchronous host media replacement without resetting the CPU.
     ///
     /// Returns false without changing any state when a disk transfer is active
@@ -170,7 +193,14 @@ struct MachineBus<'a, 'mem, 'dev> {
     boot_rom_enabled: &'a mut bool,
     serial: &'a mut Serial,
     disk: &'a mut Controller,
+    clock: u64,
     tstates: u32,
+}
+
+impl MachineBus<'_, '_, '_> {
+    fn sync_disk_clock(&mut self) {
+        self.disk.set_clock(self.clock + u64::from(self.tstates));
+    }
 }
 
 impl EngineBus for MachineBus<'_, '_, '_> {
@@ -192,7 +222,10 @@ impl EngineBus for MachineBus<'_, '_, '_> {
         let value = match low {
             ports::SERIAL_DATA => self.serial.read_data(self.devices.console),
             ports::SERIAL_STATUS => self.serial.read_status(self.devices.console),
-            ports::DISK_FIRST..=ports::DISK_LAST => self.disk.read_port(low, self.devices.sectors),
+            ports::DISK_FIRST..=ports::DISK_LAST => {
+                self.sync_disk_clock();
+                self.disk.read_port(low, self.devices.sectors)
+            }
             ports::SYSTEM_CONTROL => u8::from(*self.boot_rom_enabled),
             ports::VIDEO_FIRST..=ports::VIDEO_LAST => self
                 .devices
@@ -224,6 +257,7 @@ impl EngineBus for MachineBus<'_, '_, '_> {
         match low {
             ports::SERIAL_DATA => self.devices.console.transmit(value),
             ports::DISK_FIRST..=ports::DISK_LAST => {
+                self.sync_disk_clock();
                 self.disk.write_port(low, value, self.devices.sectors);
             }
             ports::SYSTEM_CONTROL if value == ports::BOOT_ROM_DISABLE_KEY => {

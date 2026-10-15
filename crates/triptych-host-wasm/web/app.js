@@ -67,6 +67,8 @@ const MAX_SERIAL_INPUT_BYTES = 16 * 1024;
 const terminalElement = document.querySelector("#terminal");
 const statusElement = document.querySelector("#status");
 const saveStatusElement = document.querySelector("#save-status");
+const diskSpeedSelect = document.querySelector("#disk-speed");
+const diskTimingStatusElement = document.querySelector("#disk-timing-status");
 const diskInput = document.querySelector("#disk-input");
 const resetButton = document.querySelector("#reset");
 const directARestoreButton = document.querySelector("#direct-a-restore");
@@ -174,6 +176,21 @@ function localConfigurationBookmark(id) {
 document.querySelector("#machine-choice").textContent = suppliedMachine
   ? "Supplied A+B machine — its saves are separate from your usual machine."
   : "Your working machine — existing saved disks are preserved.";
+
+// Floppy speed is a per-browser preference, not part of a saved machine.
+const DISK_SPEED_KEY = "triptych:disk-speed:v1";
+const DISK_SPEED_NAMES = {
+  "8in-sssd": "8″ floppy",
+  "5in-dsdd": "5¼″ floppy",
+  "3in-dsdd": "3½″ floppy",
+};
+// A floppy is only slow relative to the CPU, so floppy speeds also pace the
+// guest to a period clock.
+const FLOPPY_CLOCK_HZ = 4_000_000;
+let diskSpeed = storedDiskSpeed();
+diskSpeedSelect.value = diskSpeed;
+let pacing;
+let lastDiskTimingRender = 0;
 
 let machine;
 let runtime;
@@ -658,6 +675,78 @@ function setSaveStatus(message, state = "idle") {
   saveStatusElement.dataset.state = state;
 }
 
+function storedDiskSpeed() {
+  try {
+    const value = localStorage.getItem(DISK_SPEED_KEY);
+    return Object.hasOwn(DISK_SPEED_NAMES, value) ? value : "";
+  } catch {
+    return "";
+  }
+}
+
+function applyDiskSpeed() {
+  pacing = undefined;
+  machine?.configure_disk_timing(diskSpeed, diskSpeed !== "", FLOPPY_CLOCK_HZ);
+  renderDiskTiming(true);
+}
+
+function renderDiskTiming(force = false) {
+  const now = performance.now();
+  if (!force && now - lastDiskTimingRender < 250) return;
+  lastDiskTimingRender = now;
+  const report = machine?.disk_timing_report();
+  diskTimingStatusElement.hidden = !report;
+  if (!report) return;
+  try {
+    const seconds = (ms) => (ms / 1000).toFixed(1);
+    const name = DISK_SPEED_NAMES[report.profile()] ?? report.profile();
+    diskTimingStatusElement.textContent =
+      `${name} at 4 MHz: ${seconds(report.disk_ms())} s waiting on disk · ` +
+      `${report.sector_reads()} reads, ${report.sector_writes()} writes, ` +
+      `${report.seeks()} seeks`;
+    diskTimingStatusElement.title =
+      `Head load or spin-up ${seconds(report.ready_ms())} s, ` +
+      `seeking ${seconds(report.seek_ms())} s, ` +
+      `rotation ${seconds(report.rotation_ms())} s, ` +
+      `transfer ${seconds(report.transfer_ms())} s. ` +
+      `${report.record_reads()} record reads (${report.buffer_hits()} from buffer), ` +
+      `${report.record_writes()} record writes.`;
+  } finally {
+    report.free();
+  }
+}
+
+// T-states the guest may run now to keep pace with FLOPPY_CLOCK_HZ.
+function pacedBudget() {
+  const now = performance.now();
+  const elapsed = machine.elapsed_tstates();
+  pacing ??= { time: now, tstates: elapsed };
+  let due =
+    pacing.tstates + ((now - pacing.time) * FLOPPY_CLOCK_HZ) / 1000 - elapsed;
+  // Browsers throttle animation frames in background tabs, so allow up to
+  // half a second of catch-up; after a longer pause, continue at 4 MHz
+  // instead of racing through the backlog.
+  const limit = FLOPPY_CLOCK_HZ / 2;
+  if (due > limit) {
+    pacing.tstates += due - limit;
+    due = limit;
+  }
+  return Math.floor(due);
+}
+
+diskSpeedSelect.addEventListener("change", () => {
+  diskSpeed = Object.hasOwn(DISK_SPEED_NAMES, diskSpeedSelect.value)
+    ? diskSpeedSelect.value
+    : "";
+  try {
+    if (diskSpeed) localStorage.setItem(DISK_SPEED_KEY, diskSpeed);
+    else localStorage.removeItem(DISK_SPEED_KEY);
+  } catch {
+    // The setting still applies to this page.
+  }
+  applyDiskSpeed();
+});
+
 function drainOutput() {
   const output = machine?.take_serial_output();
   if (output?.length > 0) {
@@ -674,7 +763,13 @@ function runMachine(generation) {
     const deadline = performance.now() + 6;
     let outputChanged = false;
     do {
-      const reason = machine.run_slice(25_000, 250_000);
+      let maxTstates = 250_000;
+      if (diskSpeed) {
+        const due = pacedBudget();
+        if (due < 1) break;
+        maxTstates = Math.min(maxTstates, due);
+      }
+      const reason = machine.run_slice(25_000, maxTstates);
       if (reason === 4) {
         const counts = runtime.flushCounts();
         if (counts.some((count, drive) => count !== lastFlushCounts[drive])) {
@@ -693,6 +788,7 @@ function runMachine(generation) {
       renderTerminal(terminalElement, terminal.snapshot());
       revealActiveCursor();
     }
+    if (diskSpeed) renderDiskTiming();
     const counts = runtime.flushCounts();
     if (counts.some((count, drive) => count !== lastFlushCounts[drive])) {
       lastFlushCounts = counts;
@@ -890,6 +986,7 @@ function activateMachine(prepared) {
   const previous = runtime;
   runtime = prepared;
   machine = prepared.cpu;
+  applyDiskSpeed();
   activeMedia = prepared.media;
   resetConfigurationTarget();
   renderActiveConfiguration();

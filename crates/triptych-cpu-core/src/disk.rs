@@ -1,4 +1,7 @@
-use crate::{DriveInfo, SectorStore, RECORD_BYTES, SECTOR_BYTES};
+use crate::disk_timing::{Access, DiskTiming, DiskTimingMode};
+use crate::{
+    DiskTimingConfig, DiskTimingReport, DriveInfo, SectorStore, RECORD_BYTES, SECTOR_BYTES,
+};
 
 const RECORDS_PER_SECTOR: u32 = (SECTOR_BYTES / RECORD_BYTES) as u32;
 
@@ -24,6 +27,7 @@ const ERROR_PROTOCOL: u8 = 4;
 const ERROR_WRITE_PROTECTED: u8 = 5;
 const ERROR_PROVIDER: u8 = 6;
 
+const STATUS_BUSY: u8 = 1 << 0;
 const STATUS_DATA_REQUEST: u8 = 1 << 1;
 const STATUS_ERROR: u8 = 1 << 2;
 const STATUS_WRITE_PROTECTED: u8 = 1 << 3;
@@ -61,6 +65,11 @@ pub(crate) struct Controller {
     cache_sector: u32,
     cache_dirty: bool,
     cache_bytes: [u8; SECTOR_BYTES],
+    timing: Option<DiskTiming>,
+    /// Guest T-state clock at the current port access, supplied by the bus.
+    now: u64,
+    /// Stall mode: the guest clock at which the current command completes.
+    busy_until: u64,
 }
 
 impl Default for Controller {
@@ -78,6 +87,9 @@ impl Default for Controller {
             cache_sector: 0,
             cache_dirty: false,
             cache_bytes: [0; SECTOR_BYTES],
+            timing: None,
+            now: 0,
+            busy_until: 0,
         }
     }
 }
@@ -88,6 +100,9 @@ impl Controller {
             return false;
         }
         self.cache_valid = false;
+        if let Some(timing) = &mut self.timing {
+            timing.invalidate_buffer();
+        }
         true
     }
 
@@ -95,7 +110,40 @@ impl Controller {
         self.selected_drive = 0;
         self.selected_record = 0;
         self.error = ERROR_NONE;
+        self.busy_until = 0;
         self.abort_transfer();
+        if let Some(timing) = &mut self.timing {
+            timing.invalidate_buffer();
+        }
+    }
+
+    pub(crate) fn set_clock(&mut self, now: u64) {
+        self.now = now;
+    }
+
+    /// Replace the timing model. Counters restart from the current clock.
+    pub(crate) fn configure_timing(&mut self, config: Option<DiskTimingConfig>) {
+        self.timing = config.map(|config| DiskTiming::new(config, self.now));
+        self.busy_until = 0;
+    }
+
+    pub(crate) fn timing_report(&self, now: u64) -> Option<DiskTimingReport> {
+        self.timing.as_ref().map(|timing| timing.report(now))
+    }
+
+    fn busy(&self) -> bool {
+        self.now < self.busy_until
+    }
+
+    /// Charge a successfully started command to the timing model.
+    fn charge(&mut self, access: Access) {
+        let Some(timing) = &mut self.timing else {
+            return;
+        };
+        let duration = timing.access(access, self.selected_drive, self.selected_record, self.now);
+        if timing.mode() == DiskTimingMode::Stall {
+            self.busy_until = self.now + duration;
+        }
     }
 
     pub(crate) fn state(&self) -> DiskState {
@@ -153,6 +201,9 @@ impl Controller {
 
     fn status(&self, sectors: &dyn SectorStore) -> u8 {
         let drive = sectors.drive_info(self.selected_drive);
+        if self.busy() {
+            return STATUS_READY | STATUS_BUSY;
+        }
         STATUS_READY
             | if self.transfer_kind.is_some() {
                 STATUS_DATA_REQUEST
@@ -260,6 +311,8 @@ impl Controller {
             COMMAND_FLUSH => {
                 if self.flush_cache(sectors) && sectors.flush(self.selected_drive).is_err() {
                     self.fail(ERROR_PROVIDER);
+                } else if self.error == ERROR_NONE {
+                    self.charge(Access::Flush);
                 }
             }
             COMMAND_CAPACITY => {
@@ -282,6 +335,7 @@ impl Controller {
         self.transfer_kind = Some(TransferKind::Read);
         self.transfer_position = 0;
         self.transfer_offset = offset;
+        self.charge(Access::Read);
     }
 
     fn begin_write(&mut self, sectors: &mut dyn SectorStore) {
@@ -300,6 +354,7 @@ impl Controller {
         self.transfer_kind = Some(TransferKind::Write);
         self.transfer_position = 0;
         self.transfer_offset = self.record_offset();
+        self.charge(Access::Write);
     }
 
     fn record_offset(&self) -> usize {
@@ -498,6 +553,60 @@ mod tests {
         store.fail_reads = true;
         controller.write_port(COMMAND_STATUS, COMMAND_READ, &mut store);
         assert_eq!(controller.read_port(ERROR, &mut store), ERROR_PROVIDER);
+    }
+
+    #[test]
+    fn stall_timing_holds_busy_until_the_modelled_read_completes() {
+        use crate::{DiskTimingMode, DiskTimingProfile};
+        let mut store = Store::default();
+        store.bytes.fill(0x44);
+        let mut controller = Controller::default();
+        controller.set_clock(1_000);
+        controller.configure_timing(Some(DiskTimingConfig::new(
+            DiskTimingProfile::EIGHT_INCH_SSSD,
+            DiskTimingMode::Stall,
+        )));
+        controller.write_port(COMMAND_STATUS, COMMAND_READ, &mut store);
+        let busy = controller.read_port(COMMAND_STATUS, &mut store);
+        assert_eq!(busy, STATUS_READY | STATUS_BUSY);
+        let report = controller.timing_report(1_000).unwrap();
+        let done = 1_000 + report.stats.disk_tstates;
+        controller.set_clock(done - 1);
+        assert_eq!(
+            controller.read_port(COMMAND_STATUS, &mut store) & STATUS_BUSY,
+            STATUS_BUSY
+        );
+        controller.set_clock(done);
+        let ready = controller.read_port(COMMAND_STATUS, &mut store);
+        assert_eq!(
+            ready & (STATUS_BUSY | STATUS_DATA_REQUEST),
+            STATUS_DATA_REQUEST
+        );
+        assert_eq!(controller.read_port(DATA, &mut store), 0x44);
+    }
+
+    #[test]
+    fn account_timing_never_reports_busy_but_counts_the_wait() {
+        use crate::{DiskTimingMode, DiskTimingProfile};
+        let mut store = Store::default();
+        let mut controller = Controller::default();
+        controller.configure_timing(Some(DiskTimingConfig::new(
+            DiskTimingProfile::EIGHT_INCH_SSSD,
+            DiskTimingMode::Account,
+        )));
+        controller.write_port(COMMAND_STATUS, COMMAND_READ, &mut store);
+        let status = controller.read_port(COMMAND_STATUS, &mut store);
+        assert_eq!(status & STATUS_BUSY, 0);
+        assert_eq!(status & STATUS_DATA_REQUEST, STATUS_DATA_REQUEST);
+        let report = controller.timing_report(0).unwrap();
+        assert_eq!(report.stats.record_reads, 1);
+        assert_eq!(report.modelled_tstates, report.stats.disk_tstates);
+        assert!(report.stats.disk_tstates > 0);
+
+        // Failed commands are not charged.
+        select_record(&mut controller, &mut store, 8);
+        controller.write_port(COMMAND_STATUS, COMMAND_READ, &mut store);
+        assert_eq!(controller.timing_report(0).unwrap().stats.record_reads, 1);
     }
 
     fn select_record(controller: &mut Controller, store: &mut Store, record: u32) {
